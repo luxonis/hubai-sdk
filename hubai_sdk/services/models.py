@@ -159,6 +159,80 @@ def create_model(
     return ModelResponse(**res)
 
 
+@app.command(name="update")
+def update_model(
+    identifier: UUID | str,
+    *,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    description: str | None = None,
+    description_short: str | None = None,
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool | None = None,
+    silent: bool | None = None
+) -> ModelResponse | None:
+    """Updates a model.
+
+    Parameters
+    ----------
+    identifier : UUID | str
+        The model ID or slug.
+    license_type : License | None
+        The type of the license.
+    is_public : bool | None
+        Whether the model is public (True), private (False), or team (None).
+    description : str | None
+        Full description of the model.
+    description_short : str | None
+        Short description of the model.
+    architecture_id : UUID | str | None
+        The architecture ID.
+    tasks : list[Task] | None
+        List of tasks this model supports.
+    links : list[str] | None
+        List of links to related resources.
+    is_yolo : bool | None
+        Whether the model is a YOLO model.
+    silent : bool | None
+        Whether to print the model information after update.
+    """
+
+    if silent is None:
+        silent = not is_cli_call()
+
+    data = {}
+    if license_type is not None:
+        data["license_type"] = license_type
+    if is_public is not None:
+        data["is_public"] = is_public
+    if description is not None:
+        data["description"] = description
+    if description_short is not None:
+        data["description_short"] = description_short
+    if architecture_id is not None:
+        data["architecture_id"] = str(architecture_id)
+    if tasks is not None:
+        data["tasks"] = tasks
+    if links is not None:
+        data["links"] = links
+    if is_yolo is not None:
+        data["is_yolo"] = is_yolo
+    try:
+        res = Request.patch(service="models", endpoint=f"models/{identifier}", json=data)
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.json().get("detail") == "Unique constraint error.":
+            raise ValueError(f"Model '{identifier}' already exists") from e
+        raise
+    logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
+
+    if not silent:
+        return get_model(res["id"])
+
+    return ModelResponse(**res)
+
+
 @app.command(name="delete")
 def delete_model(identifier: UUID | str) -> None:
     """Deletes a model.
