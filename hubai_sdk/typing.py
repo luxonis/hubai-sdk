@@ -65,4 +65,4 @@ YoloVersion: TypeAlias = Literal[
     "goldyolo",
 ]
 
-HubService: TypeAlias = Literal["models", "dags", "datasets"]
+HubService: TypeAlias = Literal["models", "dags"]

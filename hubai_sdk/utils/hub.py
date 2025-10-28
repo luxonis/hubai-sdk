@@ -245,7 +245,7 @@ def is_valid_uuid(uuid_string: str) -> bool:
 def slug_to_id(
     slug: str,
     endpoint: Literal[
-        "models", "modelVersions", "modelInstances", "architectures"
+        "models", "modelVersions", "modelInstances"
     ],
 ) -> str:
     for is_public in [True, False]:
@@ -265,7 +265,7 @@ def slug_to_id(
 def get_resource_id(
     identifier: str,
     endpoint: Literal[
-        "models", "modelVersions", "modelInstances", "architectures"
+        "models", "modelVersions", "modelInstances"
     ],
 ) -> str:
     if is_valid_uuid(identifier):
@@ -276,7 +276,7 @@ def get_resource_id(
 def request_info(
     identifier: str,
     endpoint: Literal[
-        "models", "modelVersions", "modelInstances", "architectures"
+        "models", "modelVersions", "modelInstances"
     ],
 ) -> dict[str, Any]:
     resource_id = get_resource_id(identifier, endpoint)
