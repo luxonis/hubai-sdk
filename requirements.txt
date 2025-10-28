@@ -1,0 +1,10 @@
+luxonis-ml[data,nn_archive]
+keyring
+requests
+cyclopts
+loguru
+rich
+packaging
+onnx
+psutil
+pillow
