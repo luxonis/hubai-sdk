@@ -34,6 +34,7 @@ from hubai_sdk.utils.hubai_models import ModelInstanceResponse
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.sdk_models import ConvertResponse
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
+from hubai_sdk.services.variants import get_variant
 
 
 def convert(
@@ -229,6 +230,23 @@ def convert(
         )
         assert variant is not None
         variant_id = variant.id
+
+    else:
+        variant = get_variant(variant_id)
+        if variant_version is not None:
+            variant = create_variant(
+                variant.name,
+                model_id=model_id,
+                variant_version=variant_version,
+                description=variant_description,
+                repository_url=repository_url,
+                commit_hash=commit_hash,
+                domain=domain,
+                tags=variant_tags or [],
+                silent=True,
+            )
+            assert variant is not None
+            variant_id = variant.id
 
     assert variant_id is not None
     instance_name = f"{variant_name} base instance"
