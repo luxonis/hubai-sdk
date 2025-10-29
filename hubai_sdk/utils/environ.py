@@ -1,9 +1,9 @@
 import multiprocessing
 from contextlib import suppress
-
+import platform
 import keyring
-from loguru import logger
 from luxonis_ml.utils import Environ as BaseEnviron
+from loguru import logger
 from pydantic import model_validator
 from typing_extensions import Self
 
@@ -22,7 +22,10 @@ def _get_password(
 def get_password_with_timeout(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
-    # Avoid multiprocessing issues - just use direct keyring call
+    # if system is mac with arm, use direct keyring call
+    if platform.system() == "Darwin" and platform.machine() == "arm64":
+        return keyring.get_password(service_name, username)
+
     q = multiprocessing.Queue()
     p = multiprocessing.Process(
         target=_get_password, args=(q, service_name, username)

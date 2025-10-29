@@ -78,5 +78,17 @@ def login(
     logger.info("API key stored successfully.")
 
 
+@app.command(group="Admin")
+def logout() -> None:
+    """Logout from HubAI."""
+    if environ.HUBAI_API_KEY is None:
+        logger.info("User not logged in. Nothing to logout.")
+        return
+
+    keyring.delete_password("HubAI", "api_key")
+    environ.HUBAI_API_KEY = None
+    logger.info("Logged out successfully.")
+
+
 if __name__ == "__main__":
     app()
