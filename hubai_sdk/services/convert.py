@@ -71,7 +71,6 @@ def convert(
     yolo_input_shape: str | None = None,
     yolo_version: YoloVersion | None = None,
     yolo_class_names: list[str] | None = None,
-    api_key: str | None = None,
 ) -> ConvertResponse:
     """Starts the online conversion process.
 
@@ -134,8 +133,6 @@ def convert(
         YOLO version.
     yolo_class_names : list[str], optional
         List of class names for YOLO models.
-    api_key : str, optional
-        API key for authentication. If not specified, the API key will be taken from the environment variable `HUBAI_API_KEY`.
     opts : list[str], optional
         Additional options for the conversion process.
     """
@@ -233,7 +230,11 @@ def convert(
 
     else:
         variant = get_variant(variant_id)
+        if variant is None:
+            raise ValueError(f"Variant with ID {variant_id} not found")
         if variant_version is not None:
+            if model_id is None:
+                raise ValueError("`--model-id` is required to create a new variant version.")
             variant = create_variant(
                 variant.name,
                 model_id=model_id,
@@ -371,7 +372,63 @@ def RVC2(
         to override configuration values.
     **hub_kwargs
         Additional keyword arguments to be passed to the
-        online conversion.
+        online conversion. See also `convert` function.
+
+    Hub kwargs:
+    ------------
+    name : str, optional
+        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
+    license_type : License, optional
+        The type of the license.
+    is_public : bool, optional
+        Whether the model is public (True), private (False), or team (None).
+    description_short : str, optional
+        Short description of the model.
+    description : str, optional
+        Full description of the model.
+    architecture_id : UUID | str, optional
+        The architecture ID.
+    tasks : list[Task], optional
+        List of tasks this model supports.
+    links : list[str], optional
+        List of links to related resources.
+    is_yolo : bool, optional
+        Whether the model is a YOLO model.
+    model_id : UUID | str, optional
+        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
+    variant_version : str, optional
+        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
+        If no versions exist, the version will be "0.1.0".
+    repository_url : str, optional
+        URL of the repository.
+    commit_hash : str, optional
+        Commit hash.
+    target_precision : TargetPrecision
+        Target precision.
+    quantization_data : Quantization
+        Quantization data.
+    max_quantization_images : int, optional
+        Maximum number of quantization images.
+    domain : str, optional
+        Domain of the model.
+    variant_tags : list[str], optional
+        List of tags for the model variant.
+    variant_id : UUID | str, optional
+        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
+    input_shape : list[int], optional
+        The input shape of the model instance.
+    is_deployable : bool, optional
+        Whether the model instance is deployable.
+    output_dir : str, optional
+        Output directory for the downloaded files.
+    tool_version : str, optional
+        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
+    yolo_input_shape : str, optional
+        Input shape for YOLO models.
+    yolo_version : YoloVersion, optional
+        YOLO version.
+    yolo_class_names : list[str], optional
+        List of class names for YOLO models.
     """
     return convert(
         Target.RVC2,
@@ -420,6 +477,62 @@ def RVC3(
     **hub_kwargs
         Additional keyword arguments to be passed to the
         online conversion.
+
+    Hub kwargs:
+    ------------
+    name : str, optional
+        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
+    license_type : License, optional
+        The type of the license.
+    is_public : bool, optional
+        Whether the model is public (True), private (False), or team (None).
+    description_short : str, optional
+        Short description of the model.
+    description : str, optional
+        Full description of the model.
+    architecture_id : UUID | str, optional
+        The architecture ID.
+    tasks : list[Task], optional
+        List of tasks this model supports.
+    links : list[str], optional
+        List of links to related resources.
+    is_yolo : bool, optional
+        Whether the model is a YOLO model.
+    model_id : UUID | str, optional
+        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
+    variant_version : str, optional
+        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
+        If no versions exist, the version will be "0.1.0".
+    repository_url : str, optional
+        URL of the repository.
+    commit_hash : str, optional
+        Commit hash.
+    target_precision : TargetPrecision
+        Target precision.
+    quantization_data : Quantization
+        Quantization data.
+    max_quantization_images : int, optional
+        Maximum number of quantization images.
+    domain : str, optional
+        Domain of the model.
+    variant_tags : list[str], optional
+        List of tags for the model variant.
+    variant_id : UUID | str, optional
+        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
+    input_shape : list[int], optional
+        The input shape of the model instance.
+    is_deployable : bool, optional
+        Whether the model instance is deployable.
+    output_dir : str, optional
+        Output directory for the downloaded files.
+    tool_version : str, optional
+        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
+    yolo_input_shape : str, optional
+        Input shape for YOLO models.
+    yolo_version : YoloVersion, optional
+        YOLO version.
+    yolo_class_names : list[str], optional
+        List of class names for YOLO models.
     """
     if not isinstance(pot_target_device, PotDevice):
         pot_target_device = PotDevice(pot_target_device)
@@ -477,7 +590,63 @@ def RVC4(
         to override configuration values.
     **hub_kwargs
         Additional keyword arguments to be passed to the
-        online conversion.
+        online conversion. See also `convert` function.
+
+    Hub kwargs:
+    ------------
+    name : str, optional
+        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
+    license_type : License, optional
+        The type of the license.
+    is_public : bool, optional
+        Whether the model is public (True), private (False), or team (None).
+    description_short : str, optional
+        Short description of the model.
+    description : str, optional
+        Full description of the model.
+    architecture_id : UUID | str, optional
+        The architecture ID.
+    tasks : list[Task], optional
+        List of tasks this model supports.
+    links : list[str], optional
+        List of links to related resources.
+    is_yolo : bool, optional
+        Whether the model is a YOLO model.
+    model_id : UUID | str, optional
+        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
+    variant_version : str, optional
+        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
+        If no versions exist, the version will be "0.1.0".
+    repository_url : str, optional
+        URL of the repository.
+    commit_hash : str, optional
+        Commit hash.
+    target_precision : TargetPrecision
+        Target precision.
+    quantization_data : Quantization
+        Quantization data.
+    max_quantization_images : int, optional
+        Maximum number of quantization images.
+    domain : str, optional
+        Domain of the model.
+    variant_tags : list[str], optional
+        List of tags for the model variant.
+    variant_id : UUID | str, optional
+        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
+    input_shape : list[int], optional
+        The input shape of the model instance.
+    is_deployable : bool, optional
+        Whether the model instance is deployable.
+    output_dir : str, optional
+        Output directory for the downloaded files.
+    tool_version : str, optional
+        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
+    yolo_input_shape : str, optional
+        Input shape for YOLO models.
+    yolo_version : YoloVersion, optional
+        YOLO version.
+    yolo_class_names : list[str], optional
+        List of class names for YOLO models.
     """
     htp_socs = htp_socs or ["sm8550"]
     return convert(
@@ -528,7 +697,63 @@ def Hailo(
         to override configuration values.
     **hub_kwargs
         Additional keyword arguments to be passed to the
-        online conversion.
+        online conversion. See also `convert` function.
+
+    Hub kwargs:
+    ------------
+    name : str, optional
+        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
+    license_type : License, optional
+        The type of the license.
+    is_public : bool, optional
+        Whether the model is public (True), private (False), or team (None).
+    description_short : str, optional
+        Short description of the model.
+    description : str, optional
+        Full description of the model.
+    architecture_id : UUID | str, optional
+        The architecture ID.
+    tasks : list[Task], optional
+        List of tasks this model supports.
+    links : list[str], optional
+        List of links to related resources.
+    is_yolo : bool, optional
+        Whether the model is a YOLO model.
+    model_id : UUID | str, optional
+        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
+    variant_version : str, optional
+        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
+        If no versions exist, the version will be "0.1.0".
+    repository_url : str, optional
+        URL of the repository.
+    commit_hash : str, optional
+        Commit hash.
+    target_precision : TargetPrecision
+        Target precision.
+    quantization_data : Quantization
+        Quantization data.
+    max_quantization_images : int, optional
+        Maximum number of quantization images.
+    domain : str, optional
+        Domain of the model.
+    variant_tags : list[str], optional
+        List of tags for the model variant.
+    variant_id : UUID | str, optional
+        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
+    input_shape : list[int], optional
+        The input shape of the model instance.
+    is_deployable : bool, optional
+        Whether the model instance is deployable.
+    output_dir : str, optional
+        Output directory for the downloaded files.
+    tool_version : str, optional
+        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
+    yolo_input_shape : str, optional
+        Input shape for YOLO models.
+    yolo_version : YoloVersion, optional
+        YOLO version.
+    yolo_class_names : list[str], optional
+        List of class names for YOLO models.
     """
     return convert(
         Target.HAILO,
