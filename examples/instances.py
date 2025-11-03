@@ -27,7 +27,6 @@ instance = client.instances.create_instance(
     model_type=ModelType.ONNX,
     input_shape=[1, 3, 288, 512],
 )
-assert instance is not None
 
 # Upload base model file to the instance
 client.instances.upload_file(
