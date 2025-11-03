@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, overload
 from uuid import UUID
 
 import requests
@@ -22,6 +22,37 @@ app = App(
     group="Resource Management",
 )
 
+@overload
+def list_variants(
+    model_id: UUID | str | None = None,
+    slug: str | None = None,
+    variant_slug: str | None = None,
+    variant_version: str | None = None,
+    is_public: bool | None = None,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> list[ModelVersionResponse]:
+    ...
+
+@overload
+def list_variants(
+    model_id: UUID | str | None = None,
+    slug: str | None = None,
+    variant_slug: str | None = None,
+    variant_version: str | None = None,
+    is_public: bool | None = None,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> list[ModelVersionResponse]:
+    ...
 
 @app.command(name="ls")
 def list_variants(
@@ -82,6 +113,14 @@ def list_variants(
     return [ModelVersionResponse(**variant) for variant in data]
 
 
+@overload
+def get_variant(identifier: UUID | str) -> ModelVersionResponse:
+    ...
+
+@overload
+def get_variant(identifier: UUID | str) -> None:
+    ...
+
 @app.command(name="info")
 def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
     """Returns information about a model version.
@@ -116,6 +155,50 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
         )
     return ModelVersionResponse(**data)
 
+@overload
+def create_variant(
+    name: str,
+    *,
+    model_id: UUID | str,
+    variant_version: str,
+    description: str | None = None,
+    repository_url: str | None = None,
+    commit_hash: str | None = None,
+    domain: str | None = None,
+    tags: list[str] | None = None,
+    silent: bool = True
+) -> ModelVersionResponse:
+    ...
+
+@overload
+def create_variant(
+    name: str,
+    *,
+    model_id: UUID | str,
+    variant_version: str,
+    description: str | None = None,
+    repository_url: str | None = None,
+    commit_hash: str | None = None,
+    domain: str | None = None,
+    tags: list[str] | None = None,
+    silent: bool = False,
+) -> None:
+    ...
+
+@overload
+def create_variant(
+    name: str,
+    *,
+    model_id: UUID | str,
+    variant_version: str,
+    description: str | None = None,
+    repository_url: str | None = None,
+    commit_hash: str | None = None,
+    domain: str | None = None,
+    tags: list[str] | None = None,
+    silent: bool | None = None,
+) -> ModelVersionResponse:
+    ...
 
 @app.command(name="create")
 def create_variant(

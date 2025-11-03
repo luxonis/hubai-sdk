@@ -1,7 +1,7 @@
 import signal
 from pathlib import Path
 from types import FrameType
-from typing import Annotated, Literal
+from typing import Annotated, Literal, overload
 from urllib.parse import unquote, urlparse
 from uuid import UUID
 
@@ -39,6 +39,55 @@ app = App(
     group="Resource Management",
 )
 
+@overload
+def list_instances(
+    *,
+    platforms: list[ModelType] | None = None,
+    model_id: UUID | str | None = None,
+    variant_id: UUID | str | None = None,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_class: ModelClass | None = None,
+    name: str | None = None,
+    hash: str | None = None,
+    status: Status | None = None,
+    is_public: bool | None = None,
+    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
+    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
+    slug: str | None = None,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> list[ModelInstanceResponse]:
+    ...
+
+@overload
+def list_instances(
+    *,
+    platforms: list[ModelType] | None = None,
+    model_id: UUID | str | None = None,
+    variant_id: UUID | str | None = None,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_class: ModelClass | None = None,
+    name: str | None = None,
+    hash: str | None = None,
+    status: Status | None = None,
+    is_public: bool | None = None,
+    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
+    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
+    slug: str | None = None,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> None:
+    ...
 
 @app.command(name="ls")
 def list_instances(
@@ -101,6 +150,9 @@ def list_instances(
         Sort the model instances by this field.
     order : Literal["asc", "desc"]
         By which order to sort the model instances.
+    field : list[str] | None
+        List of fields to show in the output.
+        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown.
     """
 
     silent = not is_cli_call()
@@ -139,6 +191,14 @@ def list_instances(
         return None
     return [ModelInstanceResponse(**instance) for instance in data]
 
+
+@overload
+def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
+    ...
+
+@overload
+def get_instance(identifier: UUID | str) -> None:
+    ...
 
 @app.command(name="info")
 def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
@@ -262,6 +322,57 @@ def download_instance(
     return downloaded_path
 
 
+@overload
+def create_instance(
+    name: str,
+    *,
+    variant_id: UUID | str,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_precision_type: TargetPrecision | None = None,
+    quantization_data: Quantization | str | None = None,
+    tags: list[str] | None = None,
+    input_shape: list[int] | None = None,
+    is_deployable: bool | None = None,
+    yolo_version: YoloVersion | None = None,
+    silent: bool = True,
+) -> ModelInstanceResponse:
+    ...
+
+@overload
+def create_instance(
+    name: str,
+    *,
+    variant_id: UUID | str,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_precision_type: TargetPrecision | None = None,
+    quantization_data: Quantization | str | None = None,
+    tags: list[str] | None = None,
+    input_shape: list[int] | None = None,
+    is_deployable: bool | None = None,
+    yolo_version: YoloVersion | None = None,
+    silent: bool = False,
+) -> None:
+    ...
+
+@overload
+def create_instance(
+    name: str,
+    *,
+    variant_id: UUID | str,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_precision_type: TargetPrecision | None = None,
+    quantization_data: Quantization | str | None = None,
+    tags: list[str] | None = None,
+    input_shape: list[int] | None = None,
+    is_deployable: bool | None = None,
+    yolo_version: YoloVersion | None = None,
+    silent: bool | None = None,
+) -> ModelInstanceResponse:
+    ...
+
 @app.command(name="create")
 def create_instance(
     name: str,
@@ -346,6 +457,14 @@ def delete_instance(identifier: UUID | str) -> None:
     logger.info(f"Model instance '{identifier}' deleted")
 
 
+@overload
+def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
+    ...
+
+@overload
+def get_config(identifier: UUID | str) -> None:
+    ...
+
 @app.command(name="config")
 def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
     """Returns the configuration of a model instance.
@@ -367,6 +486,14 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
         return None
     return ArchiveConfigurationResponse(**data)
 
+
+@overload
+def get_files(identifier: UUID | str) -> list[ModelInstanceFileResponse]:
+    ...
+
+@overload
+def get_files(identifier: UUID | str) -> None:
+    ...
 
 @app.command(name="files")
 def get_files(

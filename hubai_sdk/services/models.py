@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, overload
 from uuid import UUID
 
 import requests
@@ -21,6 +21,40 @@ app = App(
 )
 
 
+@overload
+def list_models(
+    tasks: list[Task] | None = None,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    slug: str | None = None,
+    project_id: str | None = None,
+    luxonis_only: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None
+) -> list[ModelResponse]:
+    ...
+
+@overload
+def list_models(
+    tasks: list[Task] | None = None,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    slug: str | None = None,
+    project_id: str | None = None,
+    luxonis_only: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None
+) -> None:
+    ...
+
 @app.command(name="ls")
 def list_models(
     tasks: list[Task] | None = None,
@@ -34,7 +68,7 @@ def list_models(
     order: Order = "desc",
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
+    ] = None
 ) -> list[ModelResponse] | None:
     silent = not is_cli_call()
     data = hub_ls(
@@ -57,6 +91,14 @@ def list_models(
 
     return [ModelResponse(**model) for model in data]
 
+
+@overload
+def get_model(identifier: UUID | str) -> ModelResponse:
+    ...
+
+@overload
+def get_model(identifier: UUID | str) -> None:
+    ...
 
 @app.command(name="info")
 def get_model(identifier: UUID | str) -> ModelResponse | None:
@@ -89,6 +131,54 @@ def get_model(identifier: UUID | str) -> ModelResponse | None:
         )
     return ModelResponse(**data)
 
+
+@overload
+def create_model(
+    name: str,
+    *,
+    license_type: License = "undefined",
+    is_public: bool | None = False,
+    description: str | None = None,
+    description_short: str = "<empty>",
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool = False,
+    silent: bool = True,
+) -> ModelResponse:
+    ...
+
+@overload
+def create_model(
+    name: str,
+    *,
+    license_type: License = "undefined",
+    is_public: bool | None = False,
+    description: str | None = None,
+    description_short: str = "<empty>",
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool = False,
+    silent: bool = False,
+) -> None:
+    ...
+
+@overload
+def create_model(
+    name: str,
+    *,
+    license_type: License = "undefined",
+    is_public: bool | None = False,
+    description: str | None = None,
+    description_short: str = "<empty>",
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool = False,
+    silent: bool | None = None,
+) -> ModelResponse:
+    ...
 
 @app.command(name="create")
 def create_model(
@@ -158,6 +248,54 @@ def create_model(
         return get_model(res["id"])
     return ModelResponse(**res)
 
+
+@overload
+def update_model(
+    identifier: UUID | str,
+    *,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    description: str | None = None,
+    description_short: str | None = None,
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool | None = None,
+    silent: bool = True
+) -> ModelResponse:
+    ...
+
+@overload
+def update_model(
+    identifier: UUID | str,
+    *,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    description: str | None = None,
+    description_short: str | None = None,
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool | None = None,
+    silent: bool = False
+) -> None:
+    ...
+
+@overload
+def update_model(
+    identifier: UUID | str,
+    *,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    description: str | None = None,
+    description_short: str | None = None,
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool | None = None,
+    silent: bool | None = None
+) -> ModelResponse:
+    ...
 
 @app.command(name="update")
 def update_model(
