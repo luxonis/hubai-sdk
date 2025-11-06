@@ -68,7 +68,7 @@ def convert(
     is_deployable: bool | None = None,
     output_dir: str | None = None,
     tool_version: str | None = None,
-    yolo_input_shape: str | None = None,
+    yolo_input_shape: list[int] | None = None,
     yolo_version: YoloVersion | None = None,
     yolo_class_names: list[str] | None = None,
 ) -> ConvertResponse:
@@ -127,7 +127,7 @@ def convert(
         Output directory for the downloaded files.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : str, optional
+    yolo_input_shape : list[int], optional
         Input shape for YOLO models.
     yolo_version : YoloVersion, optional
         YOLO version.
@@ -423,7 +423,7 @@ def RVC2(
         Output directory for the downloaded files.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : str, optional
+    yolo_input_shape : list[int], optional
         Input shape for YOLO models.
     yolo_version : YoloVersion, optional
         YOLO version.
@@ -527,7 +527,7 @@ def RVC3(
         Output directory for the downloaded files.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : str, optional
+    yolo_input_shape : list[int], optional
         Input shape for YOLO models.
     yolo_version : YoloVersion, optional
         YOLO version.
@@ -641,7 +641,7 @@ def RVC4(
         Output directory for the downloaded files.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : str, optional
+    yolo_input_shape : list[int], optional
         Input shape for YOLO models.
     yolo_version : YoloVersion, optional
         YOLO version.
@@ -748,7 +748,7 @@ def Hailo(
         Output directory for the downloaded files.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : str, optional
+    yolo_input_shape : list[int], optional
         Input shape for YOLO models.
     yolo_version : YoloVersion, optional
         YOLO version.
