@@ -1,6 +1,6 @@
 # HubAI SDK
 
-Python SDK for interacting with Luxonis HubAI - a platform for managing, converting, and deploying machine learning models for Luxonis OAK devices.
+Python SDK for interacting with Luxonis HubAI - a platform for managing, converting, and deploying machine learning models for Luxonis OAK devices. If you want to convert models locally, check out [modelconverter](https://github.com/luxonis/modelconverter) instead.
 
 ## ✨ Features
 
@@ -280,13 +280,149 @@ See the `examples/` directory for more detailed usage examples:
 - **`examples/instances.py`**: Instance management and file operations
 - **`examples/conversion/`**: Model conversion examples for different formats
 
-### Key Types
+## Migration from `blobconverter`
 
-- **`License`**: Model license types (MIT, Apache 2.0, etc.)
-- **`Task`**: ML tasks (OBJECT_DETECTION, CLASSIFICATION, etc.)
-- **`Target`**: Conversion targets (RVC2, RVC4, HAILO, etc.)
-- **`TargetPrecision`**: Model precision (INT8, FP16, FP32)
-- **`ModelType`**: Model file formats (ONNX, OPENVINO, etc.)
+[BlobConverter](https://pypi.org/project/blobconverter/) is our previous library for converting models to the BLOB format usable with `RVC2` and `RVC3` devices. This library is being replaced by `modelconverter` and `HubAI SDK`, which eventually become the only supported way of converting models in the future.
+
+`blobconverter` is still available and can be used for conversion, but we recommend using `HubAI SDK` for new projects. The API of `HUBAI SDK` is similar to that of `blobconverter`, but there are some differences in the parameters and the way the conversion is done.
+
+`blobconverter` offers several functions for converting models from different frameworks, such as `from_onnx`, `from_openvino`, and `from_tf`. These functions are now replaced by the `convert.RVC2` (or `convert.RVC3`) function in `HubAI SDK`, which takes a single argument `path` that specifies the path to the model file.
+
+The following table shows the mapping between the parameters of `blobconverter` and `HUBAI SDK`. The parameters are grouped by their purpose. The first column shows the parameters of `blobconverter`, the second column shows the equivalent parameters in `HubAI SDK`, and the third column contains additional notes.
+
+| `blobconverter`    | `HubAI SDK`         | Notes                                                                                                     |
+| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `model`            | `path`              | The model file path.                                                                                      |
+| `xml`              | `path`              | The XML file path. Only for conversion from OpenVINO IR                                                   |
+| `bin`              | `opts["input_bin"]` | The BIN file path. Only for conversion from OpenVINO IR. See the [example](#conversion-from-openvino-ir). |
+| `version`          | `tool_version`      | The version of the conversion tool.                                                                       |
+| `data_type`        | `target_precision`  | The precision of the model.                                                                               |
+| `shaves`           | `number_of_shaves`  | The number of shaves to use.                                                                              |
+| `optimizer_params` | `mo_args`           | The arguments to pass to the model optimizer.                                                             |
+| `compile_params`   | `compile_tool_args` | The arguments to pass to the BLOB compiler.                                                               |
+
+By default, `HubAI SDK` has `superblob` enabled which is only supported on DepthAI v3. If you want to convert a model to legacy RVC2 format (blob), you can pass `superblob=False` to the `convert.RVC2` function.
+
+### Simple Conversion
+
+**Simple ONNX conversion using `blobconverter`**
+
+```python
+
+import blobconverter
+
+blob = blobconverter.from_onnx(
+    model="resnet18.onnx",
+)
+```
+
+**Equivalent code using `HubAI SDK`**
+
+```python
+response = client.convert.RVC2(
+    path="resnet18.onnx",
+)
+
+blob = response.downloaded_path
+```
+
+### Conversion from `tflite`
+
+> [!WARNING]
+> `HubAI` online conversion does not support conversion from frozen PB files, only TFLITE files are supported.
+
+`blobconverter`
+
+```python
+
+import blobconverter
+
+blob = blobconverter.from_tf(
+    frozen_pb="resnet18.tflite",
+)
+```
+
+**Equivalent code using `HubAI SDK`**
+
+```python
+response = client.convert.RVC2(
+    path="resnet18.tflite",
+
+)
+
+blob = response.downloaded_path
+```
+
+### RVC3 Conversion
+
+**Simple ONNX conversion using `blobconverter`**
+
+```python
+
+import blobconverter
+
+blob = blobconverter.from_onnx(
+    model="resnet18.onnx",
+    version="2022.3_RVC3",
+)
+```
+
+**Equivalent code using `HubAI SDK`**
+
+```python
+response = client.convert.RVC3(
+    path="resnet18.onnx",
+)
+
+blob = response.downloaded_path
+```
+
+### Advanced Parameters
+
+**`blobconverter.from_onnx` with advanced parameters**
+
+```python
+import blobconverter
+
+blob = blobconverter.from_onnx(
+    model="resnet18.onnx",
+    data_type="FP16",
+    version="2021.4",
+    shaves=6,
+    optimizer_params=[
+        "--mean_values=[127.5,127.5,127.5]",
+        "--scale_values=[255,255,255]",
+    ],
+    compile_params=["-ip U8"],
+
+)
+```
+
+**Equivalent code using `HubAI SDK`**
+
+```python
+response = client.convert.RVC2(
+    path="resnet18.onnx",
+    target_precision="FP16",
+    tool_version="2021.4.0",
+    number_of_shaves=6,
+    mo_args=[
+        "mean_values=[127.5,127.5,127.5]",
+        "scale_values=[255,255,255]"
+    ],
+    compile_tool_args=["-ip", "U8"],
+)
+
+blob = response.downloaded_path
+```
+
+### `Caffe` Conversion
+
+Conversion from the `Caffe` framework is not supported.
+
+## 📄 All Available Parameters
+
+See the [All available parameters](docs/available_parameters.md) file for all available parameters during conversion.
 
 ## 🔨 Development
 
@@ -308,11 +444,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 - **Issues**: [GitHub Issues](https://github.com/luxonis/hubai-sdk/issues)
 - **Email**: support@luxonis.com
-- **Documentation**: [HubAI Platform](https://hub.luxonis.com)
-
-## 📄 License
-
-This project is licensed under the terms specified in the project repository.
+- **Documentation**: [HubAI Platform](https://docs.luxonis.com)
 
 ## 🔗 Links
 
