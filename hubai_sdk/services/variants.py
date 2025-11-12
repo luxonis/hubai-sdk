@@ -15,6 +15,7 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import ModelVersionResponse
+from hubai_sdk.telemetry import get_telemetry
 
 app = App(
     name="variant",
@@ -108,6 +109,10 @@ def list_variants(
         keys=field or ["name", "version", "slug", "platforms"],
     )
 
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("variants.list", properties={"model_id": model_id}, include_system_metadata=False)
+
     if not silent:
         return None
     return [ModelVersionResponse(**variant) for variant in data]
@@ -134,6 +139,10 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
         identifier = str(identifier)
     silent = not is_cli_call()
     data = request_info(identifier, "modelVersions")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("variants.get", properties={"variant_id": identifier}, include_system_metadata=False)
 
     if not silent:
         return print_hub_resource_info(
@@ -261,6 +270,11 @@ def create_variant(
                 f"Model variant '{name}' already exists for model '{model_id}'"
             ) from e
         raise
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("variants.create", properties=data, include_system_metadata=False)
+
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
     if not silent:
@@ -282,3 +296,7 @@ def delete_variant(identifier: UUID | str) -> None:
     variant_id = get_resource_id(identifier, "modelVersions")
     Request.delete(service="models", endpoint=f"modelVersions/{variant_id}")
     logger.info(f"Model variant '{variant_id}' deleted")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("variants.delete", properties={"variant_id": identifier}, include_system_metadata=False)

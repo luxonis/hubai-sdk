@@ -57,3 +57,22 @@ def sanitize_net_name(name: str, with_suffix: bool = False) -> str:
 
 def is_cli_call() -> bool:
     return os.environ.get("HUBAI_CALL_SOURCE") == "CLI"
+
+
+def is_pip_package(filepath: str = __name__) -> bool:
+    """Determine if the file at the given filepath is part of a pip
+    package.
+
+    Args:
+        filepath (str): The filepath to check.
+
+    Returns:
+        (bool): True if the file is part of a pip package, False otherwise.
+    """
+    import importlib.util
+
+    # Get the spec for the module
+    spec = importlib.util.find_spec(filepath)
+
+    # Return whether the spec is not None and the origin is not None (indicating it is a package)
+    return spec is not None and spec.origin is not None

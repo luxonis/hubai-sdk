@@ -13,12 +13,16 @@ from hubai_sdk.services.convert import convert as cli_convert
 from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
+from hubai_sdk.telemetry import initialize_telemetry
 from hubai_sdk.utils.environ import environ
 
 # Set a flag to indicate that the call is coming from the CLI
 # we can then detect if we need to log to the console or not
 os.environ["HUBAI_CALL_SOURCE"] = "CLI"
 
+# Initialize telemetry for CLI usage
+telemetry = initialize_telemetry()
+telemetry.capture("init.cli", include_system_metadata=True)
 
 app = App(help="Interactions with resources on HubAI.", group="HubAI Commands")
 

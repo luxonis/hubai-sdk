@@ -15,6 +15,7 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import ModelResponse
+from hubai_sdk.telemetry import get_telemetry
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
@@ -86,6 +87,10 @@ def list_models(
         keys=field or ["name", "id", "slug"],
     )
 
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("models.list", include_system_metadata=False)
+
     if not silent:
         return None
 
@@ -106,6 +111,10 @@ def get_model(identifier: UUID | str) -> ModelResponse | None:
         identifier = str(identifier)
     silent = not is_cli_call()
     data = request_info(identifier, "models")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("models.get", properties={"model_id": identifier}, include_system_metadata=False)
 
     if not silent:
         return print_hub_resource_info(
@@ -244,6 +253,10 @@ def create_model(
         raise
     logger.info(f"Model '{res['name']}' created with ID '{res['id']}'")
 
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("models.create", properties=data, include_system_metadata=False)
+
     if not silent:
         return get_model(res["id"])
     return ModelResponse(**res)
@@ -365,6 +378,11 @@ def update_model(
         raise
     logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
 
+    telemetry = get_telemetry()
+    if telemetry:
+        data["model_id"] = identifier
+        telemetry.capture("models.update", properties=data, include_system_metadata=False)
+
     if not silent:
         return get_model(res["id"])
 
@@ -385,3 +403,7 @@ def delete_model(identifier: UUID | str) -> None:
     model_id = get_resource_id(identifier, "models")
     Request.delete(service="models", endpoint=f"models/{model_id}")
     logger.info(f"Model '{identifier}' deleted")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("models.delete", properties={"model_id": identifier}, include_system_metadata=False)
