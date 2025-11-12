@@ -73,4 +73,4 @@ jobs:
     - name: Run tests
       env:
         HUBAI_API_KEY: ${{ secrets.HUBAI_API_KEY }}
-      run: pytest --cov=hubai_sdk --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+      run: pytest tests/
