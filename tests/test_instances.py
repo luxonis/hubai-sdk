@@ -2,7 +2,7 @@ import shutil
 import os
 import pytest
 from loguru import logger
-
+import uuid
 from hubai_sdk import HubAIClient
 from hubai_sdk.utils.types import ModelType
 
@@ -34,7 +34,7 @@ def test_create_and_delete_instance(client: HubAIClient):
     if not variants:
         pytest.skip("No variants available to test create_and_delete_instance")
     instance = client.instances.create_instance(
-        name="test-sdk-instance-pytest",
+        name=f"test-sdk-instance-pytest-{str(uuid.uuid4())}",
         variant_id=variants[0].id,
         model_type=ModelType.ONNX,
     )
@@ -49,7 +49,7 @@ def test_e2e_instance(client: HubAIClient, base_model_path: str):
     if not variants:
         pytest.skip("No variants available to test e2e_instance")
     instance = client.instances.create_instance(
-        name="test-sdk-instance-base",
+        name=f"test-sdk-instance-base-{str(uuid.uuid4())}",
         variant_id=variants[0].id,
         model_type=ModelType.ONNX,
         input_shape=[1, 3, 288, 512],

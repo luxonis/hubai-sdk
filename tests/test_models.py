@@ -1,7 +1,7 @@
 import pytest
 from loguru import logger
 import os
-
+import uuid
 from hubai_sdk import HubAIClient
 
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
@@ -31,7 +31,7 @@ def test_create_and_delete_model(client: HubAIClient):
     """Test creating and deleting a model."""
     logger.info("Creating model")
     created_model = client.models.create_model(
-        name="test-sdk-model",
+        name=f"test-sdk-model-{str(uuid.uuid4())}",
         license_type="MIT",
         is_public=False,
         description="Test SDK model",
@@ -44,7 +44,7 @@ def test_create_and_delete_model(client: HubAIClient):
     # Assert model was created successfully
     assert created_model is not None
     assert hasattr(created_model, "id")
-    assert created_model.name == "test-sdk-model"
+    assert created_model.name == f"test-sdk-model-{str(uuid.uuid4())}"
 
     # Test deletion using the model ID (not the name)
     logger.info(f"Deleting model with ID: {created_model.id}")

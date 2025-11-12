@@ -4,14 +4,14 @@ from pathlib import Path
 from hubai_sdk import HubAIClient
 import pytest
 import os
-
+import uuid
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
 def test_rvc4_fp16_conversion(client: HubAIClient, base_model_path: str):
     response = client.convert.RVC4(
         path=base_model_path,
-        name="test-sdk-conversion-rvc4-fp16",
+        name=f"test-sdk-conversion-rvc4-fp16-{str(uuid.uuid4())}",
         target_precision="FP16",
     )
 
@@ -23,4 +23,4 @@ def test_rvc4_fp16_conversion(client: HubAIClient, base_model_path: str):
     assert Path.exists(downlaoded_path)
     shutil.rmtree(str(downlaoded_path.parent))
 
-    client.models.delete_model("test-sdk-conversion-rvc4-fp16")
+    client.models.delete_model(str(response.instance.model_id))
