@@ -43,7 +43,7 @@ def test_create_and_delete_instance(client: HubAIClient):
     client.instances.delete_instance(instance.id)
 
 
-def test_e2e_instance(client: HubAIClient):
+def test_e2e_instance(client: HubAIClient, model_base_path: str):
     """Test end-to-end instance functionality."""
     variants = client.variants.list_variants()
     if not variants:
@@ -57,7 +57,7 @@ def test_e2e_instance(client: HubAIClient):
     assert instance is not None
 
     client.instances.upload_file(
-        "/Users/jasa/Downloads/yolov8n-pose.onnx.tar.xz", instance.id
+        model_base_path, instance.id
     )
 
     downloaded_path = client.instances.download_instance(instance.id)
