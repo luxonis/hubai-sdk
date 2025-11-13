@@ -48,7 +48,7 @@ def test_create_and_delete_variant(client: HubAIClient, test_model_id: str):
     assert hasattr(created_variant, "id")
     assert created_variant.name == variant_name
     assert created_variant.version == "1.0.0"
-    assert created_variant.model_id == test_model_id
+    assert str(created_variant.model_id) == str(test_model_id)
 
     # Test deletion using the variant ID
     variant_id = created_variant.id
