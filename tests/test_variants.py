@@ -15,7 +15,6 @@ def test_list_variants(client: HubAIClient, test_model_id: str):
     """Test listing variants for a specific model."""
     variants = client.variants.list_variants(model_id=test_model_id)
     assert variants is not None
-    logger.info(f"Found {len(variants)} variants for model {test_model_id}")
 
     assert isinstance(variants, list)
     assert len(variants) >= 0
@@ -37,8 +36,9 @@ def test_get_variant(client: HubAIClient, test_model_id: str):
 
 def test_create_and_delete_variant(client: HubAIClient, test_model_id: str):
     """Test creating and deleting a variant."""
+    variant_name = f"test-sdk-variant-{str(uuid.uuid4())}"
     created_variant = client.variants.create_variant(
-        name=f"test-sdk-variant-{str(uuid.uuid4())}",
+        name=variant_name,
         model_id=test_model_id,
         variant_version="1.0.0",
     )
@@ -46,8 +46,9 @@ def test_create_and_delete_variant(client: HubAIClient, test_model_id: str):
     # Assert variant was created successfully
     assert created_variant is not None
     assert hasattr(created_variant, "id")
-    assert created_variant.name == f"test-sdk-variant-{str(uuid.uuid4())}"
+    assert created_variant.name == variant_name
     assert created_variant.version == "1.0.0"
+    assert created_variant.model_id == test_model_id
 
     # Test deletion using the variant ID
     variant_id = created_variant.id

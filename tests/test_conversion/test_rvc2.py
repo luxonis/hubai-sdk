@@ -9,9 +9,10 @@ os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
 def test_rvc2_conversion(client: HubAIClient, base_model_path: str):
+    model_name = f"test-sdk-conversion-rvc2-{str(uuid.uuid4())}"
     response = client.convert.RVC2(
         path=base_model_path,
-        name=f"test-sdk-conversion-rvc2-{str(uuid.uuid4())}",
+        name=model_name,
     )
 
     assert response is not None

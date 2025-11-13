@@ -9,9 +9,10 @@ os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
 def test_rvc4_fp16_conversion(client: HubAIClient, base_model_path: str):
+    model_name = f"test-sdk-conversion-rvc4-fp16-{str(uuid.uuid4())}"
     response = client.convert.RVC4(
         path=base_model_path,
-        name=f"test-sdk-conversion-rvc4-fp16-{str(uuid.uuid4())}",
+        name=model_name,
         target_precision="FP16",
     )
 
