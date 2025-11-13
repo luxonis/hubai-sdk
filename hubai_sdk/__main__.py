@@ -13,7 +13,7 @@ from hubai_sdk.services.convert import convert as cli_convert
 from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
-from hubai_sdk.telemetry import initialize_telemetry
+from hubai_sdk.utils.telemetry import initialize_telemetry
 from hubai_sdk.utils.environ import environ
 
 # Set a flag to indicate that the call is coming from the CLI

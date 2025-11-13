@@ -13,7 +13,7 @@ from hubai_sdk.services.instances import (
 )
 from hubai_sdk.services.models import create_model
 from hubai_sdk.services.variants import create_variant
-from hubai_sdk.telemetry import get_telemetry, suppress_telemetry
+from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.typing import (
     License,
     Quantization,

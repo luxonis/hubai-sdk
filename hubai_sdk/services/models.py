@@ -15,7 +15,7 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import ModelResponse
-from hubai_sdk.telemetry import get_telemetry
+from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
