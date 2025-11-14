@@ -9,11 +9,6 @@ on:
       - 'examples/**'
       - .github/workflows/tests.yaml
 
-permissions:
-  pull-requests: write
-  contents: write
-  checks: write
-
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
