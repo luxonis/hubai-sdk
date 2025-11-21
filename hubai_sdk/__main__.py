@@ -15,7 +15,7 @@ from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.telemetry import initialize_telemetry
 from hubai_sdk.utils.environ import environ
-
+from contextlib import suppress
 # Set a flag to indicate that the call is coming from the CLI
 # we can then detect if we need to log to the console or not
 os.environ["HUBAI_CALL_SOURCE"] = "CLI"
@@ -89,7 +89,8 @@ def logout() -> None:
         logger.info("User not logged in. Nothing to logout.")
         return
 
-    keyring.delete_password("HubAI", "api_key")
+    with suppress(Exception):
+        keyring.delete_password("HubAI", "api_key")
     environ.HUBAI_API_KEY = None
     logger.info("Logged out successfully.")
 

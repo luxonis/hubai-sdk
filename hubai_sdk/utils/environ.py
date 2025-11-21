@@ -47,11 +47,15 @@ class Environ(BaseEnviron):
 
     @model_validator(mode="after")
     def validate_hubai_api_key(self) -> Self:
-        if self.HUBAI_API_KEY:
-            return self
 
         with suppress(Exception):
-            self.HUBAI_API_KEY = get_password_with_timeout("HubAI", "api_key")
+            keyring_api_key = get_password_with_timeout("HubAI", "api_key")
+
+        if keyring_api_key:
+            if self.HUBAI_API_KEY:
+                logger.warning("2 API keys found. One from environment variable and one from persistent storage (done via `hubai login`). By default, the persistent storage will be used.")
+            self.HUBAI_API_KEY = keyring_api_key
+            return self
 
         return self
 
