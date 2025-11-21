@@ -51,7 +51,7 @@ def login(
 
     Parameters
     ----------
-    relogin : bool
+    relogin: bool
         Relogin if already logged in.
     """
     if environ.HUBAI_API_KEY and not relogin:

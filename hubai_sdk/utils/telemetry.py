@@ -45,9 +45,9 @@ class Telemetry:
 
         Parameters
         ----------
-        project_api_key : str | None
+        project_api_key: str | None
             PostHog project API key. If None, uses the default.
-        host : str | None
+        host: str | None
             PostHog host URL. If None, uses the default.
         """
         # Check if telemetry is disabled via environment variable
@@ -97,13 +97,7 @@ class Telemetry:
 
     @property
     def user_id(self) -> str:
-        """Get or create a consistent user ID for telemetry.
-
-        Returns
-        -------
-        str
-            A consistent user ID for this SDK installation
-        """
+        """Get or create a consistent user ID for telemetry."""
         if self._curr_user_id:
             return self._curr_user_id
 
@@ -145,9 +139,9 @@ class Telemetry:
 
         Parameters
         ----------
-        event_name : str
+        event_name: str
             Name of the event to capture
-        properties : dict[str, Any] | None
+        properties: dict[str, Any] | None
             Optional properties to attach to the event
         include_system_metadata: bool
             Whether to include system metadata in the event

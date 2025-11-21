@@ -398,8 +398,8 @@ def RVC2(
         Additional keyword arguments to be passed to the
         online conversion. See also `convert` function.
 
-    Hub kwargs:
-    ------------
+    Hub kwargs
+    ----------
     name : str, optional
         Name of the model. If not specified, the name will be taken from the configuration file or the model file.
     license_type : License, optional
@@ -502,8 +502,8 @@ def RVC3(
         Additional keyword arguments to be passed to the
         online conversion.
 
-    Hub kwargs:
-    ------------
+    Hub kwargs
+    ----------
     name : str, optional
         Name of the model. If not specified, the name will be taken from the configuration file or the model file.
     license_type : License, optional
@@ -616,8 +616,8 @@ def RVC4(
         Additional keyword arguments to be passed to the
         online conversion. See also `convert` function.
 
-    Hub kwargs:
-    ------------
+    Hub kwargs
+    ----------
     name : str, optional
         Name of the model. If not specified, the name will be taken from the configuration file or the model file.
     license_type : License, optional
@@ -723,8 +723,8 @@ def Hailo(
         Additional keyword arguments to be passed to the
         online conversion. See also `convert` function.
 
-    Hub kwargs:
-    ------------
+    Hub kwargs
+    ----------
     name : str, optional
         Name of the model. If not specified, the name will be taken from the configuration file or the model file.
     license_type : License, optional
