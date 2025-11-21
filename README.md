@@ -61,7 +61,7 @@ This will store the API key in your environment variable and will be used by the
 hubai login
 ```
 
-This will open a browser to generate a new API key and prompt you to enter it, which will be securely stored. Use `hubai --relogin` to relogin with different API key or `hubai logout` to logout.
+This will open a browser to generate a new API key and prompt you to enter it, which will be securely stored. Use `hubai login --relogin` to relogin with different API key or `hubai logout` to logout.
 
 **Option 3: Pass API Key Directly**
 
