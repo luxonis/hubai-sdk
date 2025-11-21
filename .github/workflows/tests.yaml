@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'hubai_nodes/**'
+      - 'hubai_sdk/**'
       - 'tests/**'
       - 'examples/**'
       - .github/workflows/tests.yaml
