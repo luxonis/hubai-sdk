@@ -14,6 +14,7 @@ def test_rvc4_int8_conversion(client: HubAIClient, base_model_path: str):
         name=model_name,
         target_precision="INT8",
         quantization_data="GENERAL",
+        max_quantization_images=50
     )
 
     assert response is not None
