@@ -326,6 +326,38 @@ response = client.convert.RVC2(
 blob = response.downloaded_path
 ```
 
+### Conversion from OpenVINO IR
+
+**`blobconverter` example**
+
+```python
+import blobconverter
+
+blob = blobconverter.from_openvino(
+    xml="resnet18.xml",
+    bin="resnet18.bin",
+)
+```
+
+**`HubAI SDK` example**
+
+```python
+# When the XML and BIN files are at the same location,
+# only the XML needs to be specified
+response = client.convert.RVC2("resnet18.xml")
+blob = response.downloaded_path
+
+# Otherwise, the BIN file can be specified using
+# the `opts` parameter
+response = client.convert.RVC2(
+    path="resnet18.xml",
+    opts={
+        "input_bin": "resnet18.bin",
+    }
+)
+blob = response.downloaded_path
+```
+
 ### Conversion from `tflite`
 
 > [!WARNING]
@@ -348,30 +380,6 @@ blob = blobconverter.from_tf(
 response = client.convert.RVC2(
     path="resnet18.tflite",
 
-)
-
-blob = response.downloaded_path
-```
-
-### RVC3 Conversion
-
-**Simple ONNX conversion using `blobconverter`**
-
-```python
-
-import blobconverter
-
-blob = blobconverter.from_onnx(
-    model="resnet18.onnx",
-    version="2022.3_RVC3",
-)
-```
-
-**Equivalent code using `HubAI SDK`**
-
-```python
-response = client.convert.RVC3(
-    path="resnet18.onnx",
 )
 
 blob = response.downloaded_path

@@ -32,6 +32,7 @@ from hubai_sdk.utils.hubai_models import (
     ModelInstanceResponse,
 )
 from hubai_sdk.utils.types import ModelType
+from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
     name="instance",
@@ -187,6 +188,10 @@ def list_instances(
         ],
     )
 
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.list", include_system_metadata=True)
+
     if not silent:
         return None
     return [ModelInstanceResponse(**instance) for instance in data]
@@ -213,6 +218,10 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
         identifier = str(identifier)
     silent = not is_cli_call()
     data = request_info(identifier, "modelInstances")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.get", properties={"instance_id": identifier}, include_system_metadata=True)
 
     if not silent:
         return print_hub_resource_info(
@@ -319,6 +328,11 @@ def download_instance(
             downloaded_path = file_path
 
     assert downloaded_path is not None
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.download", properties={"instance_id": identifier}, include_system_metadata=True)
+
     return downloaded_path
 
 
@@ -436,6 +450,10 @@ def create_instance(
         f"Model instance '{res['name']}' created with ID '{res['id']}'"
     )
 
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.create", properties=data, include_system_metadata=True)
+
     if not silent:
         return get_instance(res["id"])
     return ModelInstanceResponse(**res)
@@ -455,6 +473,10 @@ def delete_instance(identifier: UUID | str) -> None:
     instance_id = get_resource_id(identifier, "modelInstances")
     Request.delete(service="models", endpoint=f"modelInstances/{instance_id}")
     logger.info(f"Model instance '{identifier}' deleted")
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.delete", properties={"instance_id": identifier}, include_system_metadata=True)
 
 
 @overload
@@ -481,6 +503,11 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
     data = Request.get(
         service="models", endpoint=f"modelInstances/{model_instance_id}/config"
     )
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.config", properties={"instance_id": identifier}, include_system_metadata=True)
+
     if not silent:
         logger.info(data)
         return None
@@ -513,6 +540,11 @@ def get_files(
     data = Request.get(
         service="models", endpoint=f"modelInstances/{model_instance_id}/files"
     )
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.files", properties={"instance_id": identifier}, include_system_metadata=True)
+
     if not silent:
         logger.info(data)
         return None
@@ -543,3 +575,7 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     logger.info(
         f"File '{file_path}' uploaded to model instance '{identifier}'"
     )
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture("instances.upload", properties={"instance_id": identifier}, include_system_metadata=True)
