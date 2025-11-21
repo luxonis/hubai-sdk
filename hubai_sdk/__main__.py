@@ -56,7 +56,7 @@ def login(
     """
     if environ.HUBAI_API_KEY and not relogin:
         logger.info(
-            "User already logged in. Use `hubai --relogin` to relogin."
+            "User already logged in. Use `hubai login --relogin` to relogin."
         )
         return
 
