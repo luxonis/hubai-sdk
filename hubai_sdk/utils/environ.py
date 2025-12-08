@@ -15,7 +15,7 @@ def _get_password(
         result = keyring.get_password(service_name, username)
         q.put(result)
     except Exception as e:
-        logger.error(f"Failed to get password: {e}")
+        logger.warning(f"Failed to get password from keyring. Use HUBAI_API_KEY from environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}")
         q.put(None)
 
 
