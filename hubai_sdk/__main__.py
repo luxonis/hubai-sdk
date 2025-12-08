@@ -80,9 +80,9 @@ def login(
     try:
         keyring.set_password("HubAI", "api_key", api_key)
         logger.info("API key stored successfully.")
-    except Exception:
+    except Exception as e:
         logger.warning(
-            "Failed to store API key in keyring. Please set the HUBAI_API_KEY environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}"
+            f"Failed to store API key in keyring. Please set the HUBAI_API_KEY environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}"
         )
 
 
