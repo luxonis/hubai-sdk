@@ -7,39 +7,6 @@ from loguru import logger
 from pydantic import model_validator
 from typing_extensions import Self
 
-
-def _get_password_mac(
-    q: multiprocessing.Queue, service_name: str, username: str
-) -> None:
-    try:
-        result = keyring.get_password(service_name, username)
-        q.put(result)
-    except Exception as e:
-        logger.warning(f"Failed to get password from keyring. Use HUBAI_API_KEY from environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}")
-        q.put(None)
-
-
-# def get_password_with_timeout(
-#     service_name: str, username: str, timeout: float = 5
-# ) -> str | None:
-#     # if system is mac with arm, use direct keyring call
-#     if platform.system() == "Darwin" and platform.machine() == "arm64":
-#         return keyring.get_password(service_name, username)
-
-#     q = multiprocessing.Queue()
-#     p = multiprocessing.Process(
-#         target=_get_password, args=(q, service_name, username)
-#     )
-#     p.start()
-#     p.join(timeout)
-#     if p.is_alive():
-#         p.terminate()
-#         p.join()
-#         return None
-#     if not q.empty():
-#         return q.get()
-#     return None
-
 def get_password_with_timeout(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
