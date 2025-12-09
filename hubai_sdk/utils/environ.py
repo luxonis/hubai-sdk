@@ -52,7 +52,8 @@ def get_password_with_timeout(
         try:
             result = keyring.get_password(service_name, username)
             q.put(result)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get password from keyring. Use HUBAI_API_KEY from environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}")
             q.put(None)
 
     q = multiprocessing.Queue()
