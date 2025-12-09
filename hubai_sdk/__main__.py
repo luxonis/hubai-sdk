@@ -63,11 +63,11 @@ def login(
     logger.info("User not logged in. Follow the link to get your API key.")
     try:
         if not webbrowser.open("https://hub.luxonis.com/team-settings", new=2):
-            logger.error(
+            logger.warning(
                 "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings"
             )
     except Exception:
-        logger.error(
+        logger.warning(
             "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings"
         )
 
@@ -77,9 +77,13 @@ def login(
         logger.error("Invalid API key. Please try again.")
         sys.exit(1)
 
-    keyring.set_password("HubAI", "api_key", api_key)
-
-    logger.info("API key stored successfully.")
+    try:
+        keyring.set_password("HubAI", "api_key", api_key)
+        logger.info("API key stored successfully.")
+    except Exception as e:
+        logger.warning(
+            f"Failed to store API key in keyring. Please set the HUBAI_API_KEY environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}"
+        )
 
 
 @app.command(group="Admin")
