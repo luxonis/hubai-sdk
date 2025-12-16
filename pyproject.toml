@@ -3,6 +3,8 @@ name = "hubai-sdk"
 description = "SDK for HubAI."
 readme = "README.md"
 requires-python = ">=3.10"
+license-files = ["LICENSE"]
+license = "Apache-2.0"
 authors = [{ name = "Luxonis", email = "support@luxonis.com" }]
 maintainers = [{ name = "Luxonis", email = "support@luxonis.com" }]
 keywords = ["ml", "onnx", "openvino", "nn", "ai", "embedded"]
