@@ -1,6 +1,16 @@
 name: Tests
 
 on:
+  workflow_dispatch:
+    inputs:
+      hubai_stage:
+        description: "Stage to test (prod or stg)"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+          - stg
   pull_request:
     branches: [ main ]
     paths:
@@ -68,4 +78,5 @@ jobs:
     - name: Run tests
       env:
         HUBAI_API_KEY: ${{ secrets.HUBAI_API_KEY }}
+        HUBAI_URL: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_URL_STG || secrets.HUBAI_URL_PROD}}
       run: pytest tests/
