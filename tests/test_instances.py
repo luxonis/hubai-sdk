@@ -16,15 +16,12 @@ def test_list_instances(client: HubAIClient):
     assert len(instances) >= 0
 
 
-def test_get_instance(client: HubAIClient):
+def test_get_instance(client: HubAIClient, test_instance_id: str):
     """Test getting a specific instance."""
-    instances = client.instances.list_instances()
-    if not instances:
-        pytest.skip("No instances available to test get_instance")
-    instance = client.instances.get_instance(instances[0].id)
+    instance = client.instances.get_instance(test_instance_id)
     assert instance is not None
     assert hasattr(instance, "id")
-    assert str(instance.id) == str(instances[0].id)
+    assert str(instance.id) == str(test_instance_id)
 
 
 def test_create_and_delete_instance(client: HubAIClient):

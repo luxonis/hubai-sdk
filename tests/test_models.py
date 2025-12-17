@@ -13,16 +13,12 @@ def test_list_models(client: HubAIClient):
     assert isinstance(models, list)
 
 
-def test_get_model(client: HubAIClient):
+def test_get_model(client: HubAIClient, test_model_id: str):
     """Test getting a specific model."""
-    models = client.models.list_models()
-    if not models:
-        pytest.skip("No models available to test get_model")
-
-    model = client.models.get_model(models[0].id)
+    model = client.models.get_model(test_model_id)
     assert model is not None
     assert hasattr(model, "id")
-    assert str(model.id) == str(models[0].id)
+    assert str(model.id) == str(test_model_id)
 
 
 def test_create_and_delete_model(client: HubAIClient):
