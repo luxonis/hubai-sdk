@@ -8,7 +8,9 @@ os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 @pytest.fixture
 def test_model_id():
     """Fixture to provide a test model ID for variant operations."""
-    return "252c6e74-2869-4cbb-af7b-ccc9d655b42f"
+    stg_model_id = "aim_UJuH8qn9Q2XDoNw36Ljy2Z_stg"
+    prod_model_id = "252c6e74-2869-4cbb-af7b-ccc9d655b42f"
+    return stg_model_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_model_id
 
 
 def test_list_variants(client: HubAIClient, test_model_id: str):
