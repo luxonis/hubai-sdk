@@ -81,3 +81,19 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
 
     downloaded_path = client.instances.download_instance(base_instance.id, output_dir=str(Path.cwd()))
     return downloaded_path
+
+
+@pytest.fixture
+def test_instance_id():
+    """Fixture to provide a test instance ID for instance operations."""
+    stg_instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
+    prod_instance_id = "57fb6e9b-3157-44e7-9a1d-40254deb5313"
+    return stg_instance_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_instance_id
+
+
+@pytest.fixture
+def test_model_id():
+    """Fixture to provide a test model ID for variant operations."""
+    stg_model_id = "aim_UJuH8qn9Q2XDoNw36Ljy2Z_stg"
+    prod_model_id = "252c6e74-2869-4cbb-af7b-ccc9d655b42f"
+    return stg_model_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_model_id

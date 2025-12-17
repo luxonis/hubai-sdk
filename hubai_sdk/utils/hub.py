@@ -242,16 +242,16 @@ def is_valid_uuid(uuid_string: str) -> bool:
         return True
 
 
-def is_hubai_id(identifier: str, endpoint: Literal[
-        "models", "modelVersions", "modelInstances"
-    ]) -> bool:
-    with suppress(HTTPError):
-        data = Request.get(
-            service="models", endpoint=f"{endpoint}/{identifier}/"
-        )
-        if data:
-            return True
-    return False
+def is_hubai_id(identifier: str) -> bool:
+
+    temp = identifier
+    if not temp.startswith("ai"):
+        return False
+
+    if not "_" in identifier:
+        return False
+
+    return True
 
 
 def slug_to_id(
@@ -270,7 +270,9 @@ def slug_to_id(
                 service="models", endpoint=f"{endpoint}/", params=params
             )
             if data:
-                return data[0]["id"]
+                for item in data:
+                    if item["slug"] == slug:
+                        return str(item["id"])
     raise ValueError(f"Model with slug '{slug}' not found.")
 
 
@@ -283,7 +285,7 @@ def get_resource_id(
     if is_valid_uuid(identifier):
         return identifier
 
-    if is_hubai_id(identifier, endpoint):
+    if is_hubai_id(identifier):
         return identifier
 
     return slug_to_id(identifier, endpoint)
