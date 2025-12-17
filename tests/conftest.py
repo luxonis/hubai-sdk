@@ -72,6 +72,8 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
     instance_id = request.config.getoption("--base-instance-id", default=None)
     if instance_id is None:
         instance_id = os.getenv("HUBAI_BASE_INSTANCE_ID", "57fb6e9b-3157-44e7-9a1d-40254deb5313")
+        if os.getenv("HUBAI_STAGE", "") == "stg":
+            instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
 
     base_instance = client.instances.get_instance(instance_id)
     if base_instance is None:

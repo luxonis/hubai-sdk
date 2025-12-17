@@ -478,7 +478,7 @@ class InputType(Enum):
 
 
 class JobEventMessageResponse(BaseModel):
-    id: UUID = Field(..., title="Id")
+    id: UUID | str = Field(..., title="Id")
     queued_at: NaiveDatetime | None = Field(None, title="Queued At")
     started_at: NaiveDatetime | None = Field(None, title="Started At")
     finished_at: NaiveDatetime | None = Field(None, title="Finished At")
@@ -486,7 +486,7 @@ class JobEventMessageResponse(BaseModel):
     extra: dict[str, Any] = Field(..., title="Extra")
     name: str = Field(..., title="Name")
     status: EnumJobStatusType
-    correlation_id: UUID | None = Field(None, title="Correlation Id")
+    correlation_id: UUID | str | None = Field(None, title="Correlation Id")
     exception: str | None = Field(
         None, description="Exception message if any", title="Exception"
     )
@@ -508,15 +508,15 @@ class Metadata(BaseModel):
 
 
 class ModelDownloadResponse(BaseModel):
-    model_id: UUID = Field(
+    model_id: UUID | str = Field(
         ..., description="The ID of the model.", title="Model Id"
     )
-    model_version_id: UUID = Field(
+    model_version_id: UUID | str = Field(
         ...,
         description="The ID of the model version.",
         title="Model Version Id",
     )
-    model_instance_id: UUID = Field(
+    model_instance_id: UUID | str = Field(
         ...,
         description="The ID of the model instance.",
         title="Model Instance Id",
@@ -532,7 +532,7 @@ class ModelDownloadResponse(BaseModel):
 
 
 class ModelInstanceDetailsRequest(BaseModel):
-    model_instance_ids: list[UUID] = Field(
+    model_instance_ids: list[UUID | str] = Field(
         ...,
         description="List of IDs of the associated Model Instances.",
         title="Model Instance Ids",
@@ -540,7 +540,7 @@ class ModelInstanceDetailsRequest(BaseModel):
 
 
 class ModelInstanceFileResponse(BaseModel):
-    model_instance_id: UUID = Field(
+    model_instance_id: UUID | str = Field(
         ...,
         description="ID of the associated ModelInstance.",
         title="Model Instance Id",
@@ -548,7 +548,7 @@ class ModelInstanceFileResponse(BaseModel):
     filepath: str = Field(
         ..., description="Relative path to the file.", title="Filepath"
     )
-    id: UUID = Field(..., description="Unique identifier.", title="Id")
+    id: UUID | str = Field(..., description="Unique identifier.", title="Id")
     created: NaiveDatetime = Field(
         ..., description="Creation timestamp.", title="Created"
     )
@@ -563,12 +563,12 @@ class ModelInstanceFileResponse(BaseModel):
 
 
 class ModelInstancePatchRequest(BaseModel):
-    model_version_id: UUID | None = Field(
+    model_version_id: UUID | str | None = Field(
         None,
         description="ID of the associated Model.",
         title="Model Version Id",
     )
-    parent_id: UUID | None = Field(
+    parent_id: UUID | str | None = Field(
         None,
         description="Unique identifier of the parent ModelInstance.",
         title="Parent Id",
@@ -592,7 +592,7 @@ class ModelInstancePatchRequest(BaseModel):
         description="List of tags associated with the Model.",
         title="Tags",
     )
-    dag_run_id: UUID | None = Field(
+    dag_run_id: UUID | str | None = Field(
         None,
         description="ID of the DagRun associated with an exported Model.",
         title="Dag Run Id",
@@ -607,7 +607,7 @@ class ModelInstancePatchRequest(BaseModel):
         description="The input shape of the ModelInstance.",
         title="Input Shape",
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
         title="Quantization Data",
@@ -624,12 +624,12 @@ class ModelInstancePatchRequest(BaseModel):
 
 
 class ModelInstanceRequest(BaseModel):
-    model_version_id: UUID = Field(
+    model_version_id: UUID | str = Field(
         ...,
         description="ID of the associated Model Version.",
         title="Model Version Id",
     )
-    parent_id: UUID | None = Field(
+    parent_id: UUID | str | None = Field(
         None,
         description="Unique identifier of the parent ModelInstance.",
         title="Parent Id",
@@ -653,7 +653,7 @@ class ModelInstanceRequest(BaseModel):
         description="List of tags associated with the Model.",
         title="Tags",
     )
-    dag_run_id: UUID | None = Field(
+    dag_run_id: UUID | str | None = Field(
         None,
         description="ID of the DagRun associated with an exported Model.",
         title="Dag Run Id",
@@ -668,7 +668,7 @@ class ModelInstanceRequest(BaseModel):
         description="The input shape of the ModelInstance.",
         title="Input Shape",
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
         title="Quantization Data",
@@ -685,12 +685,12 @@ class ModelInstanceRequest(BaseModel):
 
 
 class ModelInstanceResponse(BaseModel):
-    model_version_id: UUID = Field(
+    model_version_id: UUID | str = Field(
         ...,
         description="ID of the associated Model Version.",
         title="Model Version Id",
     )
-    parent_id: UUID | None = Field(
+    parent_id: UUID | str | None = Field(
         None,
         description="Unique identifier of the parent ModelInstance.",
         title="Parent Id",
@@ -714,7 +714,7 @@ class ModelInstanceResponse(BaseModel):
         description="List of tags associated with the Model.",
         title="Tags",
     )
-    dag_run_id: UUID | None = Field(
+    dag_run_id: UUID | str | None = Field(
         None,
         description="ID of the DagRun associated with an exported Model.",
         title="Dag Run Id",
@@ -729,7 +729,7 @@ class ModelInstanceResponse(BaseModel):
         description="The input shape of the ModelInstance.",
         title="Input Shape",
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
         title="Quantization Data",
@@ -738,7 +738,7 @@ class ModelInstanceResponse(BaseModel):
         None,
         description="If the model instance is PYTORCH and YOLO, the YOLO version of this instance.",
     )
-    id: UUID = Field(..., description="Unique identifier.", title="Id")
+    id: UUID | str = Field(..., description="Unique identifier.", title="Id")
     created: NaiveDatetime = Field(
         ..., description="Creation timestamp.", title="Created"
     )
@@ -757,7 +757,7 @@ class ModelInstanceResponse(BaseModel):
         None,
         description="DEPRECATED: Specifies whether the ModelVersion is a root, base, or exported model.",
     )
-    model_id: UUID | None = Field(
+    model_id: UUID | str | None = Field(
         None, description="ID of the associated Model.", title="Model Id"
     )
     exportable_to: list[EnumModelType] | None = Field(
@@ -830,7 +830,7 @@ class ModelPatchRequest(BaseModel):
     description: constr(max_length=10000) | None = Field(
         None, description="Description of the model.", title="Description"
     )
-    architecture_id: UUID | None = Field(
+    architecture_id: UUID | str | None = Field(
         None,
         description="Architecture ID specifying a trainable architecture in EasyML.",
         title="Architecture Id",
@@ -844,7 +844,7 @@ class ModelPatchRequest(BaseModel):
     is_yolo: bool | None = Field(
         None, description="Whether the model is a YOLO model.", title="Is Yolo"
     )
-    project_id: UUID | None = Field(
+    project_id: UUID | str | None = Field(
         None, description="ID of the associated Project.", title="Project Id"
     )
 
@@ -867,7 +867,7 @@ class ModelResponse(BaseModel):
     description: constr(max_length=10000) | None = Field(
         None, description="Description of the model.", title="Description"
     )
-    architecture_id: UUID | None = Field(
+    architecture_id: UUID | str | None = Field(
         None,
         description="Architecture ID specifying a trainable architecture in EasyML.",
         title="Architecture Id",
@@ -883,7 +883,7 @@ class ModelResponse(BaseModel):
         description="Whether the model is a YOLO model.",
         title="Is Yolo",
     )
-    id: UUID = Field(..., description="Unique identifier.", title="Id")
+    id: UUID | str = Field(..., description="Unique identifier.", title="Id")
     team_name: str | None = Field(
         None, description="Hub team name.", title="Team Name"
     )
@@ -917,7 +917,7 @@ class ModelResponse(BaseModel):
         description="The platforms that a ModelVersion can be exported to.",
         title="Exportable To",
     )
-    project_id: UUID | None = Field(
+    project_id: UUID | str | None = Field(
         None,
         description="Project ID associated with this model.",
         title="Project Id",
@@ -963,7 +963,7 @@ class ModelVersionDownloadResponse(BaseModel):
 
 
 class ModelVersionPatchRequest(BaseModel):
-    model_id: UUID | None = Field(
+    model_id: UUID | str | None = Field(
         None, description="ID of the associated Model.", title="Model Id"
     )
     name: constr(max_length=255) | None = Field(
@@ -990,7 +990,7 @@ class ModelVersionPatchRequest(BaseModel):
     domain: EnumDomain | None = Field(
         None, description="Domain type.", examples=["GENERAL"]
     )
-    training_run_id: UUID | None = Field(
+    training_run_id: UUID | str | None = Field(
         None,
         description="ID of the training run that created this ModelVersion.",
         title="Training Run Id",
@@ -1008,7 +1008,7 @@ class ModelVersionPatchRequest(BaseModel):
 
 
 class ModelVersionRequest(BaseModel):
-    model_id: UUID = Field(
+    model_id: UUID | str = Field(
         ..., description="ID of the associated Model.", title="Model Id"
     )
     name: constr(max_length=255) = Field(
@@ -1035,7 +1035,7 @@ class ModelVersionRequest(BaseModel):
     domain: EnumDomain | None = Field(
         None, description="Domain type.", examples=["GENERAL"]
     )
-    training_run_id: UUID | None = Field(
+    training_run_id: UUID | str | None = Field(
         None,
         description="ID of the training run that created this ModelVersion.",
         title="Training Run Id",
@@ -1162,7 +1162,7 @@ class RVC2ExportParametersOnnxIr(BaseModel):
     name: constr(max_length=255) = Field(
         ..., description="Name of the exported model.", title="Name"
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="Either the domain name of the predefined quantization data or a UUID specifying a custom dataset.",
         title="Quantization Data",
@@ -1220,7 +1220,7 @@ class RVC3ExportParametersOnnxIr(BaseModel):
     name: constr(max_length=255) = Field(
         ..., description="Name of the exported model.", title="Name"
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="Either the domain name of the predefined quantization data or a UUID specifying a custom dataset.",
         title="Quantization Data",
@@ -1277,7 +1277,7 @@ class RVC4ExportParametersOnnxIr(BaseModel):
     name: constr(max_length=255) = Field(
         ..., description="Name of the exported model.", title="Name"
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         None,
         description="Either the domain name of the predefined quantization data or a UUID specifying a custom dataset.",
         title="Quantization Data",
@@ -1450,7 +1450,7 @@ class ArchitectureResponse(BaseModel):
         ...,
         description="The speed and accuracy ratings for each HW with this architecture.",
     )
-    id: UUID = Field(..., description="Unique identifier.", title="Id")
+    id: UUID | str = Field(..., description="Unique identifier.", title="Id")
     created: NaiveDatetime = Field(
         ..., description="Creation timestamp.", title="Created"
     )
@@ -1463,7 +1463,7 @@ class ArchitectureResponse(BaseModel):
 
 
 class AvailableForModel(BaseModel):
-    id: UUID = Field(
+    id: UUID | str = Field(
         ..., description="ID of the associated ModelInstance.", title="Id"
     )
     platform: EnumModelType = Field(
@@ -1476,7 +1476,7 @@ class BodyReadAllModelInstancesApiV1ModelInstancesGet(BaseModel):
     input_shape: list[str] | None = Field(None, title="Input Shape")
     platforms: list[EnumModelType] | None = Field(None, title="Platforms")
     snpe_version: list[str] | None = Field(None, title="Snpe Version")
-    multiple_model_version_ids: list[UUID] | None = Field(
+    multiple_model_version_ids: list[UUID | str] | None = Field(
         None, title="Multiple Model Version Ids"
     )
 
@@ -1501,7 +1501,7 @@ class HailoExportParametersOnnxIr(BaseModel):
     name: constr(max_length=255) = Field(
         ..., description="Name of the exported model.", title="Name"
     )
-    quantization_data: EnumQuantizationDataType | UUID | None = Field(
+    quantization_data: EnumQuantizationDataType | UUID | str | None = Field(
         "RANDOM",
         description="Either the domain name of the predefined quantization data or a UUID specifying a custom dataset.",
         title="Quantization Data",
@@ -1673,7 +1673,7 @@ class ModelCreateRequest(BaseModel):
     description: constr(max_length=10000) | None = Field(
         None, description="Description of the model.", title="Description"
     )
-    architecture_id: UUID | None = Field(
+    architecture_id: UUID | str | None = Field(
         None,
         description="Architecture ID specifying a trainable architecture in EasyML.",
         title="Architecture Id",
@@ -1692,7 +1692,7 @@ class ModelCreateRequest(BaseModel):
 
 
 class ModelVersionResponse(BaseModel):
-    model_id: UUID = Field(
+    model_id: UUID | str = Field(
         ..., description="ID of the associated Model.", title="Model Id"
     )
     name: constr(max_length=255) = Field(
@@ -1719,7 +1719,7 @@ class ModelVersionResponse(BaseModel):
     domain: EnumDomain | None = Field(
         None, description="Domain type.", examples=["GENERAL"]
     )
-    training_run_id: UUID | None = Field(
+    training_run_id: UUID | str | None = Field(
         None,
         description="ID of the training run that created this ModelVersion.",
         title="Training Run Id",
@@ -1734,7 +1734,7 @@ class ModelVersionResponse(BaseModel):
         description="List of tags associated with the ModelVersion.",
         title="Tags",
     )
-    id: UUID = Field(..., description="Unique identifier.", title="Id")
+    id: UUID | str = Field(..., description="Unique identifier.", title="Id")
     created: NaiveDatetime = Field(
         ..., description="Creation timestamp.", title="Created"
     )

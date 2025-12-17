@@ -242,6 +242,18 @@ def is_valid_uuid(uuid_string: str) -> bool:
         return True
 
 
+def is_hubai_id(identifier: str, endpoint: Literal[
+        "models", "modelVersions", "modelInstances"
+    ]) -> bool:
+    with suppress(HTTPError):
+        data = Request.get(
+            service="models", endpoint=f"{endpoint}/{identifier}/"
+        )
+        if data:
+            return True
+    return False
+
+
 def slug_to_id(
     slug: str,
     endpoint: Literal[
@@ -270,6 +282,10 @@ def get_resource_id(
 ) -> str:
     if is_valid_uuid(identifier):
         return identifier
+
+    if is_hubai_id(identifier, endpoint):
+        return identifier
+
     return slug_to_id(identifier, endpoint)
 
 

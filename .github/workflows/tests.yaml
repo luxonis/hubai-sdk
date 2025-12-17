@@ -77,6 +77,7 @@ jobs:
 
     - name: Run tests
       env:
+        HUBAI_STAGE: ${{ github.event.inputs.hubai_stage }}
         HUBAI_API_KEY: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_API_KEY_STG || secrets.HUBAI_API_KEY_PROD }}
         HUBAI_URL: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_URL_STG || secrets.HUBAI_URL_PROD}}
       run: pytest tests/
