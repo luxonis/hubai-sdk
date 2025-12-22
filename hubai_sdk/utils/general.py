@@ -96,12 +96,13 @@ def version_check(current_version: str):
         logger.info(f"Latest version: {latest}, Current version: {current}")
 
         if latest > current:
-            logger.warning(
+            logger.error(
                 f"A newer version of hubai-sdk is available: {latest} "
                 f"(current: {current}).\n"
                 f"Run: `pip install --upgrade hubai-sdk`",
                 file=sys.stderr,
             )
+            exit(1)
 
     except Exception:
         # Never crash user code
