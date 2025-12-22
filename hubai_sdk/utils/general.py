@@ -5,9 +5,8 @@ from pathlib import Path
 from loguru import logger
 
 import sys
-import json
 import requests
-from packaging.version import parse as parse_version
+from packaging.version import parse as parse_version, Version
 
 PYPI_URL = "https://pypi.org/pypi/hubai-sdk/json"
 
@@ -85,6 +84,22 @@ def is_pip_package(filepath: str = __name__) -> bool:
     return spec is not None and spec.origin is not None
 
 
+def significant_update_available(cur: Version, new: Version) -> bool:
+    # Must be newer at all
+    if new <= cur:
+        return False
+
+    # Notify on major or minor change only
+    if new.major != cur.major:
+        return True
+
+    if new.minor != cur.minor:
+        return True
+
+    # Patch-only change is ignored
+    return False
+
+
 def version_check(current_version: str):
     try:
         response = requests.get(PYPI_URL, timeout=2)
@@ -95,7 +110,7 @@ def version_check(current_version: str):
 
         logger.info(f"Latest version: {latest}, Current version: {current}")
 
-        if latest > current:
+        if significant_update_available(current, latest):
             logger.error(
                 f"A newer version of hubai-sdk is available: {latest} "
                 f"(current: {current}).\n"
