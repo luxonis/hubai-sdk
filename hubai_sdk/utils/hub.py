@@ -254,12 +254,57 @@ def is_hubai_id(identifier: str) -> bool:
     return True
 
 
+def extract_relevant_slug(slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]) -> str:
+
+    # check if the slug is full slug (team_id/model_name:variant_name)
+    if "/" in slug:
+        # FORMAT: team_id/model_name:variant_name
+        if len(slug.split("/")) != 2:
+            raise ValueError(f"Invalid slug: {slug}. It should be in the format of team_id/model_name:variant_name")
+
+        _, model_name = slug.split("/")
+
+        if ":" in model_name:
+            model_name, variant_name = model_name.split(":")
+        else:
+            variant_name = None
+
+        if endpoint == "models":
+            if model_name is None:
+                raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of team_id/model_name:variant_name")
+            return model_name
+        elif endpoint == "modelVersions":
+            raise ValueError(f"Can not extract variant name from slug: {slug}. Use corect variant slug or ID.")
+        else:
+            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use corect instance slug or ID.")
+
+    elif ":" in slug:
+        # FORMAT: model_name:variant_name
+        if len(slug.split(":")) != 2:
+            raise ValueError(f"Invalid slug: {slug}. It should be in the format of model_name:variant_name")
+        model_name, variant_name = slug.split(":")
+        if endpoint == "models":
+            if model_name is None:
+                raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of model_name:variant_name")
+            return model_name
+        elif endpoint == "modelVersions":
+            raise ValueError(f"Can not extract variant name from slug: {slug}. Use corect variant slug or ID.")
+        else:
+            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use corect instance slug or ID.")
+
+    else:
+        return slug
+
+
 def slug_to_id(
     slug: str,
     endpoint: Literal[
         "models", "modelVersions", "modelInstances"
     ],
 ) -> str:
+
+    slug = extract_relevant_slug(slug, endpoint)
+
     for is_public in [True, False]:
         with suppress(HTTPError):
             params = {

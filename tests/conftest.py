@@ -71,7 +71,7 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
     # Try to get instance ID from command line, env var, or use default
     instance_id = request.config.getoption("--base-instance-id", default=None)
     if instance_id is None:
-        instance_id = os.getenv("HUBAI_BASE_INSTANCE_ID", "57fb6e9b-3157-44e7-9a1d-40254deb5313")
+        instance_id = os.getenv("HUBAI_BASE_INSTANCE_ID", "aimi_LCEFX2rJSsMhEjsyeMEcWn")
         if os.getenv("HUBAI_STAGE", "") == "stg":
             instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
 
@@ -87,7 +87,7 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
 def test_instance_id():
     """Fixture to provide a test instance ID for instance operations."""
     stg_instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
-    prod_instance_id = "57fb6e9b-3157-44e7-9a1d-40254deb5313"
+    prod_instance_id = "aimi_LCEFX2rJSsMhEjsyeMEcWn"
     return stg_instance_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_instance_id
 
 
@@ -95,5 +95,5 @@ def test_instance_id():
 def test_model_id():
     """Fixture to provide a test model ID for variant operations."""
     stg_model_id = "aim_UJuH8qn9Q2XDoNw36Ljy2Z_stg"
-    prod_model_id = "252c6e74-2869-4cbb-af7b-ccc9d655b42f"
+    prod_model_id = "aim_FNtJ9PtPdS54T833mCBRGi"
     return stg_model_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_model_id
