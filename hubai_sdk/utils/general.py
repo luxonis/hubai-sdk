@@ -4,6 +4,13 @@ from pathlib import Path
 
 from loguru import logger
 
+import sys
+import json
+import requests
+from packaging.version import parse as parse_version
+
+PYPI_URL = "https://pypi.org/pypi/hubai-sdk/json"
+
 
 def _normalize_underscores(s: str) -> str:
     return re.sub(r"_+", "_", s)
@@ -76,3 +83,26 @@ def is_pip_package(filepath: str = __name__) -> bool:
 
     # Return whether the spec is not None and the origin is not None (indicating it is a package)
     return spec is not None and spec.origin is not None
+
+
+def version_check(current_version: str):
+    try:
+        response = requests.get(PYPI_URL, timeout=2)
+        data = response.json()
+
+        latest = parse_version(data["info"]["version"])
+        current = parse_version(current_version)
+
+        logger.info(f"Latest version: {latest}, Current version: {current}")
+
+        if latest > current:
+            logger.warning(
+                f"A newer version of hubai-sdk is available: {latest} "
+                f"(current: {current}).\n"
+                f"Run: `pip install --upgrade hubai-sdk`",
+                file=sys.stderr,
+            )
+
+    except Exception:
+        # Never crash user code
+        pass
