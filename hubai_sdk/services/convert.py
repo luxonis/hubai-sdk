@@ -31,7 +31,7 @@ from hubai_sdk.utils.hub import (
     wait_for_export,
 )
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.hubai_models import ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.sdk_models import ConvertResponse
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target

@@ -9,12 +9,12 @@ from hubai_sdk.typing import License, Order, Task
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
     get_resource_id,
-    hub_ls,
+    print_hub_ls,
     print_hub_resource_info,
     request_info,
 )
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.hubai_models import ModelResponse
+from hubai_sdk.utils.sdk_models import ModelResponse
 from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
@@ -72,27 +72,31 @@ def list_models(
     ] = None
 ) -> list[ModelResponse] | None:
     silent = not is_cli_call()
-    data = hub_ls(
-        "models",
-        tasks=list(tasks) if tasks else [],
-        license_type=license_type,
-        is_public=is_public,
-        slug=slug,
-        project_id=project_id,
-        luxonis_only=luxonis_only,
-        limit=limit,
-        sort=sort,
-        order=order,
-        _silent=silent,
-        keys=field or ["name", "id", "slug"],
-    )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("models.list", include_system_metadata=False)
 
+    data = Request.get(
+        service="models", endpoint="models", params={
+            "tasks": tasks,
+            "license_type": license_type,
+            "is_public": is_public,
+            "slug": slug,
+            "project_id": project_id,
+            "luxonis_only": luxonis_only,
+            "limit": limit,
+            "sort": sort,
+            "order": order,
+        }
+    )
+
     if not silent:
-        return None
+        return print_hub_ls(
+            data,
+            keys=field or ["name", "id", "slug"],
+            silent=silent
+        )
 
     return [ModelResponse(**model) for model in data]
 
@@ -257,9 +261,7 @@ def create_model(
     if telemetry:
         telemetry.capture("models.create", properties=data, include_system_metadata=False)
 
-    if not silent:
-        return get_model(res["id"])
-    return ModelResponse(**res)
+    return get_model(res["id"])
 
 
 @overload
@@ -383,10 +385,7 @@ def update_model(
         data["model_id"] = identifier
         telemetry.capture("models.update", properties=data, include_system_metadata=False)
 
-    if not silent:
-        return get_model(res["id"])
-
-    return ModelResponse(**res)
+    return get_model(res["id"])
 
 
 @app.command(name="delete")

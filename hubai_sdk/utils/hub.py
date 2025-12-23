@@ -202,18 +202,15 @@ def print_hub_resource_info(
     console.print(main_panel)
 
 
-def hub_ls(
-    endpoint: str,
+def print_hub_ls(
+    data: list[dict[str, Any]],
     keys: list[str],
     rename: dict[str, str] | None = None,
     *,
     _silent: bool = False,
     **kwargs,
-) -> list[dict[str, Any]]:
+) -> None:
     rename = rename or {}
-    data = Request.get(
-        service="models", endpoint=f"{endpoint}/", params=kwargs
-    )
     table = Table(row_styles=["yellow", "cyan"], box=ROUNDED)
     for key in keys:
         table.add_column(rename.get(key, key), header_style="magenta i")
@@ -230,7 +227,6 @@ def hub_ls(
     if not _silent:
         console = Console()
         console.print(table)
-    return data
 
 
 def is_valid_uuid(uuid_string: str) -> bool:
@@ -274,9 +270,9 @@ def extract_relevant_slug(slug: str, endpoint: Literal["models", "modelVersions"
                 raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of team_id/model_name:variant_name")
             return model_name
         elif endpoint == "modelVersions":
-            raise ValueError(f"Can not extract variant name from slug: {slug}. Use corect variant slug or ID.")
+            raise ValueError(f"Can not extract variant name from slug: {slug}. Use correct variant slug or ID.")
         else:
-            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use corect instance slug or ID.")
+            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use correct instance slug or ID.")
 
     elif ":" in slug:
         # FORMAT: model_name:variant_name
@@ -288,9 +284,9 @@ def extract_relevant_slug(slug: str, endpoint: Literal["models", "modelVersions"
                 raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of model_name:variant_name")
             return model_name
         elif endpoint == "modelVersions":
-            raise ValueError(f"Can not extract variant name from slug: {slug}. Use corect variant slug or ID.")
+            raise ValueError(f"Can not extract variant name from slug: {slug}. Use correct variant slug or ID.")
         else:
-            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use corect instance slug or ID.")
+            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use correct instance slug or ID.")
 
     else:
         return slug

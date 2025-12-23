@@ -21,7 +21,7 @@ from hubai_sdk.typing import (
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
     get_resource_id,
-    hub_ls,
+    print_hub_ls,
     print_hub_resource_info,
     request_info,
 )
@@ -29,8 +29,8 @@ from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
     ModelInstanceFileResponse,
-    ModelInstanceResponse,
 )
+from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.types import ModelType
 from hubai_sdk.utils.telemetry import get_telemetry
 
@@ -157,43 +157,41 @@ def list_instances(
     """
 
     silent = not is_cli_call()
-    data = hub_ls(
-        "modelInstances",
-        platforms=[platform.name for platform in platforms]
-        if platforms
-        else [],
-        model_id=str(model_id) if model_id else None,
-        model_version_id=str(variant_id) if variant_id else None,
-        model_type=model_type,
-        parent_id=str(parent_id) if parent_id else None,
-        model_class=model_class,
-        name=name,
-        hash=hash,
-        status=status,
-        compression_level=compression_level,
-        optimization_level=optimization_level,
-        is_public=is_public,
-        slug=slug,
-        limit=limit,
-        sort=sort,
-        order=order,
-        _silent=silent,
-        keys=field
-        or [
-            "slug",
-            "id",
-            "model_type",
-            "is_nn_archive",
-            "model_precision_type",
-        ],
-    )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
+    data = Request.get(service="models", endpoint="modelInstances", params={
+        "platforms": [platform.name for platform in platforms] if platforms else [],
+        "model_id": str(model_id) if model_id else None,
+        "model_version_id": str(variant_id) if variant_id else None,
+        "model_type": model_type,
+        "parent_id": str(parent_id) if parent_id else None,
+        "model_class": model_class,
+        "name": name,
+        "hash": hash,
+        "status": status,
+        "compression_level": compression_level,
+        "optimization_level": optimization_level,
+        "is_public": is_public,
+        "slug": slug,
+        "limit": limit,
+        "sort": sort,
+        "order": order,
+    })
+
+    for instance in data:
+        instance["model_name"] = request_info(instance["model_id"], "models")["name"]
+        instance["model_variant_name"] = request_info(instance["model_version_id"], "modelVersions")["name"]
+
     if not silent:
-        return None
+        return print_hub_ls(
+            data,
+            keys=field or ["model_name", "model_variant_name", "slug", "id", "model_type", "is_nn_archive", "model_precision_type"],
+            silent=silent
+        )
+
     return [ModelInstanceResponse(**instance) for instance in data]
 
 
@@ -219,6 +217,9 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
     silent = not is_cli_call()
     data = request_info(identifier, "modelInstances")
 
+    data["model_name"] = request_info(data["model_id"], "models")["name"]
+    data["model_variant_name"] = request_info(data["model_version_id"], "modelVersions")["name"]
+
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("instances.get", properties={"instance_id": identifier}, include_system_metadata=True)
@@ -229,6 +230,8 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
             title="Model Instance Info",
             json=False,
             keys=[
+                "model_name",
+                "model_variant_name",
                 "name",
                 "slug",
                 "id",
@@ -454,9 +457,7 @@ def create_instance(
     if telemetry:
         telemetry.capture("instances.create", properties=data, include_system_metadata=True)
 
-    if not silent:
-        return get_instance(res["id"])
-    return ModelInstanceResponse(**res)
+    return get_instance(res["id"])
 
 
 @app.command(name="delete")

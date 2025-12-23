@@ -9,12 +9,12 @@ from hubai_sdk.typing import Order
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
     get_resource_id,
-    hub_ls,
+    print_hub_ls,
     print_hub_resource_info,
     request_info,
 )
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.hubai_models import ModelVersionResponse
+from hubai_sdk.utils.sdk_models import ModelVersionResponse
 from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
@@ -95,26 +95,32 @@ def list_variants(
     """
 
     silent = not is_cli_call()
-    data = hub_ls(
-        "modelVersions",
-        model_id=str(model_id) if model_id else None,
-        is_public=is_public,
-        slug=slug,
-        variant_slug=variant_slug,
-        version=variant_version,
-        limit=limit,
-        sort=sort,
-        order=order,
-        _silent=silent,
-        keys=field or ["name", "version", "slug", "platforms"],
-    )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("variants.list", properties={"model_id": model_id}, include_system_metadata=False)
 
+    data = Request.get(service="models", endpoint="modelVersions", params={
+        "model_id": str(model_id) if model_id else None,
+        "slug": slug,
+        "variant_slug": variant_slug,
+        "version": variant_version,
+        "is_public": is_public,
+        "limit": limit,
+        "sort": sort,
+        "order": order,
+    })
+
+    for variant in data:
+        variant["model_name"] = request_info(variant["model_id"], "models")["name"]
+
     if not silent:
-        return None
+        return print_hub_ls(
+            data,
+            keys=field or ["model_name", "name", "version", "slug", "platforms"],
+            silent=silent
+        )
+
     return [ModelVersionResponse(**variant) for variant in data]
 
 
@@ -140,6 +146,8 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
     silent = not is_cli_call()
     data = request_info(identifier, "modelVersions")
 
+    data["model_name"] = request_info(data["model_id"], "models")["name"]
+
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("variants.get", properties={"variant_id": identifier}, include_system_metadata=False)
@@ -150,6 +158,7 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
             title="Model Variant Info",
             json=False,
             keys=[
+                "model_name",
                 "name",
                 "slug",
                 "version",
@@ -277,9 +286,7 @@ def create_variant(
 
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
-    if not silent:
-        return get_variant(res["id"])
-    return ModelVersionResponse(**res)
+    return get_variant(res["id"])
 
 
 @app.command(name="delete")
