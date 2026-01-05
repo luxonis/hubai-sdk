@@ -113,7 +113,7 @@ def list_instances(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> list[ModelInstanceResponse] | None:
-    """Lists model instances.
+    """List the model instances in the HubAI.
 
     Parameters
     ----------
@@ -148,11 +148,11 @@ def list_instances(
     limit : int
         Limit the number of model instances to show.
     sort : str
-        Sort the model instances by this field.
+        Sort the model instances by this field. It should be the field name from the ModelInstanceResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
-        By which order to sort the model instances.
+        Order to sort the model instances by. It should be "asc" or "desc".
     field : list[str] | None
-        List of fields to show in the output.
+        Fields to include in the response in case of CLI usage.
         By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown.
     """
 

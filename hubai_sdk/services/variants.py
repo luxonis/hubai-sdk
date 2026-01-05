@@ -69,7 +69,7 @@ def list_variants(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> list[ModelVersionResponse] | None:
-    """Lists model versions.
+    """List the model versions in the HubAI.
 
     Parameters
     ----------
@@ -86,12 +86,12 @@ def list_variants(
     limit : int
         Limit the number of model versions to show.
     sort : str
-        Sort the model versions by this field.
+        Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
-        By which order to sort the model versions.
+        Order to sort the model versions by. It should be "asc" or "desc".
     field : list[str] | None
-        List of fields to show in the output.
-        By default, ["name", "version", "slug", "platforms"] are shown.
+        Fields to include in the response in case of CLI usage.
+        By default, ["model_name", "name", "version", "slug", "platforms"] are shown.
     """
 
     silent = not is_cli_call()

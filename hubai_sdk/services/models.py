@@ -72,6 +72,32 @@ def list_models(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None
 ) -> list[ModelResponse] | None:
+    """List the models in the HubAI.
+
+    Parameters
+    ----------
+    tasks : list[Task] | None
+        Filter the listed models by tasks.
+    license_type : License | None
+        Filter the listed models by license type.
+    is_public : bool | None
+        Filter the listed models by public status.
+    slug : str | None
+        Filter the listed models by slug. You can directly copy the slug from the HubAI.
+    project_id : str | None
+        Filter the listed models by project ID.
+    luxonis_only : bool
+        Filter the listed models by Luxonis only.
+    limit : int
+        Maximum number of models to return.
+    sort : str
+        Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
+    order : Order
+        Order to sort the models by. It should be "asc" or "desc".
+    field : list[str] | None
+        Fields to include in the response in case of CLI usage.
+    """
+
     silent = not is_cli_call()
 
     telemetry = get_telemetry()
@@ -115,6 +141,13 @@ def get_model(identifier: UUID | str) -> None:
 
 @app.command(name="info")
 def get_model(identifier: UUID | str) -> ModelResponse | None:
+    """Get the model information from the HubAI.
+
+    Parameters
+    ----------
+    identifier : UUID | str
+        The model ID or slug.
+    """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     silent = not is_cli_call()
