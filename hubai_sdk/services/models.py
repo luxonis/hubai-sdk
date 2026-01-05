@@ -12,11 +12,11 @@ from hubai_sdk.utils.hub import (
     print_hub_ls,
     print_hub_resource_info,
     request_info,
+    extract_relevant_slug
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
 from hubai_sdk.utils.telemetry import get_telemetry
-from hubai_sdk.utils.hub import extract_relevant_slug
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
