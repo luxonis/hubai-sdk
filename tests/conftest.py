@@ -97,3 +97,11 @@ def test_model_id():
     stg_model_id = "aim_UJuH8qn9Q2XDoNw36Ljy2Z_stg"
     prod_model_id = "aim_FNtJ9PtPdS54T833mCBRGi"
     return stg_model_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_model_id
+
+
+@pytest.fixture
+def test_variant_id():
+    """Fixture to provide a test variant ID for instance operations."""
+    stg_variant_id = "aimv_UJuH8pVjm1mvWGYd69Jioz_stg"
+    prod_variant_id = "aimv_VitM2h2uQHtnZfQRJ2Ann9"
+    return stg_variant_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_variant_id
