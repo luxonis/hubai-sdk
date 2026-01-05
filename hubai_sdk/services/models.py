@@ -16,6 +16,7 @@ from hubai_sdk.utils.hub import (
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
 from hubai_sdk.utils.telemetry import get_telemetry
+from hubai_sdk.utils.hub import extract_relevant_slug
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
@@ -76,6 +77,9 @@ def list_models(
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("models.list", include_system_metadata=False)
+
+    if slug is not None:
+        slug = extract_relevant_slug(slug, "models")
 
     data = Request.get(
         service="models", endpoint="models", params={
