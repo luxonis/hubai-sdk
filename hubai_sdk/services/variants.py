@@ -30,6 +30,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -46,6 +47,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -62,6 +64,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -83,6 +86,8 @@ def list_variants(
         Filter the listed model versions by version.
     is_public : bool | None
         Filter the listed model versions by visibility.
+    include_model_name : bool
+        Whether to include the model name in the response. By default, it is False and the ModelVersionResponse will have "model_name" field as None. If True, the ModelVersionResponse will have "model_name" field as the name of the model.
     limit : int
         Limit the number of model versions to show.
     sort : str
@@ -91,7 +96,7 @@ def list_variants(
         Order to sort the model versions by. It should be "asc" or "desc".
     field : list[str] | None
         Fields to include in the response in case of CLI usage.
-        By default, ["model_name", "name", "version", "slug", "platforms"] are shown.
+        By default, ["name", "version", "slug", "platforms"] are shown. If include_model_name is True, ["model_name"] is added.
     """
 
     silent = not is_cli_call()
@@ -111,13 +116,14 @@ def list_variants(
         "order": order,
     })
 
-    for variant in data:
-        variant["model_name"] = request_info(variant["model_id"], "models")["name"]
+    if include_model_name:
+        for variant in data:
+            variant["model_name"] = request_info(variant["model_id"], "models")["name"]
 
     if not silent:
         return print_hub_ls(
             data,
-            keys=field or ["model_name", "name", "version", "slug", "platforms"],
+            keys=field or (["name", "version", "slug", "platforms"] if not include_model_name else ["model_name", "name", "version", "slug", "platforms"]),
             silent=silent
         )
 

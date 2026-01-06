@@ -56,6 +56,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -81,6 +82,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -106,6 +108,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -145,6 +148,8 @@ def list_instances(
         Only relevant for Hailo models.
     slug : str | None
         Filter the listed model instances by slug.
+    include_model_name : bool
+        Whether to include the model name and model variant name in the response. By default, it is False and the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as None. If True, the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as the name of the model and model variant.
     limit : int
         Limit the number of model instances to show.
     sort : str
@@ -153,7 +158,7 @@ def list_instances(
         Order to sort the model instances by. It should be "asc" or "desc".
     field : list[str] | None
         Fields to include in the response in case of CLI usage.
-        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown.
+        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown. If include_model_name is True, ["model_name", "model_variant_name"] are added.
     """
 
     silent = not is_cli_call()
@@ -181,14 +186,15 @@ def list_instances(
         "order": order,
     })
 
-    for instance in data:
-        instance["model_name"] = request_info(instance["model_id"], "models")["name"]
-        instance["model_variant_name"] = request_info(instance["model_version_id"], "modelVersions")["name"]
+    if include_model_name:
+        for instance in data:
+            instance["model_name"] = request_info(instance["model_id"], "models")["name"]
+            instance["model_variant_name"] = request_info(instance["model_version_id"], "modelVersions")["name"]
 
     if not silent:
         return print_hub_ls(
             data,
-            keys=field or ["model_name", "model_variant_name", "slug", "id", "model_type", "is_nn_archive", "model_precision_type"],
+            keys=field or (["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] if not include_model_name else ["model_name", "model_variant_name", "slug", "id", "model_type", "is_nn_archive", "model_precision_type"]),
             silent=silent
         )
 
