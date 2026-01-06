@@ -24,15 +24,12 @@ def test_get_instance(client: HubAIClient, test_instance_id: str):
     assert str(instance.id) == str(test_instance_id)
 
 
-def test_create_and_delete_instance(client: HubAIClient):
+def test_create_and_delete_instance(client: HubAIClient, test_variant_id: str):
     """Test creating and deleting an instance."""
     instance_name = f"test-sdk-instance-pytest-{str(uuid.uuid4())}"
-    variants = client.variants.list_variants()
-    if not variants:
-        pytest.skip("No variants available to test create_and_delete_instance")
     instance = client.instances.create_instance(
         name=instance_name,
-        variant_id=variants[0].id,
+        variant_id=test_variant_id,
         model_type=ModelType.ONNX,
     )
     assert instance is not None
@@ -41,15 +38,12 @@ def test_create_and_delete_instance(client: HubAIClient):
     client.instances.delete_instance(instance.id)
 
 
-def test_e2e_instance(client: HubAIClient, base_model_path: str):
+def test_e2e_instance(client: HubAIClient, base_model_path: str, test_variant_id: str):
     """Test end-to-end instance functionality."""
     instance_name = f"test-sdk-instance-base-{str(uuid.uuid4())}"
-    variants = client.variants.list_variants()
-    if not variants:
-        pytest.skip("No variants available to test e2e_instance")
     instance = client.instances.create_instance(
         name=instance_name,
-        variant_id=variants[0].id,
+        variant_id=test_variant_id,
         model_type=ModelType.ONNX,
         input_shape=[1, 3, 288, 512],
     )

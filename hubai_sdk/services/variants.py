@@ -9,12 +9,12 @@ from hubai_sdk.typing import Order
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
     get_resource_id,
-    hub_ls,
+    print_hub_ls,
     print_hub_resource_info,
     request_info,
 )
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.hubai_models import ModelVersionResponse
+from hubai_sdk.utils.sdk_models import ModelVersionResponse
 from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
@@ -30,6 +30,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -46,6 +47,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -62,6 +64,7 @@ def list_variants(
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -69,7 +72,7 @@ def list_variants(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> list[ModelVersionResponse] | None:
-    """Lists model versions.
+    """List the model versions in the HubAI.
 
     Parameters
     ----------
@@ -83,38 +86,47 @@ def list_variants(
         Filter the listed model versions by version.
     is_public : bool | None
         Filter the listed model versions by visibility.
+    include_model_name : bool
+        Whether to include the model name in the response. By default, it is False and the ModelVersionResponse will have "model_name" field as None. If True, the ModelVersionResponse will have "model_name" field as the name of the model.
     limit : int
         Limit the number of model versions to show.
     sort : str
-        Sort the model versions by this field.
+        Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
-        By which order to sort the model versions.
+        Order to sort the model versions by. It should be "asc" or "desc".
     field : list[str] | None
-        List of fields to show in the output.
-        By default, ["name", "version", "slug", "platforms"] are shown.
+        Fields to include in the response in case of CLI usage.
+        By default, ["name", "version", "slug", "platforms"] are shown. If include_model_name is True, ["model_name"] is added.
     """
 
     silent = not is_cli_call()
-    data = hub_ls(
-        "modelVersions",
-        model_id=str(model_id) if model_id else None,
-        is_public=is_public,
-        slug=slug,
-        variant_slug=variant_slug,
-        version=variant_version,
-        limit=limit,
-        sort=sort,
-        order=order,
-        _silent=silent,
-        keys=field or ["name", "version", "slug", "platforms"],
-    )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("variants.list", properties={"model_id": model_id}, include_system_metadata=False)
 
+    data = Request.get(service="models", endpoint="modelVersions", params={
+        "model_id": str(model_id) if model_id else None,
+        "slug": slug,
+        "variant_slug": variant_slug,
+        "version": variant_version,
+        "is_public": is_public,
+        "limit": limit,
+        "sort": sort,
+        "order": order,
+    })
+
+    if include_model_name:
+        for variant in data:
+            variant["model_name"] = request_info(variant["model_id"], "models")["name"]
+
     if not silent:
-        return None
+        return print_hub_ls(
+            data,
+            keys=field or (["name", "version", "slug", "platforms"] if not include_model_name else ["model_name", "name", "version", "slug", "platforms"]),
+            silent=silent
+        )
+
     return [ModelVersionResponse(**variant) for variant in data]
 
 
@@ -140,6 +152,8 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
     silent = not is_cli_call()
     data = request_info(identifier, "modelVersions")
 
+    data["model_name"] = request_info(data["model_id"], "models")["name"]
+
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("variants.get", properties={"variant_id": identifier}, include_system_metadata=False)
@@ -150,6 +164,7 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
             title="Model Variant Info",
             json=False,
             keys=[
+                "model_name",
                 "name",
                 "slug",
                 "version",
@@ -277,9 +292,7 @@ def create_variant(
 
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
-    if not silent:
-        return get_variant(res["id"])
-    return ModelVersionResponse(**res)
+    return get_variant(res["id"])
 
 
 @app.command(name="delete")

@@ -21,7 +21,7 @@ from hubai_sdk.typing import (
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
     get_resource_id,
-    hub_ls,
+    print_hub_ls,
     print_hub_resource_info,
     request_info,
 )
@@ -29,8 +29,8 @@ from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
     ModelInstanceFileResponse,
-    ModelInstanceResponse,
 )
+from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.types import ModelType
 from hubai_sdk.utils.telemetry import get_telemetry
 
@@ -56,6 +56,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -81,6 +82,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -106,6 +108,7 @@ def list_instances(
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
     slug: str | None = None,
+    include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
@@ -113,7 +116,7 @@ def list_instances(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> list[ModelInstanceResponse] | None:
-    """Lists model instances.
+    """List the model instances in the HubAI.
 
     Parameters
     ----------
@@ -145,55 +148,56 @@ def list_instances(
         Only relevant for Hailo models.
     slug : str | None
         Filter the listed model instances by slug.
+    include_model_name : bool
+        Whether to include the model name and model variant name in the response. By default, it is False and the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as None. If True, the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as the name of the model and model variant.
     limit : int
         Limit the number of model instances to show.
     sort : str
-        Sort the model instances by this field.
+        Sort the model instances by this field. It should be the field name from the ModelInstanceResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
-        By which order to sort the model instances.
+        Order to sort the model instances by. It should be "asc" or "desc".
     field : list[str] | None
-        List of fields to show in the output.
-        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown.
+        Fields to include in the response in case of CLI usage.
+        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown. If include_model_name is True, ["model_name", "model_variant_name"] are added.
     """
 
     silent = not is_cli_call()
-    data = hub_ls(
-        "modelInstances",
-        platforms=[platform.name for platform in platforms]
-        if platforms
-        else [],
-        model_id=str(model_id) if model_id else None,
-        model_version_id=str(variant_id) if variant_id else None,
-        model_type=model_type,
-        parent_id=str(parent_id) if parent_id else None,
-        model_class=model_class,
-        name=name,
-        hash=hash,
-        status=status,
-        compression_level=compression_level,
-        optimization_level=optimization_level,
-        is_public=is_public,
-        slug=slug,
-        limit=limit,
-        sort=sort,
-        order=order,
-        _silent=silent,
-        keys=field
-        or [
-            "slug",
-            "id",
-            "model_type",
-            "is_nn_archive",
-            "model_precision_type",
-        ],
-    )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
+    data = Request.get(service="models", endpoint="modelInstances", params={
+        "platforms": [platform.name for platform in platforms] if platforms else [],
+        "model_id": str(model_id) if model_id else None,
+        "model_version_id": str(variant_id) if variant_id else None,
+        "model_type": model_type,
+        "parent_id": str(parent_id) if parent_id else None,
+        "model_class": model_class,
+        "name": name,
+        "hash": hash,
+        "status": status,
+        "compression_level": compression_level,
+        "optimization_level": optimization_level,
+        "is_public": is_public,
+        "slug": slug,
+        "limit": limit,
+        "sort": sort,
+        "order": order,
+    })
+
+    if include_model_name:
+        for instance in data:
+            instance["model_name"] = request_info(instance["model_id"], "models")["name"]
+            instance["model_variant_name"] = request_info(instance["model_version_id"], "modelVersions")["name"]
+
     if not silent:
-        return None
+        return print_hub_ls(
+            data,
+            keys=field or (["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] if not include_model_name else ["model_name", "model_variant_name", "slug", "id", "model_type", "is_nn_archive", "model_precision_type"]),
+            silent=silent
+        )
+
     return [ModelInstanceResponse(**instance) for instance in data]
 
 
@@ -219,6 +223,9 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
     silent = not is_cli_call()
     data = request_info(identifier, "modelInstances")
 
+    data["model_name"] = request_info(data["model_id"], "models")["name"]
+    data["model_variant_name"] = request_info(data["model_version_id"], "modelVersions")["name"]
+
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("instances.get", properties={"instance_id": identifier}, include_system_metadata=True)
@@ -229,6 +236,8 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
             title="Model Instance Info",
             json=False,
             keys=[
+                "model_name",
+                "model_variant_name",
                 "name",
                 "slug",
                 "id",
@@ -454,9 +463,7 @@ def create_instance(
     if telemetry:
         telemetry.capture("instances.create", properties=data, include_system_metadata=True)
 
-    if not silent:
-        return get_instance(res["id"])
-    return ModelInstanceResponse(**res)
+    return get_instance(res["id"])
 
 
 @app.command(name="delete")
