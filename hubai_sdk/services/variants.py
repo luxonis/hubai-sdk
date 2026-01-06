@@ -26,7 +26,6 @@ app = App(
 @overload
 def list_variants(
     model_id: UUID | str | None = None,
-    slug: str | None = None,
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
@@ -43,7 +42,6 @@ def list_variants(
 @overload
 def list_variants(
     model_id: UUID | str | None = None,
-    slug: str | None = None,
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
@@ -60,7 +58,6 @@ def list_variants(
 @app.command(name="ls")
 def list_variants(
     model_id: UUID | str | None = None,
-    slug: str | None = None,
     variant_slug: str | None = None,
     variant_version: str | None = None,
     is_public: bool | None = None,
@@ -78,8 +75,6 @@ def list_variants(
     ----------
     model_id : UUID | str | None
         Filter the listed model versions by model ID.
-    slug : str | None
-        Filter the listed model versions by slug.
     variant_slug : str | None
         Filter the listed model versions by variant slug.
     variant_version : str | None
@@ -107,7 +102,6 @@ def list_variants(
 
     data = Request.get(service="models", endpoint="modelVersions", params={
         "model_id": str(model_id) if model_id else None,
-        "slug": slug,
         "variant_slug": variant_slug,
         "version": variant_version,
         "is_public": is_public,

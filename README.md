@@ -104,6 +104,14 @@ print(f"Converted model downloaded to: {response.downloaded_path}")
 
 The SDK provides four main services accessible through the `HubAIClient`:
 
+### Using Slugs from HubAI
+
+You can copy slugs directly from the HubAI platform and use them as identifiers in the SDK for models and variants. For example like this:
+
+```bash
+hubai model info luxonis/yolov6-nano:r2-coco-512x384
+```
+
 ### 🤖 Models Service (`client.models`)
 
 Manage ML models in HubAI.
@@ -116,7 +124,7 @@ models = client.models.list_models(
     limit=10
 )
 
-# Get model by ID or slug
+# Get model by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
 model = client.models.get_model("model-id-or-slug")
 
 # Create a new model
@@ -147,8 +155,8 @@ Manage model variants and versions.
 # List variants (optionally filtered by model)
 variants = client.variants.list_variants(model_id="model-id")
 
-# Get variant by ID
-variant = client.variants.get_variant("variant-id")
+# Get variant by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
+variant = client.variants.get_variant("variant-id-or-slug")
 
 # Create a new variant
 new_variant = client.variants.create_variant(

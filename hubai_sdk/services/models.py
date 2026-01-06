@@ -12,7 +12,6 @@ from hubai_sdk.utils.hub import (
     print_hub_ls,
     print_hub_resource_info,
     request_info,
-    extract_relevant_slug
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
@@ -28,7 +27,6 @@ def list_models(
     tasks: list[Task] | None = None,
     license_type: License | None = None,
     is_public: bool | None = None,
-    slug: str | None = None,
     project_id: str | None = None,
     luxonis_only: bool = False,
     limit: int = 50,
@@ -45,7 +43,6 @@ def list_models(
     tasks: list[Task] | None = None,
     license_type: License | None = None,
     is_public: bool | None = None,
-    slug: str | None = None,
     project_id: str | None = None,
     luxonis_only: bool = False,
     limit: int = 50,
@@ -62,7 +59,6 @@ def list_models(
     tasks: list[Task] | None = None,
     license_type: License | None = None,
     is_public: bool | None = None,
-    slug: str | None = None,
     project_id: str | None = None,
     luxonis_only: bool = False,
     limit: int = 50,
@@ -82,8 +78,6 @@ def list_models(
         Filter the listed models by license type.
     is_public : bool | None
         Filter the listed models by public status.
-    slug : str | None
-        Filter the listed models by slug. You can directly copy the slug from the HubAI.
     project_id : str | None
         Filter the listed models by project ID.
     luxonis_only : bool
@@ -104,15 +98,11 @@ def list_models(
     if telemetry:
         telemetry.capture("models.list", include_system_metadata=False)
 
-    if slug is not None:
-        slug = extract_relevant_slug(slug, "models")
-
     data = Request.get(
         service="models", endpoint="models", params={
             "tasks": tasks,
             "license_type": license_type,
             "is_public": is_public,
-            "slug": slug,
             "project_id": project_id,
             "luxonis_only": luxonis_only,
             "limit": limit,
