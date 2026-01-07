@@ -290,10 +290,13 @@ def full_slug_to_id(slug: str, endpoint: Literal["models", "modelVersions", "mod
         )
 
         if response:
-            if endpoint == "models":
-                return response["items"][0]["model"]["id"]
-            elif endpoint == "modelVersions":
-                return response["items"][0]["model_version"]["id"]
+            try:
+                if endpoint == "models":
+                    return response["items"][0]["model"]["id"]
+                elif endpoint == "modelVersions":
+                    return response["items"][0]["model_version"]["id"]
+            except KeyError:
+                return None # type: ignore
 
     return None # type: ignore
 
