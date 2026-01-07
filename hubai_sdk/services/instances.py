@@ -55,7 +55,6 @@ def list_instances(
     is_public: bool | None = None,
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    slug: str | None = None,
     include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
@@ -81,7 +80,6 @@ def list_instances(
     is_public: bool | None = None,
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    slug: str | None = None,
     include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
@@ -107,7 +105,6 @@ def list_instances(
     is_public: bool | None = None,
     compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    slug: str | None = None,
     include_model_name: bool = False,
     limit: int = 50,
     sort: str = "updated",
@@ -146,8 +143,6 @@ def list_instances(
     optimization_level : Literal[-100, 0, 1, 2, 3, 4] | None
         Filter the listed model instances by optimization level.
         Only relevant for Hailo models.
-    slug : str | None
-        Filter the listed model instances by slug.
     include_model_name : bool
         Whether to include the model name and model variant name in the response. By default, it is False and the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as None. If True, the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as the name of the model and model variant.
     limit : int
@@ -180,7 +175,6 @@ def list_instances(
         "compression_level": compression_level,
         "optimization_level": optimization_level,
         "is_public": is_public,
-        "slug": slug,
         "limit": limit,
         "sort": sort,
         "order": order,

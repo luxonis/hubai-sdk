@@ -250,57 +250,12 @@ def is_hubai_id(identifier: str) -> bool:
     return True
 
 
-def extract_relevant_slug(slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]) -> str:
-
-    # check if the slug is full slug (team_id/model_name:variant_name)
-    if "/" in slug:
-        # FORMAT: team_id/model_name:variant_name
-        if len(slug.split("/")) != 2:
-            raise ValueError(f"Invalid slug: {slug}. It should be in the format of team_id/model_name:variant_name")
-
-        _, model_name = slug.split("/")
-
-        if ":" in model_name:
-            model_name, variant_name = model_name.split(":")
-        else:
-            variant_name = None
-
-        if endpoint == "models":
-            if model_name is None:
-                raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of team_id/model_name:variant_name")
-            return model_name
-        elif endpoint == "modelVersions":
-            raise ValueError(f"Can not extract variant name from slug: {slug}. Use correct variant slug or ID.")
-        else:
-            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use correct instance slug or ID.")
-
-    elif ":" in slug:
-        # FORMAT: model_name:variant_name
-        if len(slug.split(":")) != 2:
-            raise ValueError(f"Invalid slug: {slug}. It should be in the format of model_name:variant_name")
-        model_name, variant_name = slug.split(":")
-        if endpoint == "models":
-            if model_name is None:
-                raise ValueError(f"Can not extract model name. Invalid slug: {slug}. It should be in the format of model_name:variant_name")
-            return model_name
-        elif endpoint == "modelVersions":
-            raise ValueError(f"Can not extract variant name from slug: {slug}. Use correct variant slug or ID.")
-        else:
-            raise ValueError(f"Can not extract instance slug from slug: {slug}. Use correct instance slug or ID.")
-
-    else:
-        return slug
-
-
 def slug_to_id(
     slug: str,
     endpoint: Literal[
         "models", "modelVersions", "modelInstances"
     ],
 ) -> str:
-
-    slug = extract_relevant_slug(slug, endpoint)
-
     for is_public in [True, False]:
         with suppress(HTTPError):
             params = {
@@ -314,7 +269,36 @@ def slug_to_id(
                 for item in data:
                     if item["slug"] == slug:
                         return str(item["id"])
-    raise ValueError(f"Model with slug '{slug}' not found.")
+
+    return None # type: ignore
+
+def full_slug_to_id(slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]) -> str:
+    data = {
+        "items": [
+            {
+                "identifier": 0,
+                "slug": slug
+            }
+        ]
+    }
+
+    with suppress(HTTPError):
+        response = Request.post(
+            service="models",
+            endpoint="models/read_by_slugs",
+            json=data
+        )
+
+        if response:
+            try:
+                if endpoint == "models":
+                    return response["items"][0]["model"]["id"]
+                elif endpoint == "modelVersions":
+                    return response["items"][0]["model_version"]["id"]
+            except KeyError:
+                return None # type: ignore
+
+    return None # type: ignore
 
 
 def get_resource_id(
@@ -329,7 +313,17 @@ def get_resource_id(
     if is_hubai_id(identifier):
         return identifier
 
-    return slug_to_id(identifier, endpoint)
+    found_id = full_slug_to_id(identifier, endpoint)
+
+    if found_id:
+        return found_id
+
+    found_id = slug_to_id(identifier, endpoint)
+
+    if not found_id:
+        raise ValueError(f"Resource for endpoint '{endpoint}' with identifier '{identifier}' not found in HubAI.")
+
+    return found_id
 
 
 def request_info(
