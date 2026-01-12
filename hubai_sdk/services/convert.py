@@ -62,7 +62,7 @@ def convert(
     domain: str | None = None,
     variant_tags: list[str] | None = None,
     variant_id: UUID | str | None = None,
-    quantization_data: Quantization | None = None,
+    quantization_data: Quantization | str | None = None,
     max_quantization_images: int | None = None,
     instance_tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -147,6 +147,9 @@ def convert(
         model_id = str(model_id)
     if isinstance(variant_id, UUID):
         variant_id = str(variant_id)
+
+    if quantization_data and quantization_data.upper() in set(Quantization.__args__):
+        quantization_data = quantization_data.upper()
 
     opts = opts or []
 
@@ -286,9 +289,7 @@ def convert(
         instance_id,
         target=target,
         target_precision=target_precision or "INT8",
-        quantization_data=quantization_data.upper()
-        if quantization_data
-        else None,
+        quantization_data=quantization_data,
         max_quantization_images=max_quantization_images,
         yolo_version=yolo_version,
         yolo_class_names=yolo_class_names,
