@@ -13,7 +13,7 @@ from rich.progress import Progress
 from hubai_sdk.typing import (
     ModelClass,
     Order,
-    Quantization,
+    QuantizationData,
     Status,
     TargetPrecision,
     YoloVersion,
@@ -196,15 +196,15 @@ def list_instances(
 
 
 @overload
-def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
+def get_instance(identifier: UUID | str, silent: bool | None = None) -> ModelInstanceResponse:
     ...
 
 @overload
-def get_instance(identifier: UUID | str) -> None:
+def get_instance(identifier: UUID | str, silent: bool | None = None) -> None:
     ...
 
 @app.command(name="info")
-def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
+def get_instance(identifier: UUID | str, silent: bool | None = None) -> ModelInstanceResponse | None:
     """Returns information about a model instance.
 
     Parameters
@@ -214,7 +214,8 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse | None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    silent = not is_cli_call()
+    if silent is None:
+        silent = not is_cli_call()
     data = request_info(identifier, "modelInstances")
 
     data["model_name"] = request_info(data["model_id"], "models")["name"]
@@ -347,7 +348,7 @@ def create_instance(
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
     model_precision_type: TargetPrecision | None = None,
-    quantization_data: Quantization | str | None = None,
+    quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
     is_deployable: bool | None = None,
@@ -364,7 +365,7 @@ def create_instance(
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
     model_precision_type: TargetPrecision | None = None,
-    quantization_data: Quantization | str | None = None,
+    quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
     is_deployable: bool | None = None,
@@ -381,7 +382,7 @@ def create_instance(
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
     model_precision_type: TargetPrecision | None = None,
-    quantization_data: Quantization | str | None = None,
+    quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
     is_deployable: bool | None = None,
@@ -398,7 +399,7 @@ def create_instance(
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
     model_precision_type: TargetPrecision | None = None,
-    quantization_data: Quantization | str | None = None,
+    quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
     is_deployable: bool | None = None,
@@ -419,9 +420,10 @@ def create_instance(
         The ID of the parent model instance.
     model_precision_type : TargetPrecision | None
         The precision type of the model.
-    quantization_data : Quantization | None
-        The quantization data for the model. Can be one of
-        predefined datasets or a dataset id.
+    quantization_data : QuantizationData | None
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None
@@ -457,7 +459,7 @@ def create_instance(
     if telemetry:
         telemetry.capture("instances.create", properties=data, include_system_metadata=True)
 
-    return get_instance(res["id"])
+    return get_instance(res["id"], silent)
 
 
 @app.command(name="delete")

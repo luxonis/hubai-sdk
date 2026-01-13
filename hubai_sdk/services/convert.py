@@ -16,7 +16,7 @@ from hubai_sdk.services.variants import create_variant
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.typing import (
     License,
-    Quantization,
+    QuantizationData,
     TargetPrecision,
     Task,
     YoloVersion,
@@ -62,7 +62,7 @@ def convert(
     domain: str | None = None,
     variant_tags: list[str] | None = None,
     variant_id: UUID | str | None = None,
-    quantization_data: Quantization | None = None,
+    quantization_data: QuantizationData | None = None,
     max_quantization_images: int | None = None,
     instance_tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -110,8 +110,10 @@ def convert(
         Commit hash.
     target_precision : TargetPrecision
         Target precision.
-    quantization_data : Quantization
-        Quantization data.
+    quantization_data : QuantizationData
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -286,9 +288,7 @@ def convert(
         instance_id,
         target=target,
         target_precision=target_precision or "INT8",
-        quantization_data=quantization_data.upper()
-        if quantization_data
-        else None,
+        quantization_data=None if not quantization_data else quantization_data.upper() if not quantization_data.startswith("aid_") else quantization_data,
         max_quantization_images=max_quantization_images,
         yolo_version=yolo_version,
         yolo_class_names=yolo_class_names,
@@ -429,8 +429,10 @@ def RVC2(
         Commit hash.
     target_precision : TargetPrecision
         Target precision.
-    quantization_data : Quantization
-        Quantization data.
+    quantization_data : QuantizationData, optional
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -533,8 +535,10 @@ def RVC3(
         Commit hash.
     target_precision : TargetPrecision
         Target precision.
-    quantization_data : Quantization
-        Quantization data.
+    quantization_data : QuantizationData, optional
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -647,8 +651,10 @@ def RVC4(
         Commit hash.
     target_precision : TargetPrecision
         Target precision.
-    quantization_data : Quantization
-        Quantization data.
+    quantization_data : QuantizationData, optional
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -754,8 +760,10 @@ def Hailo(
         Commit hash.
     target_precision : TargetPrecision
         Target precision.
-    quantization_data : Quantization
-        Quantization data.
+    quantization_data : QuantizationData, optional
+        The data used to quantize this model. Can be a predefined domain
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
+        starting with "aid_".
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
