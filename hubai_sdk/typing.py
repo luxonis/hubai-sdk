@@ -1,5 +1,4 @@
 from typing import Annotated, Literal, TypeAlias
-
 from pydantic import Field
 
 Task: TypeAlias = Literal[
