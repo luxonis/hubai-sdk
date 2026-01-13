@@ -15,8 +15,8 @@ from hubai_sdk.typing import (
     Order,
     QuantizationData,
     Status,
-    TargetPrecision,
     YoloVersion,
+    QuantizationMode,
 )
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
@@ -347,7 +347,8 @@ def create_instance(
     variant_id: UUID | str,
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
-    model_precision_type: TargetPrecision | None = None,
+    # model_precision_type: TargetPrecision | None = None,
+    quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -364,7 +365,7 @@ def create_instance(
     variant_id: UUID | str,
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
-    model_precision_type: TargetPrecision | None = None,
+    quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -381,7 +382,7 @@ def create_instance(
     variant_id: UUID | str,
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
-    model_precision_type: TargetPrecision | None = None,
+    quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -398,7 +399,7 @@ def create_instance(
     variant_id: UUID | str,
     model_type: ModelType | None = None,
     parent_id: UUID | str | None = None,
-    model_precision_type: TargetPrecision | None = None,
+    quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -418,10 +419,14 @@ def create_instance(
         The type of the model.
     parent_id : UUID | str | None
         The ID of the parent model instance.
-    model_precision_type : TargetPrecision | None
-        The precision type of the model.
+    quantization_mode : QuantizationMode | None
+        The quantization mode of the model. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
+        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
+        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | None
-        The data used to quantize this model. Can be a predefined domain
+        The quantization data for the model. Can be one of predefined domains
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
         starting with "aid_".
     tags : list[str] | None
@@ -443,7 +448,7 @@ def create_instance(
         "model_version_id": str(variant_id) if variant_id else None,
         "parent_id": str(parent_id) if parent_id else None,
         "model_type": model_type,
-        "model_precision_type": model_precision_type,
+        "quantization_mode": quantization_mode,
         "tags": tags or [],
         "input_shape": [input_shape] if input_shape else None,
         "quantization_data": quantization_data,

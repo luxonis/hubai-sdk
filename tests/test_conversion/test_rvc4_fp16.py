@@ -13,7 +13,7 @@ def test_rvc4_fp16_conversion(client: HubAIClient, base_model_path: str):
     response = client.convert.RVC4(
         path=base_model_path,
         name=model_name,
-        target_precision="FP16",
+        quantization_mode="FP16_STANDARD",
     )
 
     assert response is not None
