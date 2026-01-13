@@ -125,15 +125,15 @@ def list_variants(
 
 
 @overload
-def get_variant(identifier: UUID | str) -> ModelVersionResponse:
+def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVersionResponse:
     ...
 
 @overload
-def get_variant(identifier: UUID | str) -> None:
+def get_variant(identifier: UUID | str, silent: bool | None = None) -> None:
     ...
 
 @app.command(name="info")
-def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
+def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVersionResponse | None:
     """Returns information about a model version.
 
     Parameters
@@ -143,7 +143,8 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse | None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    silent = not is_cli_call()
+    if silent is None:
+        silent = not is_cli_call()
     data = request_info(identifier, "modelVersions")
 
     data["model_name"] = request_info(data["model_id"], "models")["name"]
@@ -286,7 +287,7 @@ def create_variant(
 
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
-    return get_variant(res["id"])
+    return get_variant(res["id"], silent)
 
 
 @app.command(name="delete")
