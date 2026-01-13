@@ -1,4 +1,6 @@
-from typing import Literal, TypeAlias
+from typing import Annotated, Literal, TypeAlias
+
+from pydantic import Field
 
 Task: TypeAlias = Literal[
     "CLASSIFICATION",
@@ -46,11 +48,17 @@ ModelClass: TypeAlias = Literal[
 
 Status: TypeAlias = Literal["available", "unavailable"]
 
-TargetPrecision: TypeAlias = Literal["FP16", "FP32", "INT8"]
+TargetPrecision: TypeAlias = Literal["FP16", "FP32", "INT8", "INT8_INT16"]
+
+QuantizationMode: TypeAlias = Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]
 
 Quantization: TypeAlias = Literal[
     "DRIVING", "FOOD", "GENERAL", "INDOORS", "RANDOM", "WAREHOUSE"
 ]
+
+DatasetId = Annotated[str, Field(pattern=r"^aid_[a-zA-Z0-9_]+")]
+
+QuantizationData: TypeAlias = Quantization | DatasetId
 
 YoloVersion: TypeAlias = Literal[
     "yolov5",

@@ -122,15 +122,15 @@ def list_models(
 
 
 @overload
-def get_model(identifier: UUID | str) -> ModelResponse:
+def get_model(identifier: UUID | str, silent: bool | None = None) -> ModelResponse:
     ...
 
 @overload
-def get_model(identifier: UUID | str) -> None:
+def get_model(identifier: UUID | str, silent: bool | None = None) -> None:
     ...
 
 @app.command(name="info")
-def get_model(identifier: UUID | str) -> ModelResponse | None:
+def get_model(identifier: UUID | str, silent: bool | None = None) -> ModelResponse | None:
     """Get the model information from the HubAI.
 
     Parameters
@@ -140,7 +140,8 @@ def get_model(identifier: UUID | str) -> ModelResponse | None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    silent = not is_cli_call()
+    if silent is None:
+        silent = not is_cli_call()
     data = request_info(identifier, "models")
 
     telemetry = get_telemetry()
@@ -288,7 +289,7 @@ def create_model(
     if telemetry:
         telemetry.capture("models.create", properties=data, include_system_metadata=False)
 
-    return get_model(res["id"])
+    return get_model(res["id"], silent)
 
 
 @overload
@@ -412,7 +413,7 @@ def update_model(
         data["model_id"] = identifier
         telemetry.capture("models.update", properties=data, include_system_metadata=False)
 
-    return get_model(res["id"])
+    return get_model(res["id"], silent)
 
 
 @app.command(name="delete")
