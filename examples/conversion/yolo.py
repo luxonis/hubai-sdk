@@ -6,7 +6,13 @@ from pathlib import Path
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model-path", "-m", type=str, required=True, help="Path to the PyTorch YOLO model file (.pt)")
+parser.add_argument(
+    "--model-path",
+    "-m",
+    type=str,
+    required=True,
+    help="Path to the PyTorch YOLO model file (.pt)",
+)
 
 args = parser.parse_args()
 
@@ -22,7 +28,7 @@ client = HubAIClient(api_key=api_key)
 response = client.convert.RVC4(
     path=model_path,
     name="test-sdk-conversion-yolo-v8",
-    target_precision="INT8",
+    quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
     max_quantization_images=100,
     yolo_input_shape=[512, 288],

@@ -21,7 +21,7 @@ client = HubAIClient(api_key=api_key)
 response = client.convert.RVC4(
     path=model_path,
     name="test-sdk-conversion-rvc4-int8",
-    target_precision="INT8",
+    quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
     max_quantization_images=100,
 )

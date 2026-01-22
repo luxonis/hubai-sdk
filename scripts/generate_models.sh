@@ -35,6 +35,17 @@ fi
 
 echo "✅ Replaced all occurrences of AwareDatetime with NaiveDatetime in hubai_models.py"
 
+# Replace all occurrences of ' with "
+if sed --version >/dev/null 2>&1; then
+  # GNU sed (Linux)
+  sed -i "s/'/\"/g" hubai_models.py
+else
+  # BSD sed (macOS, *BSD)
+  sed -i '' "s/'/\"/g" hubai_models.py
+fi
+
+echo "✅ Replaced all occurrences of ' with \" in hubai_models.py"
+
 # Move hubai_models.py to hubai_sdk/utils/
 mv hubai_models.py ../hubai_sdk/utils/
 
