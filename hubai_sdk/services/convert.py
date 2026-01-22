@@ -220,7 +220,9 @@ def convert(
 
         if variant_id is None:
             if model_id is None:
-                raise ValueError("`--model-id` is required to create a new model")
+                raise ValueError(
+                    "`--model-id` is required to create a new model"
+                )
 
             version = variant_version or get_version_number(str(model_id))
 
@@ -244,7 +246,9 @@ def convert(
                 raise ValueError(f"Variant with ID {variant_id} not found")
             if variant_version is not None:
                 if model_id is None:
-                    raise ValueError("`--model-id` is required to create a new variant version.")
+                    raise ValueError(
+                        "`--model-id` is required to create a new variant version."
+                    )
                 variant = create_variant(
                     variant.name,
                     model_id=model_id,
@@ -283,7 +287,9 @@ def convert(
 
     if target is Target.RVC4 and quantization_data is None:
         quantization_data = (
-            None if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"} else "RANDOM"
+            None
+            if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}
+            else "RANDOM"
         )
 
     target_options = get_target_specific_options(target, cfg, tool_version)
@@ -292,7 +298,11 @@ def convert(
         instance_id,
         target=target,
         quantization_mode=quantization_mode or "INT8_STANDARD",
-        quantization_data=None if not quantization_data else quantization_data.upper() if not quantization_data.startswith("aid_") else quantization_data,
+        quantization_data=None
+        if not quantization_data
+        else quantization_data.upper()
+        if not quantization_data.startswith("aid_")
+        else quantization_data,
         max_quantization_images=max_quantization_images,
         yolo_version=yolo_version,
         yolo_class_names=yolo_class_names,
@@ -313,13 +323,17 @@ def convert(
             "quantization_data": quantization_data,
             "max_quantization_images": max_quantization_images,
             "yolo_version": yolo_version,
-            "n_yolo_classes": len(yolo_class_names) if yolo_class_names else None,
+            "n_yolo_classes": len(yolo_class_names)
+            if yolo_class_names
+            else None,
             "yolo_input_shape": yolo_input_shape,
             "tool_version": tool_version,
             "input_shape": input_shape,
             **target_options,
         }
-        telemetry.capture("convert", properties=properties, include_system_metadata=True)
+        telemetry.capture(
+            "convert", properties=properties, include_system_metadata=True
+        )
 
     downloaded_path = download_instance(instance.id, output_dir)
 
@@ -454,15 +468,21 @@ def RVC2(
     """
 
     if hub_kwargs.get("quantization_mode") is not None:
-        logger.warning("`quantization_mode` is not supported for RVC2. It will be ignored.")
+        logger.warning(
+            "`quantization_mode` is not supported for RVC2. It will be ignored."
+        )
         del hub_kwargs["quantization_mode"]
 
     if hub_kwargs.get("quantization_data") is not None:
-        logger.warning("`quantization_data` is not supported for RVC2. It will be ignored.")
+        logger.warning(
+            "`quantization_data` is not supported for RVC2. It will be ignored."
+        )
         del hub_kwargs["quantization_data"]
 
     if hub_kwargs.get("max_quantization_images") is not None:
-        logger.warning("`max_quantization_images` is not supported for RVC2. It will be ignored.")
+        logger.warning(
+            "`max_quantization_images` is not supported for RVC2. It will be ignored."
+        )
         del hub_kwargs["max_quantization_images"]
 
     return convert(
@@ -564,15 +584,21 @@ def RVC3(
         List of class names for YOLO models.
     """
     if hub_kwargs.get("quantization_mode") is not None:
-        logger.warning("`quantization_mode` is not supported for RVC3. It will be ignored.")
+        logger.warning(
+            "`quantization_mode` is not supported for RVC3. It will be ignored."
+        )
         del hub_kwargs["quantization_mode"]
 
     if hub_kwargs.get("quantization_data") is not None:
-        logger.warning("`quantization_data` is not supported for RVC3. It will be ignored.")
+        logger.warning(
+            "`quantization_data` is not supported for RVC3. It will be ignored."
+        )
         del hub_kwargs["quantization_data"]
 
     if hub_kwargs.get("max_quantization_images") is not None:
-        logger.warning("`max_quantization_images` is not supported for RVC3. It will be ignored.")
+        logger.warning(
+            "`max_quantization_images` is not supported for RVC3. It will be ignored."
+        )
         del hub_kwargs["max_quantization_images"]
 
     if not isinstance(pot_target_device, PotDevice):
@@ -775,8 +801,8 @@ def Hailo(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
+    quantization_model : QuantizationMode
+        Quantization mode.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID

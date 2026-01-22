@@ -22,7 +22,7 @@ General parameters applicable to all conversion functions.
 | ------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `path`             | `str`                             | The path to the model file.                                                                                            |
 | `tool_version`     | `str \| None`                     | The version of the conversion tool.                                                                                    |
-| `target_precision` | `Literal["FP32", "FP16", "INT8"]` | The precision of the model. Defaults to `"INT8"`. Only applicable for RVC4                                             |
+| `quantization_mode` | `Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]` | The quantization mode of the model. Defaults to `"INT8_STANDARD"`. Only applicable for RVC4                                             |
 | `output_dir`       | `str \| None`                     | The directory to save the converted model. If not specified, the model will be saved in the current working directory. |
 
 ## YOLO Parameters

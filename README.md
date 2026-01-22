@@ -222,7 +222,7 @@ Convert models to Qualcomm SNPE format:
 response = client.convert.RVC4(
     path="/path/to/model.onnx",
     name="converted-model",
-    target_precision="INT8",
+    quantization_mode="INT8_STANDARD",
     use_per_channel_quantization=True,
     htp_socs=["sm8550"]
 )
@@ -239,7 +239,7 @@ response = client.convert.convert(
     target=Target.RVC2,  # or Target.RVC4, Target.HAILO, etc.
     path="/path/to/model.onnx",
     name="converted-model",
-    target_precision="INT8",
+    quantization_mode="INT8_STANDARD",
     input_shape=[1, 3, 288, 512]
 )
 ```
@@ -304,7 +304,7 @@ The following table shows the mapping between the parameters of `blobconverter` 
 | `xml`              | `path`              | The XML file path. Only for conversion from OpenVINO IR                                                   |
 | `bin`              | `opts["input_bin"]` | The BIN file path. Only for conversion from OpenVINO IR. See the [example](#conversion-from-openvino-ir). |
 | `version`          | `tool_version`      | The version of the conversion tool.                                                                       |
-| `data_type`        | `target_precision`  | The precision of the model.                                                                               |
+| `data_type`        | `quantization_mode`  | The quantization mode of the model.                                                                               |
 | `shaves`           | `number_of_shaves`  | The number of shaves to use.                                                                              |
 | `optimizer_params` | `mo_args`           | The arguments to pass to the model optimizer.                                                             |
 | `compile_params`   | `compile_tool_args` | The arguments to pass to the BLOB compiler.                                                               |
@@ -419,7 +419,7 @@ blob = blobconverter.from_onnx(
 ```python
 response = client.convert.RVC2(
     path="resnet18.onnx",
-    target_precision="FP16",
+    quantization_mode="FP16_STANDARD",
     tool_version="2021.4.0",
     number_of_shaves=6,
     mo_args=[

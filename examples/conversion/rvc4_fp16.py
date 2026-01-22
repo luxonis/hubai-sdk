@@ -21,7 +21,7 @@ client = HubAIClient(api_key=api_key)
 response = client.convert.RVC4(
     path=model_path,
     name="test-sdk-conversion-rvc4-fp16",
-    target_precision="FP16"
+    quantization_mode="FP16_STANDARD",
 )
 
 # Extract the model instance
