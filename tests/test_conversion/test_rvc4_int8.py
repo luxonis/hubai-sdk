@@ -12,7 +12,7 @@ def test_rvc4_int8_conversion(client: HubAIClient, base_model_path: str):
     response = client.convert.RVC4(
         path=base_model_path,
         name=model_name,
-        target_precision="INT8",
+        quantization_mode="INT8_STANDARD",
         quantization_data="GENERAL",
         max_quantization_images=50
     )

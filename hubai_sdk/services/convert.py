@@ -17,9 +17,9 @@ from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.typing import (
     License,
     QuantizationData,
-    TargetPrecision,
     Task,
     YoloVersion,
+    QuantizationMode,
 )
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
@@ -58,7 +58,7 @@ def convert(
     variant_description: str | None = None,
     repository_url: str | None = None,
     commit_hash: str | None = None,
-    target_precision: TargetPrecision = "INT8",
+    quantization_mode: QuantizationMode | None = None,
     domain: str | None = None,
     variant_tags: list[str] | None = None,
     variant_id: UUID | str | None = None,
@@ -108,9 +108,13 @@ def convert(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
-    quantization_data : QuantizationData
+    quantization_mode : QuantizationMode
+        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
+        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
+        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
+    quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
         starting with "aid_".
@@ -165,7 +169,7 @@ def convert(
                 "YOLO version is required for PyTorch YOLO models. Use --yolo-version to specify the version."
             )
 
-    if target_precision in {"FP16", "FP32"}:
+    if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}:
         opts.extend(["disable_calibration", "True"])
 
     if yolo_input_shape:
@@ -216,7 +220,9 @@ def convert(
 
         if variant_id is None:
             if model_id is None:
-                raise ValueError("`--model-id` is required to create a new model")
+                raise ValueError(
+                    "`--model-id` is required to create a new model"
+                )
 
             version = variant_version or get_version_number(str(model_id))
 
@@ -240,7 +246,9 @@ def convert(
                 raise ValueError(f"Variant with ID {variant_id} not found")
             if variant_version is not None:
                 if model_id is None:
-                    raise ValueError("`--model-id` is required to create a new variant version.")
+                    raise ValueError(
+                        "`--model-id` is required to create a new variant version."
+                    )
                 variant = create_variant(
                     variant.name,
                     model_id=model_id,
@@ -279,7 +287,9 @@ def convert(
 
     if target is Target.RVC4 and quantization_data is None:
         quantization_data = (
-            None if target_precision in {"FP16", "FP32"} else "RANDOM"
+            None
+            if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}
+            else "RANDOM"
         )
 
     target_options = get_target_specific_options(target, cfg, tool_version)
@@ -287,8 +297,12 @@ def convert(
         f"{variant_name} exported to {target}",
         instance_id,
         target=target,
-        target_precision=target_precision or "INT8",
-        quantization_data=None if not quantization_data else quantization_data.upper() if not quantization_data.startswith("aid_") else quantization_data,
+        quantization_mode=quantization_mode or "INT8_STANDARD",
+        quantization_data=None
+        if not quantization_data
+        else quantization_data.upper()
+        if not quantization_data.startswith("aid_")
+        else quantization_data,
         max_quantization_images=max_quantization_images,
         yolo_version=yolo_version,
         yolo_class_names=yolo_class_names,
@@ -305,17 +319,21 @@ def convert(
             "model_id": str(model_id) if model_id else None,
             "variant_id": str(variant_id) if variant_id else None,
             "instance_id": str(instance.id) if instance else None,
-            "target_precision": target_precision,
+            "quantization_mode": quantization_mode,
             "quantization_data": quantization_data,
             "max_quantization_images": max_quantization_images,
             "yolo_version": yolo_version,
-            "n_yolo_classes": len(yolo_class_names) if yolo_class_names else None,
+            "n_yolo_classes": len(yolo_class_names)
+            if yolo_class_names
+            else None,
             "yolo_input_shape": yolo_input_shape,
             "tool_version": tool_version,
             "input_shape": input_shape,
             **target_options,
         }
-        telemetry.capture("convert", properties=properties, include_system_metadata=True)
+        telemetry.capture(
+            "convert", properties=properties, include_system_metadata=True
+        )
 
     downloaded_path = download_instance(instance.id, output_dir)
 
@@ -326,7 +344,7 @@ def _export(
     name: str,
     identifier: UUID | str,
     target: Target,
-    target_precision: str,
+    quantization_mode: QuantizationMode | None,
     quantization_data: str | None,
     max_quantization_images: int | None = None,
     yolo_version: str | None = None,
@@ -350,7 +368,7 @@ def _export(
             "It's recommended to provide YOLO class names via --yolo-class-names. If omitted, class names will be extracted from model weights if present, otherwise default names will be used."
         )
     if target is Target.RVC4:
-        json["target_precision"] = target_precision
+        json["target_precision"] = quantization_mode
     res = Request.post(
         service="models",
         endpoint=f"modelInstances/{model_instance_id}/export/{target.value}",
@@ -427,14 +445,6 @@ def RVC2(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
-    quantization_data : QuantizationData, optional
-        The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
-    max_quantization_images : int, optional
-        Maximum number of quantization images.
     domain : str, optional
         Domain of the model.
     variant_tags : list[str], optional
@@ -456,6 +466,25 @@ def RVC2(
     yolo_class_names : list[str], optional
         List of class names for YOLO models.
     """
+
+    if hub_kwargs.get("quantization_mode") is not None:
+        logger.warning(
+            "`quantization_mode` is not supported for RVC2. It will be ignored."
+        )
+        del hub_kwargs["quantization_mode"]
+
+    if hub_kwargs.get("quantization_data") is not None:
+        logger.warning(
+            "`quantization_data` is not supported for RVC2. It will be ignored."
+        )
+        del hub_kwargs["quantization_data"]
+
+    if hub_kwargs.get("max_quantization_images") is not None:
+        logger.warning(
+            "`max_quantization_images` is not supported for RVC2. It will be ignored."
+        )
+        del hub_kwargs["max_quantization_images"]
+
     return convert(
         Target.RVC2,
         _combine_opts(
@@ -533,14 +562,6 @@ def RVC3(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
-    quantization_data : QuantizationData, optional
-        The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
-    max_quantization_images : int, optional
-        Maximum number of quantization images.
     domain : str, optional
         Domain of the model.
     variant_tags : list[str], optional
@@ -562,6 +583,24 @@ def RVC3(
     yolo_class_names : list[str], optional
         List of class names for YOLO models.
     """
+    if hub_kwargs.get("quantization_mode") is not None:
+        logger.warning(
+            "`quantization_mode` is not supported for RVC3. It will be ignored."
+        )
+        del hub_kwargs["quantization_mode"]
+
+    if hub_kwargs.get("quantization_data") is not None:
+        logger.warning(
+            "`quantization_data` is not supported for RVC3. It will be ignored."
+        )
+        del hub_kwargs["quantization_data"]
+
+    if hub_kwargs.get("max_quantization_images") is not None:
+        logger.warning(
+            "`max_quantization_images` is not supported for RVC3. It will be ignored."
+        )
+        del hub_kwargs["max_quantization_images"]
+
     if not isinstance(pot_target_device, PotDevice):
         pot_target_device = PotDevice(pot_target_device)
     return convert(
@@ -649,8 +688,12 @@ def RVC4(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
+    quantization_mode : QuantizationMode
+        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
+        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
+        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
@@ -758,8 +801,8 @@ def Hailo(
         URL of the repository.
     commit_hash : str, optional
         Commit hash.
-    target_precision : TargetPrecision
-        Target precision.
+    quantization_model : QuantizationMode
+        Quantization mode.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
