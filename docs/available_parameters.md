@@ -18,12 +18,12 @@ The Python API for conversion is available through `HubAIClient.convert` namespa
 
 General parameters applicable to all conversion functions.
 
-| argument           | type                              | description                                                                                                            |
-| ------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `path`             | `str`                             | The path to the model file.                                                                                            |
-| `tool_version`     | `str \| None`                     | The version of the conversion tool.                                                                                    |
-| `quantization_mode` | `Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]` | The quantization mode of the model. Defaults to `"INT8_STANDARD"`. Only applicable for RVC4                                             |
-| `output_dir`       | `str \| None`                     | The directory to save the converted model. If not specified, the model will be saved in the current working directory. |
+| argument            | type                                                                                                      | description                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `path`              | `str`                                                                                                     | The path to the model file.                                                                                            |
+| `tool_version`      | `str \| None`                                                                                             | The version of the conversion tool.                                                                                    |
+| `quantization_mode` | `Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]` | The quantization mode of the model. Defaults to `"INT8_STANDARD"`. Only applicable for RVC4                            |
+| `output_dir`        | `str \| None`                                                                                             | The directory to save the converted model. If not specified, the model will be saved in the current working directory. |
 
 ## YOLO Parameters
 

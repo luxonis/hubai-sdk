@@ -304,7 +304,7 @@ The following table shows the mapping between the parameters of `blobconverter` 
 | `xml`              | `path`              | The XML file path. Only for conversion from OpenVINO IR                                                   |
 | `bin`              | `opts["input_bin"]` | The BIN file path. Only for conversion from OpenVINO IR. See the [example](#conversion-from-openvino-ir). |
 | `version`          | `tool_version`      | The version of the conversion tool.                                                                       |
-| `data_type`        | `quantization_mode`  | The quantization mode of the model.                                                                               |
+| `data_type`        | `quantization_mode` | The quantization mode of the model.                                                                       |
 | `shaves`           | `number_of_shaves`  | The number of shaves to use.                                                                              |
 | `optimizer_params` | `mo_args`           | The arguments to pass to the model optimizer.                                                             |
 | `compile_params`   | `compile_tool_args` | The arguments to pass to the BLOB compiler.                                                               |
