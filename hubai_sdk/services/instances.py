@@ -24,11 +24,13 @@ from hubai_sdk.utils.hub import (
     print_hub_ls,
     print_hub_resource_info,
     request_info,
+    wait_for_job,
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
     ModelInstanceFileResponse,
+    ModelInstanceUploadResponse,
 )
 from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.types import ModelType
@@ -561,7 +563,11 @@ def get_files(
 
 @app.command(name="upload")
 def upload_file(file_path: str, identifier: UUID | str) -> None:
-    """Uploads a file to a model instance.
+    """Uploads a file to a model instance using async upload.
+
+    This function initiates an async upload by first obtaining a signed
+    upload policy from the server, then uploading the file directly to
+    cloud storage.
 
     Parameters
     ----------
@@ -572,14 +578,60 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
+
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    file_size = path.stat().st_size
+    file_name = path.name
+
     model_instance_id = get_resource_id(identifier, "modelInstances")
-    with open(file_path, "rb") as file:
-        files = {"files": file}
-        Request.post(
-            service="models",
-            endpoint=f"modelInstances/{model_instance_id}/upload",
+
+    # Get signed upload policy
+    upload_response = Request.post(
+        service="models",
+        endpoint=f"modelInstances/{model_instance_id}/upload_async",
+        params={"size": file_size, "name": file_name},
+    )
+
+    upload_response = ModelInstanceUploadResponse(**upload_response)
+
+    policy = upload_response.policy
+    upload_url = policy.url
+    fields = policy.fields
+    job_id = upload_response.job.id
+
+    # Prepare form data with policy fields
+    form_data = {
+        "key": fields.key,
+        "policy": fields.policy,
+        "success_action_status": fields.success_action_status,
+        "x-goog-algorithm": fields.x_goog_algorithm,
+        "x-goog-credential": fields.x_goog_credential,
+        "x-goog-date": fields.x_goog_date,
+        "x-goog-signature": fields.x_goog_signature,
+    }
+
+    # Upload file to GCS with progress tracking
+    with open(file_path, "rb") as file, Progress() as progress:
+        task = progress.add_task(f"Uploading '{file_name}'", total=file_size)
+
+        # Read file and track progress
+        file_content = file.read()
+        progress.update(task, advance=file_size)
+
+        files = {"file": (file_name, file_content)}
+        response = requests.post(
+            upload_url,
+            data=form_data,
             files=files,
+            timeout=600,
         )
+        response.raise_for_status()
+
+    wait_for_job(job_id)
+
     logger.info(
         f"File '{file_path}' uploaded to model instance '{identifier}'"
     )

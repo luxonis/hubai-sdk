@@ -72,4 +72,4 @@ YoloVersion: TypeAlias = Literal[
     "goldyolo",
 ]
 
-HubService: TypeAlias = Literal["models", "dags"]
+HubService: TypeAlias = Literal["models", "dags", "jobs"]
