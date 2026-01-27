@@ -23,6 +23,7 @@ from rich.panel import Panel
 from rich.pretty import Pretty
 from rich.progress import Progress
 from rich.table import Table
+from urllib3 import response
 
 from hubai_sdk.utils.config import Config, SingleStageConfig
 from hubai_sdk.utils.constants import (
@@ -37,6 +38,7 @@ from hubai_sdk.utils.general import sanitize_net_name
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.nn_archive import process_nn_archive
 from hubai_sdk.utils.types import ModelType, Target
+from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobEventMessageResponse
 
 
 def get_output_dir_name(
@@ -409,6 +411,18 @@ def wait_for_export(run_id: str) -> None:
         logs = _clean_logs(run["logs"])
         raise RuntimeError(f"Export failed with\n{logs}.")
 
+def wait_for_job(job_id: str) -> None:
+    def _get_job(job_id: str) -> JobEventMessageResponse:
+        response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
+        return JobEventMessageResponse(**response)
+
+    while True:
+        job = _get_job(job_id)
+        if job.status == EnumJobStatusType.COMPLETED:
+            break
+        elif job.status == EnumJobStatusType.FAILED:
+            raise RuntimeError(f"Job '{job_id}' failed with error: {job.exception}")
+        sleep(1)
 
 def get_target_specific_options(
     target: Target, cfg: SingleStageConfig, tool_version: str | None = None
