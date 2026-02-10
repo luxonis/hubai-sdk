@@ -117,7 +117,7 @@ def list_variants(
     if not silent:
         return print_hub_ls(
             data,
-            keys=field or (["name", "version", "slug", "platforms"] if not include_model_name else ["model_name", "name", "version", "slug", "platforms"]),
+            keys=field or (["name", "version", "id", "platforms"] if not include_model_name else ["model_name", "name", "version", "id", "platforms"]),
             silent=silent
         )
 
