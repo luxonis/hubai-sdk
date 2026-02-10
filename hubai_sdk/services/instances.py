@@ -347,9 +347,8 @@ def create_instance(
     name: str,
     *,
     variant_id: UUID | str,
-    model_type: ModelType | None = None,
+    model_type: ModelType,
     parent_id: UUID | str | None = None,
-    # model_precision_type: TargetPrecision | None = None,
     quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
     tags: list[str] | None = None,
@@ -365,7 +364,7 @@ def create_instance(
     name: str,
     *,
     variant_id: UUID | str,
-    model_type: ModelType | None = None,
+    model_type: ModelType,
     parent_id: UUID | str | None = None,
     quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
@@ -382,7 +381,7 @@ def create_instance(
     name: str,
     *,
     variant_id: UUID | str,
-    model_type: ModelType | None = None,
+    model_type: ModelType,
     parent_id: UUID | str | None = None,
     quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
@@ -399,7 +398,7 @@ def create_instance(
     name: str,
     *,
     variant_id: UUID | str,
-    model_type: ModelType | None = None,
+    model_type: ModelType,
     parent_id: UUID | str | None = None,
     quantization_mode: QuantizationMode | None = None,
     quantization_data: QuantizationData | None = None,
@@ -417,7 +416,7 @@ def create_instance(
         The name of the model instance.
     variant_id : UUID | str
         The ID of the model variant to create an instance for.
-    model_type : ModelType | None
+    model_type : ModelType
         The type of the model.
     parent_id : UUID | str | None
         The ID of the parent model instance.
