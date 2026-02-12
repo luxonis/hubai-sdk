@@ -69,6 +69,8 @@ YoloVersion: TypeAlias = Literal[
     "yolov9",
     "yolov10",
     "yolov11",
+    "yolov12",
+    "yolov26",
     "goldyolo",
 ]
 

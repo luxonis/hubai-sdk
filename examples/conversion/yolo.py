@@ -14,6 +14,14 @@ parser.add_argument(
     help="Path to the PyTorch YOLO model file (.pt)",
 )
 
+parser.add_argument(
+    "--yolo-version",
+    "-y",
+    type=str,
+    required=True,
+    help="YOLO version",
+)
+
 args = parser.parse_args()
 
 model_path = args.model_path
@@ -27,12 +35,12 @@ client = HubAIClient(api_key=api_key)
 # Convert model to RVC4
 response = client.convert.RVC4(
     path=model_path,
-    name="test-sdk-conversion-yolo-v8",
+    name=f"test-sdk-conversion-yolo-{args.yolo_version}",
     quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
-    max_quantization_images=100,
+    max_quantization_images=50,
     yolo_input_shape=[512, 288],
-    yolo_version="yolov8",
+    yolo_version=args.yolo_version,
 )
 
 # Extract the model instance
@@ -49,4 +57,4 @@ assert Path.exists(downlaoded_path)
 print(f"Model downloaded to: {downlaoded_path}\n")
 
 # Delete the model
-client.models.delete_model("test-sdk-conversion-yolo-v8")
+client.models.delete_model(f"test-sdk-conversion-yolo-{args.yolo_version}")
