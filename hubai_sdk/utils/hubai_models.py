@@ -177,6 +177,7 @@ class EnumYoloVersion(Enum):
     yolov10 = "yolov10"
     yolov11 = "yolov11"
     yolov12 = "yolov12"
+    yolov26 = "yolov26"
     goldyolo = "goldyolo"
 
 
