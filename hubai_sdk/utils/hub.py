@@ -38,7 +38,7 @@ from hubai_sdk.utils.general import sanitize_net_name
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.nn_archive import process_nn_archive
 from hubai_sdk.utils.types import ModelType, Target
-from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobEventMessageResponse
+from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobMessageResponse
 
 
 def get_output_dir_name(
@@ -241,7 +241,6 @@ def is_valid_uuid(uuid_string: str) -> bool:
 
 
 def is_hubai_id(identifier: str) -> bool:
-
     temp = identifier
     if not temp.startswith("ai"):
         return False
@@ -254,9 +253,7 @@ def is_hubai_id(identifier: str) -> bool:
 
 def slug_to_id(
     slug: str,
-    endpoint: Literal[
-        "models", "modelVersions", "modelInstances"
-    ],
+    endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
     for is_public in [True, False]:
         with suppress(HTTPError):
@@ -272,23 +269,17 @@ def slug_to_id(
                     if item["slug"] == slug:
                         return str(item["id"])
 
-    return None # type: ignore
+    return None  # type: ignore
 
-def full_slug_to_id(slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]) -> str:
-    data = {
-        "items": [
-            {
-                "identifier": 0,
-                "slug": slug
-            }
-        ]
-    }
+
+def full_slug_to_id(
+    slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]
+) -> str:
+    data = {"items": [{"identifier": 0, "slug": slug}]}
 
     with suppress(HTTPError):
         response = Request.post(
-            service="models",
-            endpoint="models/read_by_slugs",
-            json=data
+            service="models", endpoint="models/read_by_slugs", json=data
         )
 
         if response:
@@ -298,16 +289,14 @@ def full_slug_to_id(slug: str, endpoint: Literal["models", "modelVersions", "mod
                 elif endpoint == "modelVersions":
                     return response["items"][0]["model_version"]["id"]
             except KeyError:
-                return None # type: ignore
+                return None  # type: ignore
 
-    return None # type: ignore
+    return None  # type: ignore
 
 
 def get_resource_id(
     identifier: str,
-    endpoint: Literal[
-        "models", "modelVersions", "modelInstances"
-    ],
+    endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
     if is_valid_uuid(identifier):
         return identifier
@@ -323,16 +312,16 @@ def get_resource_id(
     found_id = slug_to_id(identifier, endpoint)
 
     if not found_id:
-        raise ValueError(f"Resource for endpoint '{endpoint}' with identifier '{identifier}' not found in HubAI.")
+        raise ValueError(
+            f"Resource for endpoint '{endpoint}' with identifier '{identifier}' not found in HubAI."
+        )
 
     return found_id
 
 
 def request_info(
     identifier: str,
-    endpoint: Literal[
-        "models", "modelVersions", "modelInstances"
-    ],
+    endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> dict[str, Any]:
     resource_id = get_resource_id(identifier, endpoint)
 
@@ -411,6 +400,7 @@ def wait_for_export(run_id: str) -> None:
         logs = _clean_logs(run["logs"])
         raise RuntimeError(f"Export failed with\n{logs}.")
 
+
 def wait_for_job(job_id: str) -> None:
     def _get_job(job_id: str) -> JobEventMessageResponse:
         response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
@@ -421,8 +411,11 @@ def wait_for_job(job_id: str) -> None:
         if job.status == EnumJobStatusType.COMPLETED:
             break
         elif job.status == EnumJobStatusType.FAILED:
-            raise RuntimeError(f"Job '{job_id}' failed with error: {job.exception}")
+            raise RuntimeError(
+                f"Job '{job_id}' failed with error: {job.exception}"
+            )
         sleep(1)
+
 
 def get_target_specific_options(
     target: Target, cfg: SingleStageConfig, tool_version: str | None = None
