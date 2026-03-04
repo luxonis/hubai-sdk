@@ -49,7 +49,14 @@ Status: TypeAlias = Literal["available", "unavailable"]
 
 TargetPrecision: TypeAlias = Literal["FP16", "FP32", "INT8", "INT8_INT16"]
 
-QuantizationMode: TypeAlias = Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]
+QuantizationMode: TypeAlias = Literal[
+    "INT8_STANDARD",
+    "INT8_ACCURACY_FOCUSED",
+    "INT8_INT16_MIXED",
+    "INT8_INT16_MIXED_ACCURACY_FOCUSED",
+    "FP16_STANDARD",
+    "FP32_STANDARD",
+]
 
 Quantization: TypeAlias = Literal[
     "DRIVING", "FOOD", "GENERAL", "INDOORS", "RANDOM", "WAREHOUSE"
