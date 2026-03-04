@@ -1,9 +1,10 @@
 import multiprocessing
-from contextlib import suppress
 import platform
+from contextlib import suppress
+
 import keyring
-from luxonis_ml.utils import Environ as BaseEnviron
 from loguru import logger
+from luxonis_ml.utils import Environ as BaseEnviron
 from pydantic import model_validator
 from typing_extensions import Self
 
@@ -15,7 +16,9 @@ def _get_password_win(
         result = keyring.get_password(service_name, username)
         q.put(result)
     except Exception as e:
-        logger.warning(f"Failed to get password from keyring. Use the HUBAI_API_KEY environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}")
+        logger.warning(
+            f"Failed to get password from keyring. Use the HUBAI_API_KEY environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}"
+        )
         q.put(None)
 
 
@@ -40,6 +43,7 @@ def get_password_with_timeout_win(
         return q.get()
     return None
 
+
 def get_password_with_timeout(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
@@ -53,7 +57,9 @@ def get_password_with_timeout(
             result = keyring.get_password(service_name, username)
             q.put(result)
         except Exception as e:
-            logger.warning(f"Failed to get password from keyring. Use HUBAI_API_KEY from environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}")
+            logger.warning(
+                f"Failed to get password from keyring. Use HUBAI_API_KEY from environment variable instead. You can do so by running `export HUBAI_API_KEY=<your_api_key>`. Error: {e}"
+            )
             q.put(None)
 
     q = multiprocessing.Queue()
@@ -80,13 +86,17 @@ class Environ(BaseEnviron):
 
         with suppress(Exception):
             if platform.system() == "Windows":
-                keyring_api_key = get_password_with_timeout_win("HubAI", "api_key")
+                keyring_api_key = get_password_with_timeout_win(
+                    "HubAI", "api_key"
+                )
             else:
                 keyring_api_key = get_password_with_timeout("HubAI", "api_key")
 
         if keyring_api_key:
             if self.HUBAI_API_KEY:
-                logger.warning("2 API keys found. One from environment variable and one from persistent storage (done via `hubai login`). By default, the persistent storage will be used.")
+                logger.warning(
+                    "2 API keys found. One from environment variable and one from persistent storage (done via `hubai login`). By default, the persistent storage will be used."
+                )
             self.HUBAI_API_KEY = keyring_api_key
             return self
 

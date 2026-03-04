@@ -23,7 +23,6 @@ from rich.panel import Panel
 from rich.pretty import Pretty
 from rich.progress import Progress
 from rich.table import Table
-from urllib3 import response
 
 from hubai_sdk.utils.config import Config, SingleStageConfig
 from hubai_sdk.utils.constants import (
@@ -36,9 +35,9 @@ from hubai_sdk.utils.constants import (
 from hubai_sdk.utils.filesystem_utils import resolve_path
 from hubai_sdk.utils.general import sanitize_net_name
 from hubai_sdk.utils.hub_requests import Request
+from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobMessageResponse
 from hubai_sdk.utils.nn_archive import process_nn_archive
 from hubai_sdk.utils.types import ModelType, Target
-from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobMessageResponse
 
 
 def get_output_dir_name(
@@ -245,10 +244,7 @@ def is_hubai_id(identifier: str) -> bool:
     if not temp.startswith("ai"):
         return False
 
-    if not "_" in identifier:
-        return False
-
-    return True
+    return "_" in identifier
 
 
 def slug_to_id(
@@ -286,7 +282,7 @@ def full_slug_to_id(
             try:
                 if endpoint == "models":
                     return response["items"][0]["model"]["id"]
-                elif endpoint == "modelVersions":
+                if endpoint == "modelVersions":
                     return response["items"][0]["model_version"]["id"]
             except KeyError:
                 return None  # type: ignore
@@ -402,15 +398,15 @@ def wait_for_export(run_id: str) -> None:
 
 
 def wait_for_job(job_id: str) -> None:
-    def _get_job(job_id: str) -> JobEventMessageResponse:
+    def _get_job(job_id: str) -> JobMessageResponse:
         response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
-        return JobEventMessageResponse(**response)
+        return JobMessageResponse(**response)
 
     while True:
         job = _get_job(job_id)
         if job.status == EnumJobStatusType.COMPLETED:
             break
-        elif job.status == EnumJobStatusType.FAILED:
+        if job.status == EnumJobStatusType.FAILED:
             raise RuntimeError(
                 f"Job '{job_id}' failed with error: {job.exception}"
             )

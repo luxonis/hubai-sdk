@@ -1,13 +1,15 @@
 import os
+
 from loguru import logger
 
 import hubai_sdk.services.convert
 import hubai_sdk.services.instances
 import hubai_sdk.services.models
 import hubai_sdk.services.variants
-from hubai_sdk.utils.telemetry import initialize_telemetry
 from hubai_sdk.utils.environ import environ
 from hubai_sdk.utils.hub_requests import Request
+from hubai_sdk.utils.telemetry import initialize_telemetry
+
 
 class HubAIClient:
     def __init__(self, api_key: str | None = None):

@@ -12,14 +12,13 @@ from hubai_sdk.services.instances import (
     upload_file,
 )
 from hubai_sdk.services.models import create_model
-from hubai_sdk.services.variants import create_variant
-from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
+from hubai_sdk.services.variants import create_variant, get_variant
 from hubai_sdk.typing import (
     License,
     QuantizationData,
+    QuantizationMode,
     Task,
     YoloVersion,
-    QuantizationMode,
 )
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
@@ -31,11 +30,10 @@ from hubai_sdk.utils.hub import (
     wait_for_export,
 )
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
-from hubai_sdk.utils.sdk_models import ConvertResponse
+from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
+from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
-from hubai_sdk.services.variants import get_variant
 
 
 def convert(

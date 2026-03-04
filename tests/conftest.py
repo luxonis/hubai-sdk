@@ -71,7 +71,9 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
     # Try to get instance ID from command line, env var, or use default
     instance_id = request.config.getoption("--base-instance-id", default=None)
     if instance_id is None:
-        instance_id = os.getenv("HUBAI_BASE_INSTANCE_ID", "aimi_LCEFX2rJSsMhEjsyeMEcWn")
+        instance_id = os.getenv(
+            "HUBAI_BASE_INSTANCE_ID", "aimi_LCEFX2rJSsMhEjsyeMEcWn"
+        )
         if os.getenv("HUBAI_STAGE", "") == "stg":
             instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
 
@@ -79,8 +81,9 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
     if base_instance is None:
         raise ValueError(f"Base instance with ID {instance_id} not found")
 
-    downloaded_path = client.instances.download_instance(base_instance.id, output_dir=str(Path.cwd()))
-    return downloaded_path
+    return client.instances.download_instance(
+        base_instance.id, output_dir=str(Path.cwd())
+    )
 
 
 @pytest.fixture
@@ -88,7 +91,11 @@ def test_instance_id():
     """Fixture to provide a test instance ID for instance operations."""
     stg_instance_id = "aimi_WALJ4SHoZWaaPoXDEWmEmP_stg"
     prod_instance_id = "aimi_LCEFX2rJSsMhEjsyeMEcWn"
-    return stg_instance_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_instance_id
+    return (
+        stg_instance_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_instance_id
+    )
 
 
 @pytest.fixture
@@ -96,7 +103,11 @@ def test_model_id():
     """Fixture to provide a test model ID for variant operations."""
     stg_model_id = "aim_UJuH8qn9Q2XDoNw36Ljy2Z_stg"
     prod_model_id = "aim_FNtJ9PtPdS54T833mCBRGi"
-    return stg_model_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_model_id
+    return (
+        stg_model_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_model_id
+    )
 
 
 @pytest.fixture
@@ -104,4 +115,8 @@ def test_variant_id():
     """Fixture to provide a test variant ID for instance operations."""
     stg_variant_id = "aimv_UJuH8pVjm1mvWGYd69Jioz_stg"
     prod_variant_id = "aimv_VitM2h2uQHtnZfQRJ2Ann9"
-    return stg_variant_id if os.getenv("HUBAI_STAGE", "") == "stg" else prod_variant_id
+    return (
+        stg_variant_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_variant_id
+    )

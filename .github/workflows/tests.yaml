@@ -12,11 +12,11 @@ on:
           - prod
           - stg
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'hubai_sdk/**'
-      - 'tests/**'
-      - 'examples/**'
+      - "hubai_sdk/**"
+      - "tests/**"
+      - "examples/**"
       - .github/workflows/tests.yaml
 
 jobs:
@@ -25,28 +25,28 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10']
+        python-version: ["3.10"]
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.head_ref }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
-    - name: Install package
-      run: pip install -e .[dev]
+      - name: Install package
+        run: pip install -e .[dev]
 
-    - name: Run tests
-      env:
-        HUBAI_STAGE: ${{ github.event.inputs.hubai_stage }}
-        HUBAI_API_KEY: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_API_KEY_STG || secrets.HUBAI_API_KEY_PROD }}
-        HUBAI_URL: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_URL_STG || secrets.HUBAI_URL_PROD}}
-      run: pytest tests/
+      - name: Run tests
+        env:
+          HUBAI_STAGE: ${{ github.event.inputs.hubai_stage }}
+          HUBAI_API_KEY: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_API_KEY_STG || secrets.HUBAI_API_KEY_PROD }}
+          HUBAI_URL: ${{github.event.inputs.hubai_stage == 'stg' && secrets.HUBAI_URL_STG || secrets.HUBAI_URL_PROD}}
+        run: pytest tests/

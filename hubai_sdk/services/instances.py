@@ -14,9 +14,9 @@ from hubai_sdk.typing import (
     ModelClass,
     Order,
     QuantizationData,
+    QuantizationMode,
     Status,
     YoloVersion,
-    QuantizationMode,
 )
 from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
@@ -33,8 +33,8 @@ from hubai_sdk.utils.hubai_models import (
     ModelInstanceUploadResponse,
 )
 from hubai_sdk.utils.sdk_models import ModelInstanceResponse
-from hubai_sdk.utils.types import ModelType
 from hubai_sdk.utils.telemetry import get_telemetry
+from hubai_sdk.utils.types import ModelType
 
 app = App(
     name="instance",
@@ -42,30 +42,6 @@ app = App(
     group="Resource Management",
 )
 
-@overload
-def list_instances(
-    *,
-    platforms: list[ModelType] | None = None,
-    model_id: UUID | str | None = None,
-    variant_id: UUID | str | None = None,
-    model_type: ModelType | None = None,
-    parent_id: UUID | str | None = None,
-    model_class: ModelClass | None = None,
-    name: str | None = None,
-    hash: str | None = None,
-    status: Status | None = None,
-    is_public: bool | None = None,
-    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
-    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelInstanceResponse]:
-    ...
 
 @overload
 def list_instances(
@@ -89,8 +65,33 @@ def list_instances(
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
-) -> None:
-    ...
+) -> list[ModelInstanceResponse]: ...
+
+
+@overload
+def list_instances(
+    *,
+    platforms: list[ModelType] | None = None,
+    model_id: UUID | str | None = None,
+    variant_id: UUID | str | None = None,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_class: ModelClass | None = None,
+    name: str | None = None,
+    hash: str | None = None,
+    status: Status | None = None,
+    is_public: bool | None = None,
+    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
+    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
+    include_model_name: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> None: ...
+
 
 @app.command(name="ls")
 def list_instances(
@@ -164,49 +165,84 @@ def list_instances(
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
-    data = Request.get(service="models", endpoint="modelInstances", params={
-        "platforms": [platform.name for platform in platforms] if platforms else [],
-        "model_id": str(model_id) if model_id else None,
-        "model_version_id": str(variant_id) if variant_id else None,
-        "model_type": model_type,
-        "parent_id": str(parent_id) if parent_id else None,
-        "model_class": model_class,
-        "name": name,
-        "hash": hash,
-        "status": status,
-        "compression_level": compression_level,
-        "optimization_level": optimization_level,
-        "is_public": is_public,
-        "limit": limit,
-        "sort": sort,
-        "order": order,
-    })
+    data = Request.get(
+        service="models",
+        endpoint="modelInstances",
+        params={
+            "platforms": [platform.name for platform in platforms]
+            if platforms
+            else [],
+            "model_id": str(model_id) if model_id else None,
+            "model_version_id": str(variant_id) if variant_id else None,
+            "model_type": model_type,
+            "parent_id": str(parent_id) if parent_id else None,
+            "model_class": model_class,
+            "name": name,
+            "hash": hash,
+            "status": status,
+            "compression_level": compression_level,
+            "optimization_level": optimization_level,
+            "is_public": is_public,
+            "limit": limit,
+            "sort": sort,
+            "order": order,
+        },
+    )
 
     if include_model_name:
         for instance in data:
-            instance["model_name"] = request_info(instance["model_id"], "models")["name"]
-            instance["model_variant_name"] = request_info(instance["model_version_id"], "modelVersions")["name"]
+            instance["model_name"] = request_info(
+                instance["model_id"], "models"
+            )["name"]
+            instance["model_variant_name"] = request_info(
+                instance["model_version_id"], "modelVersions"
+            )["name"]
 
     if not silent:
         return print_hub_ls(
             data,
-            keys=field or (["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] if not include_model_name else ["model_name", "model_variant_name", "slug", "id", "model_type", "is_nn_archive", "model_precision_type"]),
-            silent=silent
+            keys=field
+            or (
+                [
+                    "slug",
+                    "id",
+                    "model_type",
+                    "is_nn_archive",
+                    "model_precision_type",
+                ]
+                if not include_model_name
+                else [
+                    "model_name",
+                    "model_variant_name",
+                    "slug",
+                    "id",
+                    "model_type",
+                    "is_nn_archive",
+                    "model_precision_type",
+                ]
+            ),
+            silent=silent,
         )
 
     return [ModelInstanceResponse(**instance) for instance in data]
 
 
 @overload
-def get_instance(identifier: UUID | str, silent: bool | None = None) -> ModelInstanceResponse:
-    ...
+def get_instance(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelInstanceResponse: ...
+
 
 @overload
-def get_instance(identifier: UUID | str, silent: bool | None = None) -> None:
-    ...
+def get_instance(
+    identifier: UUID | str, silent: bool | None = None
+) -> None: ...
+
 
 @app.command(name="info")
-def get_instance(identifier: UUID | str, silent: bool | None = None) -> ModelInstanceResponse | None:
+def get_instance(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelInstanceResponse | None:
     """Returns information about a model instance.
 
     Parameters
@@ -221,11 +257,17 @@ def get_instance(identifier: UUID | str, silent: bool | None = None) -> ModelIns
     data = request_info(identifier, "modelInstances")
 
     data["model_name"] = request_info(data["model_id"], "models")["name"]
-    data["model_variant_name"] = request_info(data["model_version_id"], "modelVersions")["name"]
+    data["model_variant_name"] = request_info(
+        data["model_version_id"], "modelVersions"
+    )["name"]
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.get", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.get",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
 
     if not silent:
         return print_hub_resource_info(
@@ -337,7 +379,11 @@ def download_instance(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.download", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.download",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
 
     return downloaded_path
 
@@ -356,8 +402,8 @@ def create_instance(
     is_deployable: bool | None = None,
     yolo_version: YoloVersion | None = None,
     silent: bool = True,
-) -> ModelInstanceResponse:
-    ...
+) -> ModelInstanceResponse: ...
+
 
 @overload
 def create_instance(
@@ -373,8 +419,8 @@ def create_instance(
     is_deployable: bool | None = None,
     yolo_version: YoloVersion | None = None,
     silent: bool = False,
-) -> None:
-    ...
+) -> None: ...
+
 
 @overload
 def create_instance(
@@ -390,8 +436,8 @@ def create_instance(
     is_deployable: bool | None = None,
     yolo_version: YoloVersion | None = None,
     silent: bool | None = None,
-) -> ModelInstanceResponse:
-    ...
+) -> ModelInstanceResponse: ...
+
 
 @app.command(name="create")
 def create_instance(
@@ -463,7 +509,9 @@ def create_instance(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.create", properties=data, include_system_metadata=True)
+        telemetry.capture(
+            "instances.create", properties=data, include_system_metadata=True
+        )
 
     return get_instance(res["id"], silent)
 
@@ -485,16 +533,20 @@ def delete_instance(identifier: UUID | str) -> None:
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.delete", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.delete",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
 
 
 @overload
-def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
-    ...
+def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse: ...
+
 
 @overload
-def get_config(identifier: UUID | str) -> None:
-    ...
+def get_config(identifier: UUID | str) -> None: ...
+
 
 @app.command(name="config")
 def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
@@ -515,7 +567,11 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.config", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.config",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
 
     if not silent:
         logger.info(data)
@@ -524,12 +580,12 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
 
 
 @overload
-def get_files(identifier: UUID | str) -> list[ModelInstanceFileResponse]:
-    ...
+def get_files(identifier: UUID | str) -> list[ModelInstanceFileResponse]: ...
+
 
 @overload
-def get_files(identifier: UUID | str) -> None:
-    ...
+def get_files(identifier: UUID | str) -> None: ...
+
 
 @app.command(name="files")
 def get_files(
@@ -552,7 +608,11 @@ def get_files(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.files", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.files",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
 
     if not silent:
         logger.info(data)
@@ -637,4 +697,8 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("instances.upload", properties={"instance_id": identifier}, include_system_metadata=True)
+        telemetry.capture(
+            "instances.upload",
+            properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )

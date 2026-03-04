@@ -1,12 +1,13 @@
-import shutil
 import os
-import pytest
-from loguru import logger
+import shutil
 import uuid
+from pathlib import Path
+
 from hubai_sdk import HubAIClient
 from hubai_sdk.utils.types import ModelType
 
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
+
 
 def test_list_instances(client: HubAIClient):
     """Test listing instances functionality."""
@@ -26,7 +27,7 @@ def test_get_instance(client: HubAIClient, test_instance_id: str):
 
 def test_create_and_delete_instance(client: HubAIClient, test_variant_id: str):
     """Test creating and deleting an instance."""
-    instance_name = f"test-sdk-instance-pytest-{str(uuid.uuid4())}"
+    instance_name = f"test-sdk-instance-pytest-{uuid.uuid4()!s}"
     instance = client.instances.create_instance(
         name=instance_name,
         variant_id=test_variant_id,
@@ -38,9 +39,11 @@ def test_create_and_delete_instance(client: HubAIClient, test_variant_id: str):
     client.instances.delete_instance(instance.id)
 
 
-def test_e2e_instance(client: HubAIClient, base_model_path: str, test_variant_id: str):
+def test_e2e_instance(
+    client: HubAIClient, base_model_path: str, test_variant_id: str
+):
     """Test end-to-end instance functionality."""
-    instance_name = f"test-sdk-instance-base-{str(uuid.uuid4())}"
+    instance_name = f"test-sdk-instance-base-{uuid.uuid4()!s}"
     instance = client.instances.create_instance(
         name=instance_name,
         variant_id=test_variant_id,
@@ -50,13 +53,11 @@ def test_e2e_instance(client: HubAIClient, base_model_path: str, test_variant_id
     assert instance is not None
     assert instance.name == instance_name
 
-    client.instances.upload_file(
-        base_model_path, instance.id
-    )
+    client.instances.upload_file(base_model_path, instance.id)
 
     downloaded_path = client.instances.download_instance(instance.id)
 
-    assert os.path.exists(downloaded_path)
+    assert Path(downloaded_path).exists()
 
     client.instances.delete_instance(instance.id)
 

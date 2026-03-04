@@ -34,9 +34,9 @@ def list_models(
     order: Order = "desc",
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None
-) -> list[ModelResponse]:
-    ...
+    ] = None,
+) -> list[ModelResponse]: ...
+
 
 @overload
 def list_models(
@@ -50,9 +50,9 @@ def list_models(
     order: Order = "desc",
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None
-) -> None:
-    ...
+    ] = None,
+) -> None: ...
+
 
 @app.command(name="ls")
 def list_models(
@@ -66,7 +66,7 @@ def list_models(
     order: Order = "desc",
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None
+    ] = None,
 ) -> list[ModelResponse] | None:
     """List the models in the HubAI.
 
@@ -99,7 +99,9 @@ def list_models(
         telemetry.capture("models.list", include_system_metadata=False)
 
     data = Request.get(
-        service="models", endpoint="models", params={
+        service="models",
+        endpoint="models",
+        params={
             "tasks": tasks,
             "license_type": license_type,
             "is_public": is_public,
@@ -108,29 +110,31 @@ def list_models(
             "limit": limit,
             "sort": sort,
             "order": order,
-        }
+        },
     )
 
     if not silent:
         return print_hub_ls(
-            data,
-            keys=field or ["name", "id", "slug"],
-            silent=silent
+            data, keys=field or ["name", "id", "slug"], silent=silent
         )
 
     return [ModelResponse(**model) for model in data]
 
 
 @overload
-def get_model(identifier: UUID | str, silent: bool | None = None) -> ModelResponse:
-    ...
+def get_model(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelResponse: ...
+
 
 @overload
-def get_model(identifier: UUID | str, silent: bool | None = None) -> None:
-    ...
+def get_model(identifier: UUID | str, silent: bool | None = None) -> None: ...
+
 
 @app.command(name="info")
-def get_model(identifier: UUID | str, silent: bool | None = None) -> ModelResponse | None:
+def get_model(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelResponse | None:
     """Get the model information from the HubAI.
 
     Parameters
@@ -146,7 +150,11 @@ def get_model(identifier: UUID | str, silent: bool | None = None) -> ModelRespon
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("models.get", properties={"model_id": identifier}, include_system_metadata=False)
+        telemetry.capture(
+            "models.get",
+            properties={"model_id": identifier},
+            include_system_metadata=False,
+        )
 
     if not silent:
         return print_hub_resource_info(
@@ -186,8 +194,8 @@ def create_model(
     links: list[str] | None = None,
     is_yolo: bool = False,
     silent: bool = True,
-) -> ModelResponse:
-    ...
+) -> ModelResponse: ...
+
 
 @overload
 def create_model(
@@ -202,8 +210,8 @@ def create_model(
     links: list[str] | None = None,
     is_yolo: bool = False,
     silent: bool = False,
-) -> None:
-    ...
+) -> None: ...
+
 
 @overload
 def create_model(
@@ -218,8 +226,8 @@ def create_model(
     links: list[str] | None = None,
     is_yolo: bool = False,
     silent: bool | None = None,
-) -> ModelResponse:
-    ...
+) -> ModelResponse: ...
+
 
 @app.command(name="create")
 def create_model(
@@ -287,7 +295,9 @@ def create_model(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("models.create", properties=data, include_system_metadata=False)
+        telemetry.capture(
+            "models.create", properties=data, include_system_metadata=False
+        )
 
     return get_model(res["id"], silent)
 
@@ -304,9 +314,9 @@ def update_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool | None = None,
-    silent: bool = True
-) -> ModelResponse:
-    ...
+    silent: bool = True,
+) -> ModelResponse: ...
+
 
 @overload
 def update_model(
@@ -320,9 +330,9 @@ def update_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool | None = None,
-    silent: bool = False
-) -> None:
-    ...
+    silent: bool = False,
+) -> None: ...
+
 
 @overload
 def update_model(
@@ -336,9 +346,9 @@ def update_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool | None = None,
-    silent: bool | None = None
-) -> ModelResponse:
-    ...
+    silent: bool | None = None,
+) -> ModelResponse: ...
+
 
 @app.command(name="update")
 def update_model(
@@ -352,7 +362,7 @@ def update_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool | None = None,
-    silent: bool | None = None
+    silent: bool | None = None,
 ) -> ModelResponse | None:
     """Updates a model.
 
@@ -401,9 +411,14 @@ def update_model(
     if is_yolo is not None:
         data["is_yolo"] = is_yolo
     try:
-        res = Request.patch(service="models", endpoint=f"models/{identifier}", json=data)
+        res = Request.patch(
+            service="models", endpoint=f"models/{identifier}", json=data
+        )
     except requests.HTTPError as e:
-        if e.response is not None and e.response.json().get("detail") == "Unique constraint error.":
+        if (
+            e.response is not None
+            and e.response.json().get("detail") == "Unique constraint error."
+        ):
             raise ValueError(f"Model '{identifier}' already exists") from e
         raise
     logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
@@ -411,7 +426,9 @@ def update_model(
     telemetry = get_telemetry()
     if telemetry:
         data["model_id"] = identifier
-        telemetry.capture("models.update", properties=data, include_system_metadata=False)
+        telemetry.capture(
+            "models.update", properties=data, include_system_metadata=False
+        )
 
     return get_model(res["id"], silent)
 
@@ -433,4 +450,8 @@ def delete_model(identifier: UUID | str) -> None:
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("models.delete", properties={"model_id": identifier}, include_system_metadata=False)
+        telemetry.capture(
+            "models.delete",
+            properties={"model_id": identifier},
+            include_system_metadata=False,
+        )

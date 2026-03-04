@@ -6,11 +6,14 @@ from pathlib import Path
 import pytest
 
 from hubai_sdk import HubAIClient
+from hubai_sdk.utils.sdk_models import ConvertResponse
 
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
-def _assert_and_cleanup(response, client: HubAIClient) -> None:
+def _assert_and_cleanup(
+    response: ConvertResponse, client: HubAIClient
+) -> None:
     assert response is not None
     downloaded_path = response.downloaded_path.resolve()
     assert Path.exists(downloaded_path)

@@ -1,8 +1,10 @@
-import pytest
-from loguru import logger
 import os
-from hubai_sdk import HubAIClient
 import uuid
+
+import pytest
+
+from hubai_sdk import HubAIClient
+
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
@@ -31,7 +33,7 @@ def test_get_variant(client: HubAIClient, test_model_id: str):
 
 def test_create_and_delete_variant(client: HubAIClient, test_model_id: str):
     """Test creating and deleting a variant."""
-    variant_name = f"test-sdk-variant-{str(uuid.uuid4())}"
+    variant_name = f"test-sdk-variant-{uuid.uuid4()!s}"
     created_variant = client.variants.create_variant(
         name=variant_name,
         model_id=test_model_id,
