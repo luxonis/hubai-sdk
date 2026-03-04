@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -11,34 +12,52 @@ from hubai_sdk.utils.sdk_models import ConvertResponse
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
-def _assert_and_cleanup(
-    response: ConvertResponse, client: HubAIClient
+def _cleanup_response(
+    response: ConvertResponse | None, client: HubAIClient
 ) -> None:
-    assert response is not None
-    downloaded_path = response.downloaded_path.resolve()
-    assert Path.exists(downloaded_path)
+    if response is None:
+        return
 
-    shutil.rmtree(str(downloaded_path.parent))
-    client.models.delete_model(str(response.instance.model_id))
+    downloaded_path = response.downloaded_path.resolve()
+    with suppress(FileNotFoundError):
+        shutil.rmtree(str(downloaded_path.parent))
+
+    with suppress(Exception):
+        client.models.delete_model(str(response.instance.model_id))
+
+
+def _assert_response_downloaded(response: ConvertResponse) -> None:
+    downloaded_path = response.downloaded_path.resolve()
+    assert Path(downloaded_path).exists()
 
 
 def test_rvc2_conversion(client: HubAIClient, base_model_path: str):
     model_name = f"test-sdk-conversion-rvc2-{uuid.uuid4()}"
-    response = client.convert.RVC2(
-        path=base_model_path,
-        name=model_name,
-    )
-    _assert_and_cleanup(response, client)
+    response: ConvertResponse | None = None
+
+    try:
+        response = client.convert.RVC2(
+            path=base_model_path,
+            name=model_name,
+        )
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
 
 
 def test_rvc2_legacy_conversion(client: HubAIClient, base_model_path: str):
     model_name = f"test-sdk-conversion-rvc2-legacy-{uuid.uuid4()}"
-    response = client.convert.RVC2(
-        path=base_model_path,
-        name=model_name,
-        superblob=False,
-    )
-    _assert_and_cleanup(response, client)
+    response: ConvertResponse | None = None
+
+    try:
+        response = client.convert.RVC2(
+            path=base_model_path,
+            name=model_name,
+            superblob=False,
+        )
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
 
 
 @pytest.mark.parametrize(
@@ -72,5 +91,10 @@ def test_rvc4_conversion_all_quantization_modes(
         convert_kwargs["quantization_data"] = "GENERAL"
         convert_kwargs["max_quantization_images"] = 50
 
-    response = client.convert.RVC4(**convert_kwargs)
-    _assert_and_cleanup(response, client)
+    response: ConvertResponse | None = None
+
+    try:
+        response = client.convert.RVC4(**convert_kwargs)
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
