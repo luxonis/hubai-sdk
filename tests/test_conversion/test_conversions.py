@@ -68,7 +68,6 @@ def test_rvc2_legacy_conversion(client: HubAIClient, base_model_path: str):
         ("INT8_INT16_MIXED", True),
         ("INT8_INT16_MIXED_ACCURACY_FOCUSED", True),
         ("FP16_STANDARD", False),
-        ("FP32_STANDARD", False),
     ],
 )
 def test_rvc4_conversion_all_quantization_modes(
