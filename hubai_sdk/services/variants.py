@@ -23,21 +23,6 @@ app = App(
     group="Resource Management",
 )
 
-@overload
-def list_variants(
-    model_id: UUID | str | None = None,
-    variant_slug: str | None = None,
-    variant_version: str | None = None,
-    is_public: bool | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelVersionResponse]:
-    ...
 
 @overload
 def list_variants(
@@ -52,8 +37,24 @@ def list_variants(
     field: Annotated[
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
-) -> list[ModelVersionResponse]:
-    ...
+) -> list[ModelVersionResponse]: ...
+
+
+@overload
+def list_variants(
+    model_id: UUID | str | None = None,
+    variant_slug: str | None = None,
+    variant_version: str | None = None,
+    is_public: bool | None = None,
+    include_model_name: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> list[ModelVersionResponse]: ...
+
 
 @app.command(name="ls")
 def list_variants(
@@ -98,42 +99,63 @@ def list_variants(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("variants.list", properties={"model_id": model_id}, include_system_metadata=False)
+        telemetry.capture(
+            "variants.list",
+            properties={"model_id": model_id},
+            include_system_metadata=False,
+        )
 
-    data = Request.get(service="models", endpoint="modelVersions", params={
-        "model_id": str(model_id) if model_id else None,
-        "variant_slug": variant_slug,
-        "version": variant_version,
-        "is_public": is_public,
-        "limit": limit,
-        "sort": sort,
-        "order": order,
-    })
+    data = Request.get(
+        service="models",
+        endpoint="modelVersions",
+        params={
+            "model_id": str(model_id) if model_id else None,
+            "variant_slug": variant_slug,
+            "version": variant_version,
+            "is_public": is_public,
+            "limit": limit,
+            "sort": sort,
+            "order": order,
+        },
+    )
 
     if include_model_name:
         for variant in data:
-            variant["model_name"] = request_info(variant["model_id"], "models")["name"]
+            variant["model_name"] = request_info(
+                variant["model_id"], "models"
+            )["name"]
 
     if not silent:
         return print_hub_ls(
             data,
-            keys=field or (["name", "version", "id", "platforms"] if not include_model_name else ["model_name", "name", "version", "id", "platforms"]),
-            silent=silent
+            keys=field
+            or (
+                ["name", "version", "id", "platforms"]
+                if not include_model_name
+                else ["model_name", "name", "version", "id", "platforms"]
+            ),
+            silent=silent,
         )
 
     return [ModelVersionResponse(**variant) for variant in data]
 
 
 @overload
-def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVersionResponse:
-    ...
+def get_variant(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelVersionResponse: ...
+
 
 @overload
-def get_variant(identifier: UUID | str, silent: bool | None = None) -> None:
-    ...
+def get_variant(
+    identifier: UUID | str, silent: bool | None = None
+) -> None: ...
+
 
 @app.command(name="info")
-def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVersionResponse | None:
+def get_variant(
+    identifier: UUID | str, silent: bool | None = None
+) -> ModelVersionResponse | None:
     """Returns information about a model version.
 
     Parameters
@@ -151,7 +173,11 @@ def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVers
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("variants.get", properties={"variant_id": identifier}, include_system_metadata=False)
+        telemetry.capture(
+            "variants.get",
+            properties={"variant_id": identifier},
+            include_system_metadata=False,
+        )
 
     if not silent:
         return print_hub_resource_info(
@@ -174,6 +200,7 @@ def get_variant(identifier: UUID | str, silent: bool | None = None) -> ModelVers
         )
     return ModelVersionResponse(**data)
 
+
 @overload
 def create_variant(
     name: str,
@@ -185,9 +212,9 @@ def create_variant(
     commit_hash: str | None = None,
     domain: str | None = None,
     tags: list[str] | None = None,
-    silent: bool = True
-) -> ModelVersionResponse:
-    ...
+    silent: bool = True,
+) -> ModelVersionResponse: ...
+
 
 @overload
 def create_variant(
@@ -201,8 +228,8 @@ def create_variant(
     domain: str | None = None,
     tags: list[str] | None = None,
     silent: bool = False,
-) -> None:
-    ...
+) -> None: ...
+
 
 @overload
 def create_variant(
@@ -216,8 +243,8 @@ def create_variant(
     domain: str | None = None,
     tags: list[str] | None = None,
     silent: bool | None = None,
-) -> ModelVersionResponse:
-    ...
+) -> ModelVersionResponse: ...
+
 
 @app.command(name="create")
 def create_variant(
@@ -283,7 +310,9 @@ def create_variant(
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("variants.create", properties=data, include_system_metadata=False)
+        telemetry.capture(
+            "variants.create", properties=data, include_system_metadata=False
+        )
 
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
@@ -307,4 +336,8 @@ def delete_variant(identifier: UUID | str) -> None:
 
     telemetry = get_telemetry()
     if telemetry:
-        telemetry.capture("variants.delete", properties={"variant_id": identifier}, include_system_metadata=False)
+        telemetry.capture(
+            "variants.delete",
+            properties={"variant_id": identifier},
+            include_system_metadata=False,
+        )

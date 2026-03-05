@@ -1,6 +1,7 @@
 import os
 import sys
 import webbrowser
+from contextlib import suppress
 from time import sleep
 from typing import Annotated
 
@@ -13,9 +14,9 @@ from hubai_sdk.services.convert import convert as cli_convert
 from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
-from hubai_sdk.utils.telemetry import initialize_telemetry
 from hubai_sdk.utils.environ import environ
-from contextlib import suppress
+from hubai_sdk.utils.telemetry import initialize_telemetry
+
 # Set a flag to indicate that the call is coming from the CLI
 # we can then detect if we need to log to the console or not
 os.environ["HUBAI_CALL_SOURCE"] = "CLI"

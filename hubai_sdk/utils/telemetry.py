@@ -2,11 +2,12 @@ import atexit
 import contextvars
 import logging
 import os
-import uuid
-from contextlib import contextmanager
-from typing import Any
-
 import platform
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any
 
 from loguru import logger
 from posthog import Posthog
@@ -17,6 +18,7 @@ from hubai_sdk.utils.general import is_cli_call, is_pip_package
 _telemetry_suppressed: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_telemetry_suppressed", default=False
 )
+
 
 class Telemetry:
     """Service for capturing anonymized telemetry data with PostHog.
@@ -30,9 +32,9 @@ class Telemetry:
     UNKNOWN_USER_ID = "UNKNOWN_USER_ID"
 
     @property
-    def user_id_path(self) -> str:
+    def user_id_path(self) -> Path:
         """Get the path to the user ID file."""
-        return os.path.expanduser("~/.hubai/.telemetry_id")
+        return Path("~/.hubai/.telemetry_id").expanduser()
 
     _curr_user_id: str | None = None
 
@@ -51,7 +53,9 @@ class Telemetry:
             PostHog host URL. If None, uses the default.
         """
         # Check if telemetry is disabled via environment variable
-        telemetry_enabled = os.getenv("HUBAI_TELEMETRY_ENABLED", "true").lower() in (
+        telemetry_enabled = os.getenv(
+            "HUBAI_TELEMETRY_ENABLED", "true"
+        ).lower() in (
             "true",
             "1",
             "yes",
@@ -72,13 +76,15 @@ class Telemetry:
             "os_arch": platform.machine(),
             "processor": platform.processor(),
             "cpu_count": os.cpu_count(),
-            "is_docker": os.path.exists("/.dockerenv"),
+            "is_docker": Path("/.dockerenv").exists(),
             "version": __version__,
         }
 
         if not telemetry_enabled:
             self._posthog_client = None
-            logger.info("Telemetry disabled via HUBAI_TELEMETRY_ENABLED environment variable")
+            logger.info(
+                "Telemetry disabled via HUBAI_TELEMETRY_ENABLED environment variable"
+            )
         else:
             logger.info(
                 "Using anonymized telemetry. Set HUBAI_TELEMETRY_ENABLED=false to disable."
@@ -111,18 +117,18 @@ class Telemetry:
         # crash so we catch all exceptions.
         try:
             user_id_path = self.user_id_path
-            if not os.path.exists(user_id_path):
-                os.makedirs(os.path.dirname(user_id_path), exist_ok=True)
-                with open(user_id_path, "w") as f:
-                    new_user_id = str(uuid.uuid4())
-                    f.write(new_user_id)
+            if not user_id_path.exists():
+                user_id_path.parent.mkdir(parents=True, exist_ok=True)
+                new_user_id = str(uuid.uuid4())
+                user_id_path.write_text(new_user_id)
                 self._curr_user_id = new_user_id
             else:
-                with open(user_id_path) as f:
-                    self._curr_user_id = f.read().strip()
+                self._curr_user_id = user_id_path.read_text().strip()
         except Exception:
             self._curr_user_id = self.UNKNOWN_USER_ID
-            logger.debug("Failed to read/write telemetry ID, using UNKNOWN_USER_ID")
+            logger.debug(
+                "Failed to read/write telemetry ID, using UNKNOWN_USER_ID"
+            )
 
         return self._curr_user_id
 
@@ -189,9 +195,11 @@ class Telemetry:
                 logger.debug(f"Failed to shutdown PostHog client: {e}")
 
 
-# Global telemetry instances
-_telemetry: Telemetry | None = None
-_exit_handler_registered: bool = False
+# Global telemetry state holder
+_telemetry_state: dict[str, Telemetry | bool | None] = {
+    "telemetry": None,
+    "exit_handler_registered": False,
+}
 
 
 def get_telemetry() -> Telemetry | None:
@@ -202,11 +210,12 @@ def get_telemetry() -> Telemetry | None:
     Telemetry | None
         The global PostHog telemetry instance, or None if not initialized
     """
-    return _telemetry
+    telemetry = _telemetry_state["telemetry"]
+    return telemetry if isinstance(telemetry, Telemetry) else None
 
 
 @contextmanager
-def suppress_telemetry():
+def suppress_telemetry() -> Iterator[None]:
     """Context manager to suppress telemetry for nested function calls.
 
     Use this when a high-level function (like `convert`) calls other functions
@@ -237,6 +246,7 @@ def _flush_telemetry_on_exit() -> None:
         logger.debug("Flushing Telemetry on exit")
         telemetry_instance.shutdown()
 
+
 def initialize_telemetry(
     project_api_key: str | None = None,
     host: str | None = None,
@@ -256,18 +266,19 @@ def initialize_telemetry(
     Telemetry
         The initialized PostHog telemetry instance
     """
-    global _telemetry, _exit_handler_registered
-    if _telemetry is None:
-        _telemetry = Telemetry(
+    telemetry_instance = get_telemetry()
+    if telemetry_instance is None:
+        telemetry_instance = Telemetry(
             project_api_key=project_api_key,
             host=host,
         )
+        _telemetry_state["telemetry"] = telemetry_instance
         # Register exit handler once when telemetry is first initialized
         # This ensures telemetry is flushed on exit for both CLI and Python API usage
-        if not _exit_handler_registered:
+        if not _telemetry_state["exit_handler_registered"]:
             atexit.register(_flush_telemetry_on_exit)
-            _exit_handler_registered = True
+            _telemetry_state["exit_handler_registered"] = True
             logger.debug("Exit handler for Telemetry registered successfully.")
 
     logger.debug("Telemetry initialized successfully.")
-    return _telemetry
+    return telemetry_instance

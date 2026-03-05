@@ -1,10 +1,8 @@
-import json
 from itertools import chain
 from pathlib import Path
 from typing import Annotated, Any, Literal, cast
 
 import onnx
-import yaml
 from loguru import logger
 from luxonis_ml.utils import LuxonisConfig
 from onnx import TypeProto
@@ -18,10 +16,8 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from hubai_sdk.typing import License, Task
 from hubai_sdk.utils.constants import MODELS_DIR
 from hubai_sdk.utils.filesystem_utils import resolve_path
-from hubai_sdk.utils.hubai_models import PerformanceRating, PerformanceRatings
 from hubai_sdk.utils.layout import make_default_layout
 from hubai_sdk.utils.metadata import Metadata, get_metadata
 from hubai_sdk.utils.types import (

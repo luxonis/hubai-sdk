@@ -1,10 +1,10 @@
-import pytest
-from loguru import logger
 import os
 import uuid
+
 from hubai_sdk import HubAIClient
 
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
+
 
 def test_list_models(client: HubAIClient):
     """Test listing models functionality."""
@@ -23,7 +23,7 @@ def test_get_model(client: HubAIClient, test_model_id: str):
 
 def test_create_and_delete_model(client: HubAIClient):
     """Test creating and deleting a model."""
-    test_model_name = f"test-sdk-model-{str(uuid.uuid4())}"
+    test_model_name = f"test-sdk-model-{uuid.uuid4()!s}"
     created_model = client.models.create_model(
         name=test_model_name,
         license_type="MIT",

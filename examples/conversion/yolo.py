@@ -1,9 +1,10 @@
+import argparse
 import os
+from pathlib import Path
+
+from loguru import logger
 
 from hubai_sdk import HubAIClient
-
-from pathlib import Path
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -46,15 +47,14 @@ response = client.convert.RVC4(
 # Extract the model instance
 model = response.instance
 
-print(f"Model instance: {model}\n")
-print(f"Detected YOLO version: {model.yolo_version}\n")
+logger.info(f"Model instance: {model}")
+logger.info(f"Detected YOLO version: {model.yolo_version}")
 
 # Extract the path to the downloaded model
-downlaoded_path = response.downloaded_path
-downlaoded_path = downlaoded_path.resolve()
+downloaded_path = response.downloaded_path.resolve()
 
-assert Path.exists(downlaoded_path)
-print(f"Model downloaded to: {downlaoded_path}\n")
+assert Path.exists(downloaded_path)
+logger.info(f"Model downloaded to: {downloaded_path}")
 
 # Delete the model
 client.models.delete_model(f"test-sdk-conversion-yolo-{args.yolo_version}")

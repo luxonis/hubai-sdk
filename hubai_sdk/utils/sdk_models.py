@@ -2,7 +2,13 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from hubai_sdk.utils.hubai_models import ModelInstanceResponse as HubAIModelInstanceResponse, ModelResponse as HubAIModelResponse, ModelVersionResponse as HubAIModelVersionResponse
+from hubai_sdk.utils.hubai_models import (
+    ModelInstanceResponse as HubAIModelInstanceResponse,
+)
+from hubai_sdk.utils.hubai_models import ModelResponse as HubAIModelResponse
+from hubai_sdk.utils.hubai_models import (
+    ModelVersionResponse as HubAIModelVersionResponse,
+)
 
 
 class ModelResponse(HubAIModelResponse):

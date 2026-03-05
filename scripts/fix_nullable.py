@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 
 
-def fix_nullable(obj):
+def fix_nullable(obj: Any) -> None:
     if isinstance(obj, dict):
         # If property is literally `null`, replace with {"type": ["null"]}
         for k, v in list(obj.items()):
@@ -26,7 +27,7 @@ def fix_nullable(obj):
             fix_nullable(v)
 
 
-def main():
+def main() -> None:
     input_file = Path("hubai_openapi.json")
     output_file = Path("hubai_openapi_fixed.json")
 

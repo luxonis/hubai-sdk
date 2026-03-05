@@ -1,11 +1,11 @@
+import argparse
 import os
 import shutil
 
-from hubai_sdk import HubAIClient
-from hubai_sdk.services import variants
-from hubai_sdk.utils.types import ModelType
+from loguru import logger
 
-import argparse
+from hubai_sdk import HubAIClient
+from hubai_sdk.utils.types import ModelType
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", "-f", type=str, required=True)
@@ -29,21 +29,19 @@ instance = client.instances.create_instance(
 )
 
 # Upload base model file to the instance
-client.instances.upload_file(
-    args.file, instance.id
-)
+client.instances.upload_file(args.file, instance.id)
 
 # Get config of the instance
 config = client.instances.get_config(instance.id)
-print(f"Config: {config}\n")
+logger.info(f"Config: {config}")
 
 # Get files of the instance
 files = client.instances.get_files(instance.id)
-print(f"Files: {files}\n")
+logger.info(f"Files: {files}")
 
 # Download instance
 downloaded_path = client.instances.download_instance(instance.id)
-print(f"Instance downloaded to: {downloaded_path}\n")
+logger.info(f"Instance downloaded to: {downloaded_path}")
 
 # Delete instance
 client.instances.delete_instance(instance.id)

@@ -1,12 +1,12 @@
 import os
 import re
+import sys
 from pathlib import Path
 
-from loguru import logger
-
-import sys
 import requests
-from packaging.version import parse as parse_version, Version
+from loguru import logger
+from packaging.version import Version
+from packaging.version import parse as parse_version
 
 PYPI_URL = "https://pypi.org/pypi/hubai-sdk/json"
 
@@ -93,14 +93,11 @@ def significant_update_available(cur: Version, new: Version) -> bool:
     if new.major != cur.major:
         return True
 
-    if new.minor != cur.minor:
-        return True
-
     # Patch-only change is ignored
-    return False
+    return new.minor != cur.minor
 
 
-def version_check(current_version: str):
+def version_check(current_version: str) -> None:
     try:
         response = requests.get(PYPI_URL, timeout=2)
         data = response.json()
@@ -117,8 +114,8 @@ def version_check(current_version: str):
                 f"Run: `pip install --upgrade hubai-sdk`",
                 file=sys.stderr,
             )
-            exit(1)
+            sys.exit(1)
 
-    except Exception:
+    except Exception as exc:
         # Never crash user code
-        pass
+        logger.debug(f"Version check failed: {exc}")
