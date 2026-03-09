@@ -2,6 +2,7 @@ import os
 import sys
 import webbrowser
 from contextlib import suppress
+from importlib.metadata import entry_points
 from time import sleep
 from typing import Annotated
 
@@ -27,13 +28,17 @@ telemetry.capture("init.cli", include_system_metadata=True)
 
 app = App(help="Interactions with resources on HubAI.", group="HubAI Commands")
 
+app.command(instance := instance_app)
+
 app.command(model := model_app)
 
 app.command(variant := variant_app)
 
-app.command(instance := instance_app)
-
 app.command(convert := cli_convert)
+
+for ep in entry_points(group="hubai.plugins"):
+    plugin = ep.load()
+    app.command(plugin)
 
 
 def validate_api_key(_: str) -> bool:
