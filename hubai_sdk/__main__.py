@@ -28,11 +28,11 @@ telemetry.capture("init.cli", include_system_metadata=True)
 
 app = App(help="Interactions with resources on HubAI.", group="HubAI Commands")
 
-app.command(instance := instance_app)
-
 app.command(model := model_app)
 
 app.command(variant := variant_app)
+
+app.command(instance := instance_app)
 
 app.command(convert := cli_convert)
 
