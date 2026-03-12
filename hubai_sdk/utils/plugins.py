@@ -1,6 +1,5 @@
 from importlib import import_module
 from importlib.metadata import EntryPoint, entry_points
-from types import ModuleType
 from typing import Any
 
 
