@@ -2,7 +2,6 @@ import os
 import sys
 import webbrowser
 from contextlib import suppress
-from importlib.metadata import entry_points
 from time import sleep
 from typing import Annotated
 
@@ -16,6 +15,7 @@ from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.environ import environ
+from hubai_sdk.utils.plugins import load_cli_plugins
 from hubai_sdk.utils.telemetry import initialize_telemetry
 
 # Set a flag to indicate that the call is coming from the CLI
@@ -36,8 +36,7 @@ app.command(instance := instance_app)
 
 app.command(convert := cli_convert)
 
-for ep in entry_points(group="hubai.plugins"):
-    plugin = ep.load()
+for plugin in load_cli_plugins():
     app.command(plugin)
 
 
