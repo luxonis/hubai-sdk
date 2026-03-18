@@ -15,6 +15,7 @@ from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.environ import environ
+from hubai_sdk.utils.plugins import load_cli_plugins
 from hubai_sdk.utils.telemetry import initialize_telemetry
 
 # Set a flag to indicate that the call is coming from the CLI
@@ -34,6 +35,9 @@ app.command(variant := variant_app)
 app.command(instance := instance_app)
 
 app.command(convert := cli_convert)
+
+for plugin in load_cli_plugins():
+    app.command(plugin)
 
 
 def validate_api_key(_: str) -> bool:

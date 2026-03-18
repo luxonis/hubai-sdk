@@ -20,6 +20,8 @@ classifiers = [
 [project.scripts]
 hubai = "hubai_sdk.__main__:app"
 
+[project.entry-points."hubai.plugins"]
+
 [project.urls]
 repository = "https://github.com/luxonis/hubai-sdk"
 issues = "https://github.com/luxonis/hubai-sdk/issues"

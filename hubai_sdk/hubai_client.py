@@ -8,6 +8,7 @@ import hubai_sdk.services.models
 import hubai_sdk.services.variants
 from hubai_sdk.utils.environ import environ
 from hubai_sdk.utils.hub_requests import Request
+from hubai_sdk.utils.plugins import load_client_plugins
 from hubai_sdk.utils.telemetry import initialize_telemetry
 
 
@@ -44,6 +45,11 @@ class HubAIClient:
         self.variants = hubai_sdk.services.variants
         self.instances = hubai_sdk.services.instances
         self.convert = hubai_sdk.services.convert
+
+        for attr_name, plugin in load_client_plugins().items():
+            if hasattr(self, attr_name):
+                continue
+            setattr(self, attr_name, plugin)
 
     def _verify_api_key(self) -> bool:
         try:
