@@ -60,7 +60,13 @@ QuantizationMode: TypeAlias = Literal[
 ]
 
 Quantization: TypeAlias = Literal[
-    "DRIVING", "FOOD", "GENERAL", "INDOORS", "RANDOM", "WAREHOUSE"
+    "DRIVING",
+    "FOOD",
+    "GENERAL",
+    "INDOORS",
+    "RANDOM",
+    "WAREHOUSE",
+    "CUSTOM",
 ]
 
 DatasetId = Annotated[str, Field(pattern=r"^aid_[a-zA-Z0-9_]+")]

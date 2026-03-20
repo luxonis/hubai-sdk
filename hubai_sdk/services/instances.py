@@ -31,6 +31,7 @@ from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
     ModelInstanceFileResponse,
     ModelInstanceUploadResponse,
+    UploadQuantizationZipResponse,
 )
 from hubai_sdk.utils.sdk_models import ModelInstanceResponse
 from hubai_sdk.utils.telemetry import get_telemetry
@@ -700,5 +701,60 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
         telemetry.capture(
             "instances.upload",
             properties={"instance_id": identifier},
+            include_system_metadata=True,
+        )
+
+
+def upload_quantization_zip(
+    file_path: str,
+    identifier: UUID | str,
+    run_id: UUID | str,
+) -> None:
+    """Uploads a custom quantization zip for an export run."""
+    if isinstance(identifier, UUID):
+        identifier = str(identifier)
+    if isinstance(run_id, UUID):
+        run_id = str(run_id)
+
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    if path.suffix.lower() != ".zip":
+        raise ValueError(
+            "Custom quantization data must be provided as a .zip file."
+        )
+
+    model_instance_id = get_resource_id(identifier, "modelInstances")
+    upload_response = Request.post(
+        service="models",
+        endpoint=f"modelInstances/{model_instance_id}/export/{run_id}/upload_quantization_zip",
+    )
+    upload_response = UploadQuantizationZipResponse(**upload_response)
+
+    file_size = path.stat().st_size
+    file_name = path.name
+    with open(file_path, "rb") as file, Progress() as progress:
+        task = progress.add_task(
+            f"Uploading quantization zip '{file_name}'", total=file_size
+        )
+        file_content = file.read()
+        progress.update(task, advance=file_size)
+        response = requests.put(
+            upload_response.upload_url,
+            data=file_content,
+            headers={"Content-Type": "application/zip"},
+            timeout=600,
+        )
+        response.raise_for_status()
+
+    logger.info(
+        f"Custom quantization zip '{file_path}' uploaded for run '{run_id}'"
+    )
+
+    telemetry = get_telemetry()
+    if telemetry:
+        telemetry.capture(
+            "instances.upload_quantization_zip",
+            properties={"instance_id": identifier, "run_id": run_id},
             include_system_metadata=True,
         )
