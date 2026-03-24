@@ -1,17 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from luxonis_ml.typing import PathType
 
-from hubai_sdk.typing import QuantizationData
-
-QuantizationInputType = Literal[
-    "none",
-    "predefined_dataset",
-    "dataset_id",
-    "custom_zip",
-]
+from hubai_sdk.typing import QuantizationData, QuantizationInputType
 
 
 @dataclass(frozen=True)
