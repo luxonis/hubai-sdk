@@ -10,6 +10,7 @@ from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
     upload_file,
+    upload_quantization_zip,
 )
 from hubai_sdk.services.models import create_model
 from hubai_sdk.services.variants import create_variant, get_variant
@@ -31,6 +32,7 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
+from hubai_sdk.utils.quantization import normalize_quantization_input
 from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
@@ -60,7 +62,7 @@ def convert(
     domain: str | None = None,
     variant_tags: list[str] | None = None,
     variant_id: UUID | str | None = None,
-    quantization_data: QuantizationData | None = None,
+    quantization_data: QuantizationData | PathType | None = None,
     max_quantization_images: int | None = None,
     instance_tags: list[str] | None = None,
     input_shape: list[int] | None = None,
@@ -112,10 +114,10 @@ def convert(
         INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
         INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
-    quantization_data : QuantizationData, optional
+    quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
+        starting with "aid_", or a path to a custom quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -283,6 +285,12 @@ def convert(
             logger.info(f"Uploading input model: {cfg.input_model}")
             upload_file(str(cfg.input_model), instance_id)
 
+    normalized_quantization_input = normalize_quantization_input(
+        quantization_data
+    )
+    quantization_data = normalized_quantization_input.quantization_data
+    custom_quantization_zip = normalized_quantization_input.custom_zip_path
+
     if target is Target.RVC4 and quantization_data is None:
         quantization_data = (
             None
@@ -296,16 +304,24 @@ def convert(
         instance_id,
         target=target,
         quantization_mode=quantization_mode or "INT8_STANDARD",
-        quantization_data=None
-        if not quantization_data
-        else quantization_data.upper()
-        if not quantization_data.startswith("aid_")
-        else quantization_data,
+        quantization_data=quantization_data,
         max_quantization_images=max_quantization_images,
         yolo_version=yolo_version,
         yolo_class_names=yolo_class_names,
         **target_options,
     )
+
+    if custom_quantization_zip is not None:
+        if instance.dag_run_id is None:
+            raise ValueError(
+                "Export did not return a DAG run ID required to upload custom quantization data."
+            )
+        logger.info(
+            f"Uploading custom quantization zip: {custom_quantization_zip}"
+        )
+        upload_quantization_zip(
+            str(custom_quantization_zip), instance_id, instance.dag_run_id
+        )
 
     wait_for_export(str(instance.dag_run_id))
 
@@ -318,7 +334,7 @@ def convert(
             "variant_id": str(variant_id) if variant_id else None,
             "instance_id": str(instance.id) if instance else None,
             "quantization_mode": quantization_mode,
-            "quantization_data": quantization_data,
+            "quantization_input_type": normalized_quantization_input.input_type,
             "max_quantization_images": max_quantization_images,
             "yolo_version": yolo_version,
             "n_yolo_classes": len(yolo_class_names)

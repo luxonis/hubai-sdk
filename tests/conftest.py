@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
+
 from hubai_sdk import HubAIClient
 
 
