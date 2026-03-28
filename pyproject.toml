@@ -119,6 +119,7 @@ unfixable = ["B905", "PLC0208"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN201"]
 "__main__.py" = ["ANN201"]
+"hubai_sdk/utils/hubai_models.py" = ["ERA001"]
 
 [tool.docformatter]
 black = true
