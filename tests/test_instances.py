@@ -17,6 +17,22 @@ def test_list_instances(client: HubAIClient):
     assert len(instances) >= 0
 
 
+def test_list_instances_search_returns_expected_instance(
+    client: HubAIClient, test_instance_id: str
+) -> None:
+    expected_instance = client.instances.get_instance(test_instance_id)
+    assert expected_instance is not None
+
+    instances = client.instances.list_instances(search=expected_instance.name)
+
+    assert instances is not None
+    assert any(
+        str(instance.id) == str(expected_instance.id)
+        and instance.name == expected_instance.name
+        for instance in instances
+    )
+
+
 def test_get_instance(client: HubAIClient, test_instance_id: str):
     """Test getting a specific instance."""
     instance = client.instances.get_instance(test_instance_id)
