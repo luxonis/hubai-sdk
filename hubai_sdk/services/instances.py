@@ -48,6 +48,7 @@ app = App(
 def list_instances(
     *,
     platforms: list[ModelType] | None = None,
+    search: str | None = None,
     model_id: UUID | str | None = None,
     variant_id: UUID | str | None = None,
     model_type: ModelType | None = None,
@@ -73,6 +74,7 @@ def list_instances(
 def list_instances(
     *,
     platforms: list[ModelType] | None = None,
+    search: str | None = None,
     model_id: UUID | str | None = None,
     variant_id: UUID | str | None = None,
     model_type: ModelType | None = None,
@@ -98,6 +100,7 @@ def list_instances(
 def list_instances(
     *,
     platforms: list[ModelType] | None = None,
+    search: str | None = None,
     model_id: UUID | str | None = None,
     variant_id: UUID | str | None = None,
     model_type: ModelType | None = None,
@@ -123,6 +126,8 @@ def list_instances(
     ----------
     platforms : list[ModelType] | None
         Filter the listed model instances by platforms.
+    search : str | None
+        Search the listed model instances by a free-text query.
     model_id : UUID | str | None
         Filter the listed model instances by model ID.
     variant_id : UUID | str | None
@@ -173,6 +178,7 @@ def list_instances(
             "platforms": [platform.name for platform in platforms]
             if platforms
             else [],
+            "search": search,
             "model_id": str(model_id) if model_id else None,
             "model_version_id": str(variant_id) if variant_id else None,
             "model_type": model_type,
