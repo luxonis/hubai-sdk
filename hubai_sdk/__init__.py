@@ -3,7 +3,7 @@ from .utils.general import version_check
 
 __all__ = ["HubAIClient"]
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 # Check for new version on PyPI
 version_check(__version__)
