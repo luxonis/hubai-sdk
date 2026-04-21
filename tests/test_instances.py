@@ -23,7 +23,13 @@ def test_list_instances_search_returns_expected_instance(
     expected_instance = client.instances.get_instance(test_instance_id)
     assert expected_instance is not None
 
-    instances = client.instances.list_instances(search=expected_instance.name)
+    instances_public = client.instances.list_instances(
+        search=expected_instance.name, limit=500, is_public=True
+    )
+    instances_private = client.instances.list_instances(
+        search=expected_instance.name, limit=500, is_public=False
+    )
+    instances = instances_public + instances_private
 
     assert instances is not None
     assert any(
