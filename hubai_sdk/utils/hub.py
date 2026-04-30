@@ -397,7 +397,7 @@ def wait_for_export(run_id: str) -> None:
         raise RuntimeError(f"Export failed with\n{logs}.")
 
 
-def wait_for_job(job_id: str) -> None:
+def wait_for_job(job_id: str) -> JobMessageResponse:
     def _get_job(job_id: str) -> JobMessageResponse:
         response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
         return JobMessageResponse(**response)
@@ -405,7 +405,7 @@ def wait_for_job(job_id: str) -> None:
     while True:
         job = _get_job(job_id)
         if job.status == EnumJobStatusType.COMPLETED:
-            break
+            return job
         if job.status == EnumJobStatusType.FAILED:
             raise RuntimeError(
                 f"Job '{job_id}' failed with error: {job.exception}"

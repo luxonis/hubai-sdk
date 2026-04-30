@@ -713,14 +713,11 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
 
 def upload_quantization_zip(
     file_path: str,
-    identifier: UUID | str,
-    run_id: UUID | str,
+    job_id: UUID | str,
 ) -> None:
-    """Uploads a custom quantization zip for an export run."""
-    if isinstance(identifier, UUID):
-        identifier = str(identifier)
-    if isinstance(run_id, UUID):
-        run_id = str(run_id)
+    """Uploads a custom quantization zip for an export job."""
+    if isinstance(job_id, UUID):
+        job_id = str(job_id)
 
     path = Path(file_path)
     if not path.exists():
@@ -730,10 +727,9 @@ def upload_quantization_zip(
             "Custom quantization data must be provided as a .zip file."
         )
 
-    model_instance_id = get_resource_id(identifier, "modelInstances")
     upload_response = Request.post(
         service="models",
-        endpoint=f"modelInstances/{model_instance_id}/export/{run_id}/upload_quantization_zip",
+        endpoint=f"modelInstances/export/{job_id}/upload_quantization_zip",
     )
     upload_response = UploadQuantizationZipResponse(**upload_response)
 
@@ -754,13 +750,13 @@ def upload_quantization_zip(
         response.raise_for_status()
 
     logger.info(
-        f"Custom quantization zip '{file_path}' uploaded for run '{run_id}'"
+        f"Custom quantization zip '{file_path}' uploaded for job '{job_id}'"
     )
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture(
             "instances.upload_quantization_zip",
-            properties={"instance_id": identifier, "run_id": run_id},
+            properties={"job_id": job_id},
             include_system_metadata=True,
         )
