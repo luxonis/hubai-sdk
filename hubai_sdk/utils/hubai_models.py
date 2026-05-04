@@ -885,7 +885,7 @@ class ModelInstancePatchRequest(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | UUID | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset ID, pre-defined domain, or CUSTOM for uploaded quantization data.",
             title="Quantization Data",
         ),
     ] = None
@@ -980,7 +980,7 @@ class ModelInstanceRequest(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | UUID | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset ID, pre-defined domain, or CUSTOM for uploaded quantization data.",
             title="Quantization Data",
         ),
     ] = None
@@ -1104,7 +1104,7 @@ class ModelInstanceResponse(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset ID, pre-defined domain, or CUSTOM for uploaded quantization data.",
             title="Quantization Data",
         ),
     ] = None

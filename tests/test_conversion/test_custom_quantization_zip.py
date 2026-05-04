@@ -73,13 +73,6 @@ def test_convert_requires_zip_when_quantization_data_is_custom() -> None:
         normalize_quantization_input("CUSTOM")
 
 
-def test_normalize_quantization_input_accepts_gcs_paths() -> None:
-    normalized = normalize_quantization_input("gs://bucket/quantization-data")
-    assert normalized.input_type == "gcs_path"
-    assert normalized.quantization_data == "gs://bucket/quantization-data"
-    assert normalized.custom_zip_path is None
-
-
 def test_normalize_quantization_input_classifies_sources(
     quantization_zip: Path,
 ) -> None:

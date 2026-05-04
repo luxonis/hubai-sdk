@@ -17,10 +17,6 @@ def is_custom_quantization_zip_path(path: str | Path) -> bool:
     return Path(path).suffix.lower() == ".zip"
 
 
-def is_gcs_path(path: str) -> bool:
-    return path.lower().startswith("gs://")
-
-
 def normalize_quantization_input(
     quantization_data: QuantizationData | PathType | None,
 ) -> NormalizedQuantizationInput:
@@ -50,13 +46,6 @@ def normalize_quantization_input(
             quantization_data=None,
             custom_zip_path=None,
             input_type="none",
-        )
-
-    if is_gcs_path(quantization_data):
-        return NormalizedQuantizationInput(
-            quantization_data=quantization_data,
-            custom_zip_path=None,
-            input_type="gcs_path",
         )
 
     normalized_quantization_data = quantization_data.upper()

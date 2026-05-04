@@ -124,8 +124,8 @@ def convert(
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", a `gs://...` path, or a path to
-        a custom quantization .zip file.
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -776,8 +776,8 @@ def RVC4(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", a `gs://...` path, or a path to
-        a custom quantization .zip file.
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -886,8 +886,8 @@ def Hailo(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", a `gs://...` path, or a path to
-        a custom quantization .zip file.
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
