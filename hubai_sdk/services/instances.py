@@ -481,8 +481,8 @@ def create_instance(
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | None
         The quantization data for the model. Can be one of predefined domains
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
+        starting with "aid_", or a `gs://...` path.
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None
