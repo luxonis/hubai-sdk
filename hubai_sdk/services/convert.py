@@ -123,9 +123,9 @@ def convert(
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
-        starting with "aid_", a `gs://...` path, or a path to a custom
-        quantization .zip file.
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", a `gs://...` path, or a path to
+        a custom quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -775,9 +775,9 @@ def RVC4(
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
-        starting with "aid_", a `gs://...` path, or a path to a custom
-        quantization .zip file.
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", a `gs://...` path, or a path to
+        a custom quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -885,9 +885,9 @@ def Hailo(
         Quantization mode.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
-        starting with "aid_", a `gs://...` path, or a path to a custom
-        quantization .zip file.
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", a `gs://...` path, or a path to
+        a custom quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
