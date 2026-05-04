@@ -3,6 +3,9 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from hubai_sdk.utils.hubai_models import (
+    JobMessageResponse,
+)
+from hubai_sdk.utils.hubai_models import (
     ModelInstanceResponse as HubAIModelInstanceResponse,
 )
 from hubai_sdk.utils.hubai_models import ModelResponse as HubAIModelResponse
@@ -26,4 +29,5 @@ class ModelInstanceResponse(HubAIModelInstanceResponse):
 
 class ConvertResponse(BaseModel):
     downloaded_path: Path
+    job: JobMessageResponse
     instance: ModelInstanceResponse

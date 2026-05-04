@@ -1,14 +1,17 @@
 from pathlib import Path
-from typing import Any, Literal
+from time import sleep
+from typing import Literal
 from uuid import UUID
 
 from loguru import logger
 from luxonis_ml.nn_archive import is_nn_archive
 from luxonis_ml.typing import Kwargs, PathType
+from requests import HTTPError
 
 from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
+    get_instance,
     upload_file,
     upload_quantization_zip,
 )
@@ -28,9 +31,13 @@ from hubai_sdk.utils.hub import (
     get_target_specific_options,
     get_variant_name,
     get_version_number,
-    wait_for_export,
+    wait_for_job,
 )
 from hubai_sdk.utils.hub_requests import Request
+from hubai_sdk.utils.hubai_models import (
+    EnumModelInstanceStatus,
+    JobMessageResponse,
+)
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.quantization import normalize_quantization_input
 from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
@@ -116,8 +123,9 @@ def convert(
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE), a dataset ID
-        starting with "aid_", or a path to a custom quantization .zip file.
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -299,8 +307,9 @@ def convert(
         )
 
     target_options = get_target_specific_options(target, cfg, tool_version)
-    instance = _export(
-        f"{variant_name} exported to {target}",
+    export_name = f"{variant_name} exported to {target}"
+    export_job = _export(
+        export_name,
         instance_id,
         target=target,
         quantization_mode=quantization_mode or "INT8_STANDARD",
@@ -312,18 +321,13 @@ def convert(
     )
 
     if custom_quantization_zip is not None:
-        if instance.dag_run_id is None:
-            raise ValueError(
-                "Export did not return a DAG run ID required to upload custom quantization data."
-            )
         logger.info(
             f"Uploading custom quantization zip: {custom_quantization_zip}"
         )
-        upload_quantization_zip(
-            str(custom_quantization_zip), instance_id, instance.dag_run_id
-        )
+        upload_quantization_zip(str(custom_quantization_zip), export_job.id)
 
-    wait_for_export(str(instance.dag_run_id))
+    export_job = wait_for_job(export_job.id)
+    instance = _resolve_exported_instance(export_job)
 
     telemetry = get_telemetry()
     if telemetry:
@@ -332,7 +336,9 @@ def convert(
             "filename": Path(path).name if path else None,
             "model_id": str(model_id) if model_id else None,
             "variant_id": str(variant_id) if variant_id else None,
-            "instance_id": str(instance.id) if instance else None,
+            "base_instance_id": str(instance_id),
+            "exported_instance_id": str(instance.id),
+            "export_job_id": export_job.id,
             "quantization_mode": quantization_mode,
             "quantization_input_type": normalized_quantization_input.input_type,
             "max_quantization_images": max_quantization_images,
@@ -351,7 +357,64 @@ def convert(
 
     downloaded_path = download_instance(instance.id, output_dir)
 
-    return ConvertResponse(downloaded_path=downloaded_path, instance=instance)
+    return ConvertResponse(
+        downloaded_path=downloaded_path,
+        job=export_job,
+        instance=instance,
+    )
+
+
+def _resolve_exported_instance(
+    job: JobMessageResponse,
+) -> ModelInstanceResponse:
+    """Resolve the exported model instance from a completed export
+    job."""
+    instance_id = job.result["resulting_model_instance_id"]
+    if not isinstance(instance_id, str):
+        raise TypeError("resulting_model_instance_id must be a string")
+    return _wait_for_exported_instance_ready(get_instance(instance_id))
+
+
+def _wait_for_exported_instance_ready(
+    instance: ModelInstanceResponse,
+    *,
+    timeout_seconds: int = 180,
+    poll_interval_seconds: int = 2,
+) -> ModelInstanceResponse:
+    """Wait until an exported model instance is actually
+    downloadable."""
+    attempts = max(1, timeout_seconds // poll_interval_seconds)
+    latest_instance = instance
+    last_error: Exception | None = None
+
+    for _ in range(attempts):
+        latest_instance = get_instance(instance.id)
+        is_available = (
+            latest_instance.status == EnumModelInstanceStatus.available
+        )
+
+        if is_available:
+            try:
+                if Request.get(
+                    service="models",
+                    endpoint=f"modelInstances/{latest_instance.id}/download",
+                ):
+                    return latest_instance
+            except HTTPError as exc:
+                last_error = exc
+
+        sleep(poll_interval_seconds)
+
+    if last_error is not None:
+        raise RuntimeError(
+            "Export job completed but the exported model instance is not "
+            "downloadable yet."
+        ) from last_error
+
+    raise RuntimeError(
+        "Export job completed but the exported model instance did not "
+        "become available in time."
+    )
 
 
 def _export(
@@ -364,10 +427,10 @@ def _export(
     yolo_version: str | None = None,
     yolo_class_names: list[str] | None = None,
     **kwargs,
-) -> ModelInstanceResponse:
-    """Exports a model instance."""
+) -> JobMessageResponse:
+    """Starts an export job for a model instance."""
     model_instance_id = get_resource_id(str(identifier), "modelInstances")
-    json: dict[str, Any] = {
+    json: dict[str, object] = {
         "name": name,
         "quantization_data": quantization_data,
         "max_quantization_images": max_quantization_images,
@@ -391,10 +454,12 @@ def _export(
             "legacy": not json.get("superblob", True) and target is Target.RVC2
         },
     )
+    job = JobMessageResponse(**res)
     logger.info(
-        f"Model instance '{name}' created for {target.name} export with ID '{res['id']}'"
+        f"Export job '{job.id}' created for model instance '{model_instance_id}' "
+        f"targeting {target.name}"
     )
-    return ModelInstanceResponse(**res)
+    return job
 
 
 def RVC2(
@@ -710,8 +775,9 @@ def RVC4(
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -819,8 +885,9 @@ def Hailo(
         Quantization mode.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE) or a dataset ID
-        starting with "aid_".
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
+        a dataset ID starting with "aid_", or a path to a custom
+        quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional

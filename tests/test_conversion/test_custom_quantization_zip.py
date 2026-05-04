@@ -21,11 +21,6 @@ def test_upload_quantization_zip_uses_signed_put_url(
     request_calls: list[tuple[str, str]] = []
     put_calls: list[dict[str, object]] = []
 
-    monkeypatch.setattr(
-        instances_service,
-        "get_resource_id",
-        lambda identifier, resource: "aimi_test",
-    )
     monkeypatch.setattr(instances_service, "get_telemetry", lambda: None)
 
     def fake_post(
@@ -59,14 +54,12 @@ def test_upload_quantization_zip_uses_signed_put_url(
 
     # This helper should not talk to the backend directly beyond requesting the
     # signed URL. The actual file upload goes to the returned storage URL.
-    instances_service.upload_quantization_zip(
-        str(quantization_zip), "aimi_source", "dag-run-123"
-    )
+    instances_service.upload_quantization_zip(str(quantization_zip), "job-123")
 
     assert request_calls == [
         (
             "models",
-            "modelInstances/aimi_test/export/dag-run-123/upload_quantization_zip",
+            "modelInstances/export/job-123/upload_quantization_zip",
         )
     ]
     assert len(put_calls) == 1

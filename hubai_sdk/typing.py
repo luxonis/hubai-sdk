@@ -66,7 +66,9 @@ Quantization: TypeAlias = Literal[
     "INDOORS",
     "RANDOM",
     "WAREHOUSE",
+    "CLIP",
     "CUSTOM",
+    "UNKNOWN",
 ]
 
 QuantizationInputType: TypeAlias = Literal[
