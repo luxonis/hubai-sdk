@@ -74,11 +74,13 @@ QuantizationInputType: TypeAlias = Literal[
     "predefined_dataset",
     "dataset_id",
     "custom_zip",
+    "gcs_path",
 ]
 
 DatasetId = Annotated[str, Field(pattern=r"^aid_[a-zA-Z0-9_]+")]
+GcsPath = Annotated[str, Field(pattern=r"^gs://.+")]
 
-QuantizationData: TypeAlias = Quantization | DatasetId
+QuantizationData: TypeAlias = Quantization | DatasetId | GcsPath
 
 YoloVersion: TypeAlias = Literal[
     "yolov5",
