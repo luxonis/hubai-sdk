@@ -112,6 +112,7 @@ Parameters specific to the `RVC4` conversion.
 | `snpe_onnx_to_dlc_args`        | `list[str] \| None` | The arguments to pass to the `snpe-onnx-to-dlc` tool.        |
 | `snpe_dlc_quant_args`          | `list[str] \| None` | The arguments to pass to the `snpe-dlc-quant` tool.          |
 | `snpe_dlc_graph_prepare_args`  | `list[str] \| None` | The arguments to pass to the `snpe-dlc-graph-prepare` tool.  |
+| `snpe_version`                 | `Literal["2.41.0", "2.32.6"] \| None` | The SNPE version to use for export. Defaults to `"2.32.6"`. |
 | `use_per_channel_quantization` | `bool`              | Whether to use per-channel quantization. Defaults to `True`. |
 | `use_per_row_quantization`     | `bool`              | Whether to use per-row quantization. Defaults to `False`.    |
 | `htp_socs`                     | `list[str] \| None` | The list of HTP SoCs to use.                                 |
