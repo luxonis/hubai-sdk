@@ -1,11 +1,11 @@
 ---
 name: hubai-model-conversion
-description: Hub AI SDK model conversion workflow for Luxonis devices. Use when the user wants to convert ONNX, TFLite, OpenVINO IR, NN Archive, or YOLO models with HubAI SDK or the `hubai convert` CLI to RVC2, RVC3, RVC4, or Hailo, including quantization, custom calibration zip files, and migration from `blobconverter`.
+description: Convert models with HubAI SDK or `hubai convert` to RVC2, RVC3, RVC4, or Hailo. Use when the user asks to export ONNX, TFLite, OpenVINO IR, NN Archive, or YOLO models, or mentions quantization, calibration zip files, or `blobconverter` migration.
 ---
 
 # HubAI Model Conversion
 
-Use this skill for Hub AI's hosted model conversion flow.
+Use this skill for HubAI's hosted model conversion flow.
 
 ## Use This Skill When
 
@@ -16,6 +16,15 @@ Use this skill for Hub AI's hosted model conversion flow.
 - Working with ONNX, TFLite, OpenVINO IR (`.xml` + `.bin`), NN Archive tarballs, YAML configs, or PyTorch YOLO weights
 
 Do not use this skill for fully local or offline conversion. For that, use `luxonis/modelconverter`.
+
+## Inputs Needed
+
+- input model path
+- export target: `RVC2`, `RVC3`, `RVC4`, or `Hailo`
+- authentication via `HUBAI_API_KEY` or a working `hubai login`
+- `yolo_version` for PyTorch YOLO inputs (`.pt`, `.pth`)
+- quantization source for RVC4 INT8 flows when the default is not acceptable
+- desired output handling when the converted artifact needs to be stored, returned, or passed downstream
 
 ## Quick Checks
 
@@ -43,6 +52,25 @@ Do not use this skill for fully local or offline conversion. For that, use `luxo
 - Custom quantization data must be passed as a real `.zip` path. Passing `CUSTOM` alone is invalid.
 - OpenVINO IR can use only the `.xml` path when the `.bin` file is beside it; otherwise pass the bin path through `opts`.
 - If the user wants local-only conversion or no Hub upload, stop and switch to `modelconverter`.
+
+## Validation
+
+The task is complete when:
+
+- the Hub export job completes successfully
+- the converted artifact exists at `response.downloaded_path` or the CLI download path
+- the exported target matches the requested platform
+- PyTorch YOLO inputs include a valid `yolo_version`
+- custom calibration flows use a real `.zip` path and that upload succeeds
+
+## Common Failure Modes
+
+- `HUBAI_API_KEY` is missing: export it explicitly in the shell before running conversion
+- keyring or desktop secret storage is unavailable: prefer `HUBAI_API_KEY` over stored login
+- `.pt` or `.pth` input without `yolo_version`: conversion fails for PyTorch YOLO models
+- custom quantization input is passed as `CUSTOM` instead of a `.zip` path: invalid, pass the file path directly
+- quantization path does not end in `.zip`: invalid custom calibration input
+- multi-stage config or archive input: hosted conversion supports only single-stage models
 
 ## References
 
