@@ -1,4 +1,4 @@
-from typing import Annotated, overload
+from typing import Annotated
 from uuid import UUID
 
 import requests
@@ -6,12 +6,13 @@ from cyclopts import App, Parameter
 from loguru import logger
 
 from hubai_sdk.typing import Order
-from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
-    get_resource_id,
+    get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    request_info,
+    raise_for_resource_not_found,
+    resolve_resource_id,
+    run_cli,
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelVersionResponse
@@ -23,8 +24,29 @@ app = App(
     group="Resource Management",
 )
 
+VARIANT_LIST_KEYS = ["name", "version", "id", "platforms"]
+VARIANT_LIST_KEYS_WITH_MODEL = [
+    "model_name",
+    "name",
+    "version",
+    "id",
+    "platforms",
+]
+VARIANT_INFO_KEYS = [
+    "model_name",
+    "name",
+    "slug",
+    "version",
+    "id",
+    "model_id",
+    "created",
+    "updated",
+    "platforms",
+    "exportable_to",
+    "is_public",
+]
 
-@overload
+
 def list_variants(
     model_id: UUID | str | None = None,
     name: str | None = None,
@@ -35,44 +57,7 @@ def list_variants(
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelVersionResponse]: ...
-
-
-@overload
-def list_variants(
-    model_id: UUID | str | None = None,
-    name: str | None = None,
-    variant_slug: str | None = None,
-    variant_version: str | None = None,
-    is_public: bool | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelVersionResponse]: ...
-
-
-@app.command(name="ls")
-def list_variants(
-    model_id: UUID | str | None = None,
-    name: str | None = None,
-    variant_slug: str | None = None,
-    variant_version: str | None = None,
-    is_public: bool | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelVersionResponse] | None:
+) -> list[ModelVersionResponse]:
     """List the model versions in the HubAI.
 
     Parameters
@@ -95,12 +80,7 @@ def list_variants(
         Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
         Order to sort the model versions by. It should be "asc" or "desc".
-    field : list[str] | None
-        Fields to include in the response in case of CLI usage.
-        By default, ["name", "version", "slug", "platforms"] are shown. If include_model_name is True, ["model_name"] is added.
     """
-
-    silent = not is_cli_call()
 
     telemetry = get_telemetry()
     if telemetry:
@@ -127,41 +107,46 @@ def list_variants(
 
     if include_model_name:
         for variant in data:
-            variant["model_name"] = request_info(
+            variant["model_name"] = get_resource_info(
                 variant["model_id"], "models"
             )["name"]
-
-    if not silent:
-        return print_hub_ls(
-            data,
-            keys=field
-            or (
-                ["name", "version", "id", "platforms"]
-                if not include_model_name
-                else ["model_name", "name", "version", "id", "platforms"]
-            ),
-            silent=silent,
-        )
 
     return [ModelVersionResponse(**variant) for variant in data]
 
 
-@overload
-def get_variant(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelVersionResponse: ...
+@app.command(name="ls")
+def list_variants_cli(
+    model_id: UUID | str | None = None,
+    name: str | None = None,
+    variant_slug: str | None = None,
+    variant_version: str | None = None,
+    is_public: bool | None = None,
+    include_model_name: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> None:
+    """List the model versions in the HubAI."""
+    variants = run_cli(
+        lambda: list_variants(
+            model_id=model_id,
+            name=name,
+            variant_slug=variant_slug,
+            variant_version=variant_version,
+            is_public=is_public,
+            include_model_name=include_model_name,
+            limit=limit,
+            sort=sort,
+            order=order,
+        )
+    )
+    _print_variant_list(variants, include_model_name, field)
 
 
-@overload
-def get_variant(
-    identifier: UUID | str, silent: bool | None = None
-) -> None: ...
-
-
-@app.command(name="info")
-def get_variant(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelVersionResponse | None:
+def get_variant(identifier: UUID | str) -> ModelVersionResponse:
     """Returns information about a model version.
 
     Parameters
@@ -171,11 +156,9 @@ def get_variant(
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    if silent is None:
-        silent = not is_cli_call()
-    data = request_info(identifier, "modelVersions")
+    data = get_resource_info(identifier, "modelVersions")
 
-    data["model_name"] = request_info(data["model_id"], "models")["name"]
+    data["model_name"] = get_resource_info(data["model_id"], "models")["name"]
 
     telemetry = get_telemetry()
     if telemetry:
@@ -185,29 +168,15 @@ def get_variant(
             include_system_metadata=False,
         )
 
-    if not silent:
-        return print_hub_resource_info(
-            data,
-            title="Model Variant Info",
-            json=False,
-            keys=[
-                "model_name",
-                "name",
-                "slug",
-                "version",
-                "id",
-                "model_id",
-                "created",
-                "updated",
-                "platforms",
-                "exportable_to",
-                "is_public",
-            ],
-        )
     return ModelVersionResponse(**data)
 
 
-@overload
+@app.command(name="info")
+def get_variant_info(identifier: UUID | str) -> None:
+    """Returns information about a model version."""
+    _print_variant_info(run_cli(lambda: get_variant(identifier)))
+
+
 def create_variant(
     name: str,
     *,
@@ -218,53 +187,7 @@ def create_variant(
     commit_hash: str | None = None,
     domain: str | None = None,
     tags: list[str] | None = None,
-    silent: bool = True,
-) -> ModelVersionResponse: ...
-
-
-@overload
-def create_variant(
-    name: str,
-    *,
-    model_id: UUID | str,
-    variant_version: str,
-    description: str | None = None,
-    repository_url: str | None = None,
-    commit_hash: str | None = None,
-    domain: str | None = None,
-    tags: list[str] | None = None,
-    silent: bool = False,
-) -> None: ...
-
-
-@overload
-def create_variant(
-    name: str,
-    *,
-    model_id: UUID | str,
-    variant_version: str,
-    description: str | None = None,
-    repository_url: str | None = None,
-    commit_hash: str | None = None,
-    domain: str | None = None,
-    tags: list[str] | None = None,
-    silent: bool | None = None,
-) -> ModelVersionResponse: ...
-
-
-@app.command(name="create")
-def create_variant(
-    name: str,
-    *,
-    model_id: UUID | str,
-    variant_version: str,
-    description: str | None = None,
-    repository_url: str | None = None,
-    commit_hash: str | None = None,
-    domain: str | None = None,
-    tags: list[str] | None = None,
-    silent: bool | None = None,
-) -> ModelVersionResponse | None:
+) -> ModelVersionResponse:
     """Creates a new variant of a model.
 
     Parameters
@@ -285,12 +208,7 @@ def create_variant(
         Domain of the model variant.
     tags : list[str] | None
         List of tags for the model variant.
-    silent : bool
-        Whether to print the model variant information after creation.
     """
-
-    if silent is None:
-        silent = not is_cli_call()
 
     data = {
         "model_id": str(model_id) if model_id else None,
@@ -322,10 +240,37 @@ def create_variant(
 
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
-    return get_variant(res["id"], silent)
+    return get_variant(res["id"])
 
 
-@app.command(name="delete")
+@app.command(name="create")
+def create_variant_cli(
+    name: str,
+    *,
+    model_id: UUID | str,
+    variant_version: str,
+    description: str | None = None,
+    repository_url: str | None = None,
+    commit_hash: str | None = None,
+    domain: str | None = None,
+    tags: list[str] | None = None,
+) -> None:
+    """Creates a new variant of a model."""
+    variant = run_cli(
+        lambda: create_variant(
+            name,
+            model_id=model_id,
+            variant_version=variant_version,
+            description=description,
+            repository_url=repository_url,
+            commit_hash=commit_hash,
+            domain=domain,
+            tags=tags,
+        )
+    )
+    _print_variant_info(variant)
+
+
 def delete_variant(identifier: UUID | str) -> None:
     """Deletes a model variant.
 
@@ -336,8 +281,14 @@ def delete_variant(identifier: UUID | str) -> None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    variant_id = get_resource_id(identifier, "modelVersions")
-    Request.delete(service="models", endpoint=f"modelVersions/{variant_id}")
+    variant_id = resolve_resource_id(identifier, "modelVersions")
+    try:
+        Request.delete(
+            service="models", endpoint=f"modelVersions/{variant_id}"
+        )
+    except requests.HTTPError as exc:
+        raise_for_resource_not_found(exc, identifier, "modelVersions")
+        raise
     logger.info(f"Model variant '{variant_id}' deleted")
 
     telemetry = get_telemetry()
@@ -347,3 +298,38 @@ def delete_variant(identifier: UUID | str) -> None:
             properties={"variant_id": identifier},
             include_system_metadata=False,
         )
+
+
+@app.command(name="delete")
+def delete_variant_cli(identifier: UUID | str) -> None:
+    """Deletes a model variant."""
+    run_cli(lambda: delete_variant(identifier))
+
+
+def _print_variant_list(
+    variants: list[ModelVersionResponse],
+    include_model_name: bool,
+    field: list[str] | None = None,
+) -> None:
+    print_hub_ls(
+        [_variant_to_cli_data(variant) for variant in variants],
+        keys=field
+        or (
+            VARIANT_LIST_KEYS_WITH_MODEL
+            if include_model_name
+            else VARIANT_LIST_KEYS
+        ),
+    )
+
+
+def _print_variant_info(variant: ModelVersionResponse) -> None:
+    print_hub_resource_info(
+        _variant_to_cli_data(variant),
+        title="Model Variant Info",
+        json=False,
+        keys=VARIANT_INFO_KEYS,
+    )
+
+
+def _variant_to_cli_data(variant: ModelVersionResponse) -> dict[str, object]:
+    return variant.model_dump(mode="json")

@@ -1,11 +1,11 @@
 import re
 import shutil
-import sys
+from collections.abc import Callable
 from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 from uuid import UUID
 
 import typer
@@ -38,6 +38,9 @@ from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobMessageResponse
 from hubai_sdk.utils.nn_archive import process_nn_archive
 from hubai_sdk.utils.types import ModelType, Target
+
+ResourceEndpoint = Literal["models", "modelVersions", "modelInstances"]
+T = TypeVar("T")
 
 
 def get_output_dir_name(
@@ -207,9 +210,6 @@ def print_hub_ls(
     data: list[dict[str, Any]],
     keys: list[str],
     rename: dict[str, str] | None = None,
-    *,
-    _silent: bool = False,
-    **kwargs,
 ) -> None:
     rename = rename or {}
     table = Table(row_styles=["yellow", "cyan"], box=ROUNDED)
@@ -225,9 +225,35 @@ def print_hub_ls(
             renderables.append(value)
         table.add_row(*renderables)
 
-    if not _silent:
-        console = Console()
-        console.print(table)
+    console = Console()
+    console.print(table)
+
+
+class ResourceNotFoundError(LookupError):
+    def __init__(self, identifier: str, endpoint: ResourceEndpoint):
+        self.identifier = identifier
+        self.endpoint = endpoint
+        super().__init__(
+            f"Resource for endpoint '{endpoint}' with identifier "
+            f"'{identifier}' not found in HubAI."
+        )
+
+
+def raise_for_resource_not_found(
+    exc: HTTPError,
+    identifier: str,
+    endpoint: ResourceEndpoint,
+) -> None:
+    if exc.response is not None and exc.response.status_code == 404:
+        raise ResourceNotFoundError(identifier, endpoint) from exc
+
+
+def run_cli(action: Callable[[], T]) -> T:
+    try:
+        return action()
+    except ResourceNotFoundError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
 
 
 def is_valid_uuid(uuid_string: str) -> bool:
@@ -315,19 +341,29 @@ def get_resource_id(
     return found_id
 
 
-def request_info(
+def resolve_resource_id(
     identifier: str,
-    endpoint: Literal["models", "modelVersions", "modelInstances"],
+    endpoint: ResourceEndpoint,
+) -> str:
+    try:
+        return get_resource_id(identifier, endpoint)
+    except ValueError as exc:
+        raise ResourceNotFoundError(identifier, endpoint) from exc
+
+
+def get_resource_info(
+    identifier: str,
+    endpoint: ResourceEndpoint,
 ) -> dict[str, Any]:
-    resource_id = get_resource_id(identifier, endpoint)
+    resource_id = resolve_resource_id(identifier, endpoint)
 
     try:
         return Request.get(
             service="models", endpoint=f"{endpoint}/{resource_id}/"
         )
-    except HTTPError:
-        typer.echo(f"Resource with ID '{resource_id}' not found.")
-        sys.exit(1)
+    except HTTPError as exc:
+        raise_for_resource_not_found(exc, identifier, endpoint)
+        raise
 
 
 def get_variant_name(
