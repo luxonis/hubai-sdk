@@ -8,6 +8,7 @@ from luxonis_ml.nn_archive import is_nn_archive
 from luxonis_ml.typing import Kwargs, PathType
 from requests import HTTPError
 
+from hubai_sdk.errors import ResourceNotFoundError
 from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
@@ -25,7 +26,6 @@ from hubai_sdk.typing import (
 )
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
-    ResourceNotFoundError,
     get_configs,
     get_resource_id,
     get_resource_info,

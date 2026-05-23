@@ -8,7 +8,7 @@ import requests
 import hubai_sdk.services.instances as instance_services
 import hubai_sdk.services.models as model_services
 import hubai_sdk.services.variants as variant_services
-from hubai_sdk.utils.hub import ResourceNotFoundError
+from hubai_sdk.errors import ResourceNotFoundError
 
 
 def _model_data(**overrides: object) -> dict[str, object]:
@@ -85,19 +85,24 @@ def _http_error(status_code: int) -> requests.HTTPError:
     return requests.HTTPError(response=response)
 
 
-def _assert_cli_exit_on_missing(
+def _assert_cli_exit(
     monkeypatch: pytest.MonkeyPatch,
     action: Callable[[], object],
     expected_message: str,
 ) -> None:
-    calls: list[str] = []
-    monkeypatch.setattr("hubai_sdk.utils.hub.typer.echo", calls.append)
+    calls: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        "hubai_sdk.utils.hub.typer.echo",
+        lambda message, **kwargs: calls.append(
+            (message, bool(kwargs.get("err")))
+        ),
+    )
 
     with pytest.raises(Exception) as exc_info:
         action()
 
     assert exc_info.value.__class__.__name__ == "Exit"
-    assert calls == [expected_message]
+    assert calls == [(expected_message, True)]
 
 
 def test_list_models_returns_typed_models(
@@ -144,7 +149,7 @@ def test_get_model_info_exits_cleanly_on_missing_model(
         ),
     )
 
-    _assert_cli_exit_on_missing(
+    _assert_cli_exit(
         monkeypatch,
         lambda: model_services.get_model_info("missing-model"),
         "Resource for endpoint 'models' with identifier "

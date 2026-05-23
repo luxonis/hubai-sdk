@@ -10,7 +10,7 @@ from hubai_sdk.utils.hub import (
     get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    raise_for_resource_not_found,
+    raise_for_hub_error,
     resolve_resource_id,
     run_cli,
 )
@@ -76,20 +76,23 @@ def list_models(
     if telemetry:
         telemetry.capture("models.list", include_system_metadata=False)
 
-    data = Request.get(
-        service="models",
-        endpoint="models",
-        params={
-            "tasks": tasks,
-            "license_type": license_type,
-            "is_public": is_public,
-            "project_id": project_id,
-            "luxonis_only": luxonis_only,
-            "limit": limit,
-            "sort": sort,
-            "order": order,
-        },
-    )
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="models",
+            params={
+                "tasks": tasks,
+                "license_type": license_type,
+                "is_public": is_public,
+                "project_id": project_id,
+                "luxonis_only": luxonis_only,
+                "limit": limit,
+                "sort": sort,
+                "order": order,
+            },
+        )
+    except requests.HTTPError as exc:
+        raise_for_hub_error(exc)
 
     return [ModelResponse(**model) for model in data]
 
@@ -201,13 +204,10 @@ def create_model(
     }
     try:
         res = Request.post(service="models", endpoint="models", json=data)
-    except requests.HTTPError as e:
-        if (
-            e.response is not None
-            and e.response.json().get("detail") == "Unique constraint error."
-        ):
-            raise ValueError(f"Model '{name}' already exists") from e
-        raise
+    except requests.HTTPError as exc:
+        raise_for_hub_error(
+            exc, conflict_message=f"Model '{name}' already exists"
+        )
     logger.info(f"Model '{res['name']}' created with ID '{res['id']}'")
 
     telemetry = get_telemetry()
@@ -309,14 +309,13 @@ def update_model(
         res = Request.patch(
             service="models", endpoint=f"models/{model_id}", json=data
         )
-    except requests.HTTPError as e:
-        raise_for_resource_not_found(e, identifier, "models")
-        if (
-            e.response is not None
-            and e.response.json().get("detail") == "Unique constraint error."
-        ):
-            raise ValueError(f"Model '{identifier}' already exists") from e
-        raise
+    except requests.HTTPError as exc:
+        raise_for_hub_error(
+            exc,
+            identifier=identifier,
+            endpoint="models",
+            conflict_message=f"Model '{identifier}' already exists",
+        )
     logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
 
     telemetry = get_telemetry()
@@ -373,8 +372,7 @@ def delete_model(identifier: UUID | str) -> None:
     try:
         Request.delete(service="models", endpoint=f"models/{model_id}")
     except requests.HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, "models")
-        raise
+        raise_for_hub_error(exc, identifier=identifier, endpoint="models")
     logger.info(f"Model '{identifier}' deleted")
 
     telemetry = get_telemetry()

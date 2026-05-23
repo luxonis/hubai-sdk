@@ -5,7 +5,7 @@ from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, NoReturn, TypeVar
 from uuid import UUID
 
 import typer
@@ -24,6 +24,13 @@ from rich.pretty import Pretty
 from rich.progress import Progress
 from rich.table import Table
 
+from hubai_sdk.errors import (
+    HubApiError,
+    InputError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from hubai_sdk.utils.config import Config, SingleStageConfig
 from hubai_sdk.utils.constants import (
     CALIBRATION_DIR,
@@ -229,33 +236,6 @@ def print_hub_ls(
     console.print(table)
 
 
-class ResourceNotFoundError(LookupError):
-    def __init__(self, identifier: str, endpoint: ResourceEndpoint):
-        self.identifier = identifier
-        self.endpoint = endpoint
-        super().__init__(
-            f"Resource for endpoint '{endpoint}' with identifier "
-            f"'{identifier}' not found in HubAI."
-        )
-
-
-def raise_for_resource_not_found(
-    exc: HTTPError,
-    identifier: str,
-    endpoint: ResourceEndpoint,
-) -> None:
-    if exc.response is not None and exc.response.status_code == 404:
-        raise ResourceNotFoundError(identifier, endpoint) from exc
-
-
-def run_cli(action: Callable[[], T]) -> T:
-    try:
-        return action()
-    except ResourceNotFoundError as exc:
-        typer.echo(str(exc))
-        raise typer.Exit(code=1) from exc
-
-
 def is_valid_uuid(uuid_string: str) -> bool:
     try:
         UUID(uuid_string)
@@ -362,8 +342,63 @@ def get_resource_info(
             service="models", endpoint=f"{endpoint}/{resource_id}/"
         )
     except HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, endpoint)
-        raise
+        raise_for_hub_error(exc, identifier=identifier, endpoint=endpoint)
+
+
+def raise_for_hub_error(
+    exc: HTTPError,
+    *,
+    identifier: str | None = None,
+    endpoint: ResourceEndpoint | None = None,
+    conflict_message: str | None = None,
+) -> NoReturn:
+    status_code = (
+        exc.response.status_code if exc.response is not None else None
+    )
+    detail = _get_http_error_detail(exc)
+    default_message = (
+        f"HubAI request failed with status code {status_code}."
+        if status_code is not None
+        else "HubAI request failed."
+    )
+
+    if status_code == 404 and identifier is not None and endpoint is not None:
+        raise ResourceNotFoundError(identifier, endpoint) from exc
+
+    # The backend currently reports duplicate model/variant creates as 422
+    # with "Unique constraint error" in detail, but we still accept 409.
+    if (
+        detail is not None and "Unique constraint error" in detail
+    ) or status_code == 409:
+        raise ResourceConflictError(
+            conflict_message or detail or "Resource already exists in HubAI.",
+            status_code=status_code,
+        ) from exc
+
+    if status_code in {400, 422}:
+        raise ValidationError(
+            detail or default_message,
+            status_code=status_code,
+        ) from exc
+
+    raise HubApiError(
+        detail or default_message,
+        status_code=status_code,
+    ) from exc
+
+
+def run_cli(action: Callable[[], T]) -> T:
+    try:
+        return action()
+    except HubApiError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    except (InputError, FileNotFoundError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    except HTTPError as exc:
+        typer.echo(_get_http_error_detail(exc), err=True)
+        raise typer.Exit(code=1) from exc
 
 
 def get_variant_name(
@@ -484,3 +519,67 @@ def get_target_specific_options(
         options["disable_calibration"] = cfg.hailo.disable_calibration
 
     return options
+
+
+def _get_http_error_detail(exc: HTTPError) -> str:
+    """Extract a readable error message from a requests HTTPError."""
+    status_code = (
+        exc.response.status_code if exc.response is not None else None
+    )
+    response = exc.response
+    if response is not None:
+        try:
+            payload = response.json()
+        except Exception:
+            if response.text:
+                return response.text
+        else:
+            if isinstance(payload, dict):
+                detail = payload.get("detail")
+                if isinstance(detail, list):
+                    formatted = _format_http_error_items(detail)
+                    if formatted:
+                        return formatted
+                if detail:
+                    return str(detail)
+                if payload:
+                    return str(payload)
+            elif isinstance(payload, list):
+                formatted = _format_http_error_items(payload)
+                if formatted:
+                    return formatted
+                if payload:
+                    return str(payload)
+            elif payload:
+                return str(payload)
+
+    message = str(exc)
+    if message:
+        return message
+    if status_code is not None:
+        return f"HubAI request failed with status code {status_code}."
+    return "HubAI request failed."
+
+
+def _format_http_error_items(items: list[object]) -> str | None:
+    """Format validation-style error items into a single message
+    string."""
+    messages: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            messages.append(str(item))
+            continue
+
+        message = item.get("msg")
+        location = item.get("loc")
+        if message is None:
+            messages.append(str(item))
+        elif isinstance(location, list) and location:
+            loc_str = ".".join(str(part) for part in location)
+            messages.append(f"{loc_str}: {message}")
+        else:
+            messages.append(str(message))
+
+    if messages:
+        return "; ".join(messages)
+    return None

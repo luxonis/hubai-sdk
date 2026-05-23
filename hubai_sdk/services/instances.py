@@ -11,6 +11,7 @@ from loguru import logger
 from requests import HTTPError
 from rich.progress import Progress
 
+from hubai_sdk.errors import HubApiError, InputError
 from hubai_sdk.typing import (
     ModelClass,
     Order,
@@ -23,7 +24,7 @@ from hubai_sdk.utils.hub import (
     get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    raise_for_resource_not_found,
+    raise_for_hub_error,
     resolve_resource_id,
     run_cli,
     wait_for_job,
@@ -146,30 +147,33 @@ def list_instances(
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
-    data = Request.get(
-        service="models",
-        endpoint="modelInstances",
-        params={
-            "platforms": [platform.name for platform in platforms]
-            if platforms
-            else [],
-            "search": search,
-            "model_id": str(model_id) if model_id else None,
-            "model_version_id": str(variant_id) if variant_id else None,
-            "model_type": model_type,
-            "parent_id": str(parent_id) if parent_id else None,
-            "model_class": model_class,
-            "name": name,
-            "hash": hash,
-            "status": status,
-            "compression_level": compression_level,
-            "optimization_level": optimization_level,
-            "is_public": is_public,
-            "limit": limit,
-            "sort": sort,
-            "order": order,
-        },
-    )
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelInstances",
+            params={
+                "platforms": [platform.name for platform in platforms]
+                if platforms
+                else [],
+                "search": search,
+                "model_id": str(model_id) if model_id else None,
+                "model_version_id": str(variant_id) if variant_id else None,
+                "model_type": model_type,
+                "parent_id": str(parent_id) if parent_id else None,
+                "model_class": model_class,
+                "name": name,
+                "hash": hash,
+                "status": status,
+                "compression_level": compression_level,
+                "optimization_level": optimization_level,
+                "is_public": is_public,
+                "limit": limit,
+                "sort": sort,
+                "order": order,
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
 
     if include_model_name:
         for instance in data:
@@ -295,10 +299,11 @@ def download_instance(
             endpoint=f"modelInstances/{model_instance_id}/download",
         )
     except HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, "modelInstances")
-        raise
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
     if not urls:
-        raise ValueError("No files to download")
+        raise HubApiError("No files to download")
 
     def cleanup(sigint: int, _: FrameType | None) -> None:
         nonlocal file_path
@@ -313,46 +318,53 @@ def download_instance(
                 endpoint=f"modelInstances/{model_instance_id}",
             )
         except HTTPError as exc:
-            raise_for_resource_not_found(exc, identifier, "modelInstances")
-            raise
+            raise_for_hub_error(
+                exc, identifier=identifier, endpoint="modelInstances"
+            )
         dest = Path(instance_data.get("slug", model_instance_id))
 
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
     for url in urls:
-        with requests.get(url, stream=True, timeout=10) as response:
-            response.raise_for_status()
+        try:
+            with requests.get(url, stream=True, timeout=10) as response:
+                response.raise_for_status()
 
-            total_size = int(response.headers.get("Content-Length", 0))
-            filename = unquote(Path(urlparse(url).path).name)
-            dest.mkdir(parents=True, exist_ok=True)
+                total_size = int(response.headers.get("Content-Length", 0))
+                filename = unquote(Path(urlparse(url).path).name)
+                dest.mkdir(parents=True, exist_ok=True)
 
-            file_path = dest / filename
-            if file_path.exists() and not force:
-                logger.info(
-                    f"File '{filename}' already exists. Skipping download. "
-                    "Use `force=True` to overwrite."
-                )
-                downloaded_path = file_path
-                continue
-
-            try:
-                with open(file_path, "wb") as f, Progress() as progress:
-                    task = progress.add_task(
-                        f"Downloading '{filename}'", total=total_size
+                file_path = dest / filename
+                if file_path.exists() and not force:
+                    logger.info(
+                        f"File '{filename}' already exists. Skipping "
+                        "download. Use `force=True` to overwrite."
                     )
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            progress.update(task, advance=len(chunk))
-            except:
-                logger.error(f"Failed to download '{filename}'")
-                file_path.unlink(missing_ok=True)
-                raise
+                    downloaded_path = file_path
+                    continue
 
-            logger.info(f"Downloaded '{file_path.name}'")
-            downloaded_path = file_path
+                try:
+                    with open(file_path, "wb") as f, Progress() as progress:
+                        task = progress.add_task(
+                            f"Downloading '{filename}'", total=total_size
+                        )
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                progress.update(task, advance=len(chunk))
+                except:
+                    logger.error(f"Failed to download '{filename}'")
+                    file_path.unlink(missing_ok=True)
+                    raise
+
+                logger.info(f"Downloaded '{file_path.name}'")
+                downloaded_path = file_path
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to download instance file from '{url}': "
+                f"{exc.response.status_code if exc.response else exc}"
+            ) from exc
 
     assert downloaded_path is not None
 
@@ -433,7 +445,12 @@ def create_instance(
         "is_deployable": is_deployable,
         "yolo_version": yolo_version,
     }
-    res = Request.post(service="models", endpoint="modelInstances", json=data)
+    try:
+        res = Request.post(
+            service="models", endpoint="modelInstances", json=data
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
     logger.info(
         f"Model instance '{res['name']}' created with ID '{res['id']}'"
     )
@@ -495,8 +512,9 @@ def delete_instance(identifier: UUID | str) -> None:
             service="models", endpoint=f"modelInstances/{instance_id}"
         )
     except HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, "modelInstances")
-        raise
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
     logger.info(f"Model instance '{identifier}' deleted")
 
     telemetry = get_telemetry()
@@ -609,8 +627,9 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
             params={"size": file_size, "name": file_name},
         )
     except requests.HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, "modelInstances")
-        raise
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
 
     upload_response = ModelInstanceUploadResponse(**upload_response)
 
@@ -642,7 +661,12 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
             files=files,
             timeout=600,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to upload '{file_name}' to storage.",
+            ) from exc
 
     wait_for_job(job_id)
 
@@ -677,7 +701,7 @@ def upload_quantization_zip(
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
     if path.suffix.lower() != ".zip":
-        raise ValueError(
+        raise InputError(
             "Custom quantization data must be provided as a .zip file."
         )
 
@@ -755,8 +779,7 @@ def _get_instance_subresource(
             endpoint=f"modelInstances/{model_instance_id}/{subpath}",
         )
     except HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier_str, "modelInstances")
-        raise
+        raise_for_hub_error(exc)
 
 
 def _dump_for_cli(resource: object) -> object:
