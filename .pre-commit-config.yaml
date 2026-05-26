@@ -21,8 +21,10 @@ repos:
     rev: 1.0.0
     hooks:
       - id: mdformat
+        args: [--number]
         additional_dependencies:
           - mdformat-gfm
+          - mdformat-frontmatter
 
   - repo: https://github.com/JoC0de/pre-commit-prettier
     rev: v3.8.1
