@@ -261,7 +261,7 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
 
 
 @app.command(name="info")
-def get_instance_info(identifier: UUID | str) -> None:
+def get_instance_info_cli(identifier: UUID | str) -> None:
     """Returns information about a model instance."""
     _print_instance_info(run_cli(lambda: get_instance(identifier)))
 

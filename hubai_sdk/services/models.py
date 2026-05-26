@@ -148,7 +148,7 @@ def get_model(identifier: UUID | str) -> ModelResponse:
 
 
 @app.command(name="info")
-def get_model_info(identifier: UUID | str) -> None:
+def get_model_info_cli(identifier: UUID | str) -> None:
     """Get the model information from the HubAI."""
     _print_model_info(run_cli(lambda: get_model(identifier)))
 

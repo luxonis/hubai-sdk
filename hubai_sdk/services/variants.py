@@ -172,7 +172,7 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse:
 
 
 @app.command(name="info")
-def get_variant_info(identifier: UUID | str) -> None:
+def get_variant_info_cli(identifier: UUID | str) -> None:
     """Returns information about a model version."""
     _print_variant_info(run_cli(lambda: get_variant(identifier)))
 

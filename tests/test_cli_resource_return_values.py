@@ -114,7 +114,9 @@ def test_list_models_returns_typed_models(
     assert models[0].id == "aim_model"
 
 
-def test_get_model_info_prints_model(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_model_info_cli_prints_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[object] = []
     monkeypatch.setattr(model_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
@@ -128,12 +130,12 @@ def test_get_model_info_prints_model(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda *args, **kwargs: calls.append(args),
     )
 
-    model_services.get_model_info("aim_model")
+    model_services.get_model_info_cli("aim_model")
 
     assert calls
 
 
-def test_get_model_info_exits_cleanly_on_missing_model(
+def test_get_model_info_cli_exits_cleanly_on_missing_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -146,7 +148,7 @@ def test_get_model_info_exits_cleanly_on_missing_model(
 
     _assert_cli_exit_on_missing(
         monkeypatch,
-        lambda: model_services.get_model_info("missing-model"),
+        lambda: model_services.get_model_info_cli("missing-model"),
         "Resource for endpoint 'models' with identifier "
         "'missing-model' not found in HubAI.",
     )
