@@ -1,4 +1,3 @@
-import re
 import shutil
 from collections.abc import Callable
 from contextlib import suppress
@@ -21,7 +20,6 @@ from rich.console import Console, Group, RenderableType
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.pretty import Pretty
-from rich.progress import Progress
 from rich.table import Table
 
 from hubai_sdk.errors import (
@@ -435,37 +433,6 @@ def get_version_number(model_id: str) -> str:
     version_numbers = max_version.split(".")
     version_numbers[-1] = str(int(version_numbers[-1]) + 1)
     return ".".join(version_numbers)
-
-
-def wait_for_export(run_id: str) -> None:
-    def _get_run(run_id: str) -> dict[str, Any]:
-        return Request.get(service="dags", endpoint=f"runs/{run_id}")
-
-    def _clean_logs(logs: str) -> str:
-        pattern = r"\[.*?\] \{.*?\} INFO - \[base\] logs:\s*"
-        return re.sub(pattern, "", logs)
-
-    with Progress() as progress:
-        progress.add_task("Waiting for the conversion to finish", total=None)
-        run = _get_run(run_id)
-        while run["status"] in ["PENDING", "RUNNING"]:
-            sleep(10)
-            run = _get_run(run_id)
-
-    if run["status"] == "FAILURE":
-        if run["logs"] is None:
-            print(run["id"])
-            raise RuntimeError("Export failed with no logs.")
-
-        if run["logs"] is None:
-            raise RuntimeError("Export failed with no logs.")
-
-        while len(run["logs"].split("\n")) < 5:
-            run = _get_run(run_id)
-            sleep(5)
-
-        logs = _clean_logs(run["logs"])
-        raise RuntimeError(f"Export failed with\n{logs}.")
 
 
 def wait_for_job(job_id: str) -> JobMessageResponse:
