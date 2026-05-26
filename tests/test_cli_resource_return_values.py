@@ -98,10 +98,10 @@ def _assert_cli_exit(
         ),
     )
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(SystemExit) as exc_info:
         action()
 
-    assert exc_info.value.__class__.__name__ == "SystemExit"
+    assert exc_info.value.code == 1
     assert calls == [(expected_message, True)]
 
 
