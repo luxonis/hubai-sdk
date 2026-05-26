@@ -1,4 +1,4 @@
-from typing import Annotated, overload
+from typing import Annotated
 from uuid import UUID
 
 import requests
@@ -6,12 +6,13 @@ from cyclopts import App, Parameter
 from loguru import logger
 
 from hubai_sdk.typing import License, Order, Task
-from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
-    get_resource_id,
+    get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    request_info,
+    raise_for_resource_not_found,
+    resolve_resource_id,
+    run_cli,
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
@@ -21,8 +22,25 @@ app = App(
     name="model", help="Models Interactions", group="Resource Management"
 )
 
+MODEL_LIST_KEYS = ["name", "id", "slug"]
+MODEL_INFO_KEYS = [
+    "name",
+    "slug",
+    "id",
+    "created",
+    "updated",
+    "tasks",
+    "platforms",
+    "is_public",
+    "is_commercial",
+    "license_type",
+    "versions",
+    "likes",
+    "downloads",
+    "team_id",
+]
 
-@overload
+
 def list_models(
     tasks: list[Task] | None = None,
     license_type: License | None = None,
@@ -32,42 +50,7 @@ def list_models(
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelResponse]: ...
-
-
-@overload
-def list_models(
-    tasks: list[Task] | None = None,
-    license_type: License | None = None,
-    is_public: bool | None = None,
-    project_id: str | None = None,
-    luxonis_only: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> None: ...
-
-
-@app.command(name="ls")
-def list_models(
-    tasks: list[Task] | None = None,
-    license_type: License | None = None,
-    is_public: bool | None = None,
-    project_id: str | None = None,
-    luxonis_only: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelResponse] | None:
+) -> list[ModelResponse]:
     """List the models in the HubAI.
 
     Parameters
@@ -88,12 +71,7 @@ def list_models(
         Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
     order : Order
         Order to sort the models by. It should be "asc" or "desc".
-    field : list[str] | None
-        Fields to include in the response in case of CLI usage.
     """
-
-    silent = not is_cli_call()
-
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("models.list", include_system_metadata=False)
@@ -113,28 +91,40 @@ def list_models(
         },
     )
 
-    if not silent:
-        return print_hub_ls(
-            data, keys=field or ["name", "id", "slug"], silent=silent
-        )
-
     return [ModelResponse(**model) for model in data]
 
 
-@overload
-def get_model(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelResponse: ...
+@app.command(name="ls")
+def list_models_cli(
+    tasks: list[Task] | None = None,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    project_id: str | None = None,
+    luxonis_only: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> None:
+    """List the models in the HubAI."""
+    models = run_cli(
+        lambda: list_models(
+            tasks=tasks,
+            license_type=license_type,
+            is_public=is_public,
+            project_id=project_id,
+            luxonis_only=luxonis_only,
+            limit=limit,
+            sort=sort,
+            order=order,
+        )
+    )
+    _print_model_list(models, field)
 
 
-@overload
-def get_model(identifier: UUID | str, silent: bool | None = None) -> None: ...
-
-
-@app.command(name="info")
-def get_model(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelResponse | None:
+def get_model(identifier: UUID | str) -> ModelResponse:
     """Get the model information from the HubAI.
 
     Parameters
@@ -144,9 +134,7 @@ def get_model(
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    if silent is None:
-        silent = not is_cli_call()
-    data = request_info(identifier, "models")
+    data = get_resource_info(identifier, "models")
 
     telemetry = get_telemetry()
     if telemetry:
@@ -156,32 +144,15 @@ def get_model(
             include_system_metadata=False,
         )
 
-    if not silent:
-        return print_hub_resource_info(
-            data,
-            title="Model Info",
-            json=False,
-            keys=[
-                "name",
-                "slug",
-                "id",
-                "created",
-                "updated",
-                "tasks",
-                "platforms",
-                "is_public",
-                "is_commercial",
-                "license_type",
-                "versions",
-                "likes",
-                "downloads",
-                "team_id",
-            ],
-        )
     return ModelResponse(**data)
 
 
-@overload
+@app.command(name="info")
+def get_model_info_cli(identifier: UUID | str) -> None:
+    """Get the model information from the HubAI."""
+    _print_model_info(run_cli(lambda: get_model(identifier)))
+
+
 def create_model(
     name: str,
     *,
@@ -193,56 +164,7 @@ def create_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool = False,
-    silent: bool = True,
-) -> ModelResponse: ...
-
-
-@overload
-def create_model(
-    name: str,
-    *,
-    license_type: License = "undefined",
-    is_public: bool | None = False,
-    description: str | None = None,
-    description_short: str = "<empty>",
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool = False,
-    silent: bool = False,
-) -> None: ...
-
-
-@overload
-def create_model(
-    name: str,
-    *,
-    license_type: License = "undefined",
-    is_public: bool | None = False,
-    description: str | None = None,
-    description_short: str = "<empty>",
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool = False,
-    silent: bool | None = None,
-) -> ModelResponse: ...
-
-
-@app.command(name="create")
-def create_model(
-    name: str,
-    *,
-    license_type: License = "undefined",
-    is_public: bool | None = False,
-    description: str | None = None,
-    description_short: str = "<empty>",
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool = False,
-    silent: bool | None = None,
-) -> ModelResponse | None:
+) -> ModelResponse:
     """Creates a new model resource.
 
     Parameters
@@ -265,12 +187,7 @@ def create_model(
         List of links to related resources.
     is_yolo : bool
         Whether the model is a YOLO model.
-    silent : bool | None
-        Whether to print the model information after creation.
     """
-
-    if silent is None:
-        silent = not is_cli_call()
     data = {
         "name": name,
         "license_type": license_type,
@@ -299,10 +216,39 @@ def create_model(
             "models.create", properties=data, include_system_metadata=False
         )
 
-    return get_model(res["id"], silent)
+    return get_model(res["id"])
 
 
-@overload
+@app.command(name="create")
+def create_model_cli(
+    name: str,
+    *,
+    license_type: License = "undefined",
+    is_public: bool | None = False,
+    description: str | None = None,
+    description_short: str = "<empty>",
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool = False,
+) -> None:
+    """Creates a new model resource."""
+    model = run_cli(
+        lambda: create_model(
+            name,
+            license_type=license_type,
+            is_public=is_public,
+            description=description,
+            description_short=description_short,
+            architecture_id=architecture_id,
+            tasks=tasks,
+            links=links,
+            is_yolo=is_yolo,
+        )
+    )
+    _print_model_info(model)
+
+
 def update_model(
     identifier: UUID | str,
     *,
@@ -314,56 +260,7 @@ def update_model(
     tasks: list[Task] | None = None,
     links: list[str] | None = None,
     is_yolo: bool | None = None,
-    silent: bool = True,
-) -> ModelResponse: ...
-
-
-@overload
-def update_model(
-    identifier: UUID | str,
-    *,
-    license_type: License | None = None,
-    is_public: bool | None = None,
-    description: str | None = None,
-    description_short: str | None = None,
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool | None = None,
-    silent: bool = False,
-) -> None: ...
-
-
-@overload
-def update_model(
-    identifier: UUID | str,
-    *,
-    license_type: License | None = None,
-    is_public: bool | None = None,
-    description: str | None = None,
-    description_short: str | None = None,
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool | None = None,
-    silent: bool | None = None,
-) -> ModelResponse: ...
-
-
-@app.command(name="update")
-def update_model(
-    identifier: UUID | str,
-    *,
-    license_type: License | None = None,
-    is_public: bool | None = None,
-    description: str | None = None,
-    description_short: str | None = None,
-    architecture_id: UUID | str | None = None,
-    tasks: list[Task] | None = None,
-    links: list[str] | None = None,
-    is_yolo: bool | None = None,
-    silent: bool | None = None,
-) -> ModelResponse | None:
+) -> ModelResponse:
     """Updates a model.
 
     Parameters
@@ -386,12 +283,10 @@ def update_model(
         List of links to related resources.
     is_yolo : bool | None
         Whether the model is a YOLO model.
-    silent : bool | None
-        Whether to print the model information after update.
     """
-
-    if silent is None:
-        silent = not is_cli_call()
+    if isinstance(identifier, UUID):
+        identifier = str(identifier)
+    model_id = resolve_resource_id(identifier, "models")
 
     data = {}
     if license_type is not None:
@@ -412,9 +307,10 @@ def update_model(
         data["is_yolo"] = is_yolo
     try:
         res = Request.patch(
-            service="models", endpoint=f"models/{identifier}", json=data
+            service="models", endpoint=f"models/{model_id}", json=data
         )
     except requests.HTTPError as e:
+        raise_for_resource_not_found(e, identifier, "models")
         if (
             e.response is not None
             and e.response.json().get("detail") == "Unique constraint error."
@@ -430,10 +326,39 @@ def update_model(
             "models.update", properties=data, include_system_metadata=False
         )
 
-    return get_model(res["id"], silent)
+    return get_model(res["id"])
 
 
-@app.command(name="delete")
+@app.command(name="update")
+def update_model_cli(
+    identifier: UUID | str,
+    *,
+    license_type: License | None = None,
+    is_public: bool | None = None,
+    description: str | None = None,
+    description_short: str | None = None,
+    architecture_id: UUID | str | None = None,
+    tasks: list[Task] | None = None,
+    links: list[str] | None = None,
+    is_yolo: bool | None = None,
+) -> None:
+    """Updates a model."""
+    model = run_cli(
+        lambda: update_model(
+            identifier,
+            license_type=license_type,
+            is_public=is_public,
+            description=description,
+            description_short=description_short,
+            architecture_id=architecture_id,
+            tasks=tasks,
+            links=links,
+            is_yolo=is_yolo,
+        )
+    )
+    _print_model_info(model)
+
+
 def delete_model(identifier: UUID | str) -> None:
     """Deletes a model.
 
@@ -444,8 +369,12 @@ def delete_model(identifier: UUID | str) -> None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    model_id = get_resource_id(identifier, "models")
-    Request.delete(service="models", endpoint=f"models/{model_id}")
+    model_id = resolve_resource_id(identifier, "models")
+    try:
+        Request.delete(service="models", endpoint=f"models/{model_id}")
+    except requests.HTTPError as exc:
+        raise_for_resource_not_found(exc, identifier, "models")
+        raise
     logger.info(f"Model '{identifier}' deleted")
 
     telemetry = get_telemetry()
@@ -455,3 +384,31 @@ def delete_model(identifier: UUID | str) -> None:
             properties={"model_id": identifier},
             include_system_metadata=False,
         )
+
+
+@app.command(name="delete")
+def delete_model_cli(identifier: UUID | str) -> None:
+    """Deletes a model."""
+    run_cli(lambda: delete_model(identifier))
+
+
+def _print_model_list(
+    models: list[ModelResponse], field: list[str] | None = None
+) -> None:
+    print_hub_ls(
+        [_model_to_cli_data(model) for model in models],
+        keys=field or MODEL_LIST_KEYS,
+    )
+
+
+def _print_model_info(model: ModelResponse) -> None:
+    print_hub_resource_info(
+        _model_to_cli_data(model),
+        title="Model Info",
+        json=False,
+        keys=MODEL_INFO_KEYS,
+    )
+
+
+def _model_to_cli_data(model: ModelResponse) -> dict[str, object]:
+    return model.model_dump(mode="json")

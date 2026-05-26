@@ -11,7 +11,6 @@ from requests import HTTPError
 from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
-    get_instance,
     upload_file,
     upload_quantization_zip,
 )
@@ -26,8 +25,10 @@ from hubai_sdk.typing import (
 )
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
+    ResourceNotFoundError,
     get_configs,
     get_resource_id,
+    get_resource_info,
     get_target_specific_options,
     get_variant_name,
     get_version_number,
@@ -217,9 +218,7 @@ def convert(
                     tasks=tasks or [],
                     links=links or [],
                     is_yolo=is_yolo,
-                    silent=True,
                 )
-                assert model is not None
                 model_id = model.id
             except ValueError:
                 model_id = get_resource_id(
@@ -243,15 +242,11 @@ def convert(
                 commit_hash=commit_hash,
                 domain=domain,
                 tags=variant_tags or [],
-                silent=True,
             )
-            assert variant is not None
             variant_id = variant.id
 
         else:
             variant = get_variant(variant_id)
-            if variant is None:
-                raise ValueError(f"Variant with ID {variant_id} not found")
             if variant_version is not None:
                 if model_id is None:
                     raise ValueError(
@@ -266,9 +261,7 @@ def convert(
                     commit_hash=commit_hash,
                     domain=domain,
                     tags=variant_tags or [],
-                    silent=True,
                 )
-                assert variant is not None
                 variant_id = variant.id
 
         assert variant_id is not None
@@ -280,9 +273,7 @@ def convert(
             input_shape=input_shape or cfg.inputs[0].shape,
             is_deployable=is_deployable,
             tags=instance_tags or [],
-            silent=True,
         )
-        assert instance is not None
         instance_id = instance.id
 
         # TODO: IR support
@@ -372,11 +363,19 @@ def _resolve_exported_instance(
     instance_id = job.result["resulting_model_instance_id"]
     if not isinstance(instance_id, str):
         raise TypeError("resulting_model_instance_id must be a string")
-    return _wait_for_exported_instance_ready(get_instance(instance_id))
+    return _wait_for_exported_instance_ready(instance_id)
+
+
+def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
+    try:
+        data = get_resource_info(instance_id, "modelInstances")
+    except ResourceNotFoundError:
+        return None
+    return ModelInstanceResponse(**data)
 
 
 def _wait_for_exported_instance_ready(
-    instance: ModelInstanceResponse,
+    instance_id: str,
     *,
     timeout_seconds: int = 180,
     poll_interval_seconds: int = 2,
@@ -384,11 +383,15 @@ def _wait_for_exported_instance_ready(
     """Wait until an exported model instance is actually
     downloadable."""
     attempts = max(1, timeout_seconds // poll_interval_seconds)
-    latest_instance = instance
+    latest_instance = None
     last_error: Exception | None = None
 
     for _ in range(attempts):
-        latest_instance = get_instance(instance.id)
+        latest_instance = _get_instance_response(instance_id)
+        if latest_instance is None:
+            sleep(poll_interval_seconds)
+            continue
+
         is_available = (
             latest_instance.status == EnumModelInstanceStatus.available
         )
