@@ -705,10 +705,13 @@ def upload_quantization_zip(
             "Custom quantization data must be provided as a .zip file."
         )
 
-    upload_response = Request.post(
-        service="models",
-        endpoint=f"modelInstances/export/{job_id}/upload_quantization_zip",
-    )
+    try:
+        upload_response = Request.post(
+            service="models",
+            endpoint=f"modelInstances/export/{job_id}/upload_quantization_zip",
+        )
+    except requests.HTTPError as exc:
+        raise_for_hub_error(exc, identifier=job_id, endpoint="jobs")
     upload_response = UploadQuantizationZipResponse(**upload_response)
 
     file_size = path.stat().st_size
@@ -725,7 +728,12 @@ def upload_quantization_zip(
             headers={"Content-Type": "application/zip"},
             timeout=600,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to upload custom quantization zip '{file_name}'."
+            ) from exc
 
     logger.info(
         f"Custom quantization zip '{file_path}' uploaded for job '{job_id}'"
@@ -779,7 +787,11 @@ def _get_instance_subresource(
             endpoint=f"modelInstances/{model_instance_id}/{subpath}",
         )
     except HTTPError as exc:
-        raise_for_hub_error(exc)
+        raise_for_hub_error(
+            exc,
+            identifier=identifier_str,
+            endpoint="modelInstances",
+        )
 
 
 def _dump_for_cli(resource: object) -> object:

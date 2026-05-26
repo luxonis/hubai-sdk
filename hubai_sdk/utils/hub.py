@@ -1,6 +1,5 @@
 import shutil
 from collections.abc import Callable
-from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
@@ -84,7 +83,7 @@ def get_configs(
     opts = opts or []
     if isinstance(opts, list):
         if len(opts) % 2 != 0:
-            raise ValueError(
+            raise InputError(
                 "Invalid number of overrides. See --help for more information."
             )
         overrides: Params = {
@@ -256,18 +255,20 @@ def slug_to_id(
     endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
     for is_public in [True, False]:
-        with suppress(HTTPError):
-            params = {
-                "is_public": is_public,
-                "slug": slug,
-            }
+        params = {
+            "is_public": is_public,
+            "slug": slug,
+        }
+        try:
             data = Request.get(
                 service="models", endpoint=f"{endpoint}/", params=params
             )
-            if data:
-                for item in data:
-                    if item["slug"] == slug:
-                        return str(item["id"])
+        except HTTPError as exc:
+            raise_for_hub_error(exc, identifier=slug, endpoint=endpoint)
+        if data:
+            for item in data:
+                if item["slug"] == slug:
+                    return str(item["id"])
 
     return None  # type: ignore
 
@@ -277,19 +278,26 @@ def full_slug_to_id(
 ) -> str:
     data = {"items": [{"identifier": 0, "slug": slug}]}
 
-    with suppress(HTTPError):
+    try:
         response = Request.post(
             service="models", endpoint="models/read_by_slugs", json=data
         )
+    except HTTPError as exc:
+        detail = _get_http_error_detail(exc)
+        if "Invalid slug format" in detail:
+            return None  # type: ignore
+        raise_for_hub_error(exc, identifier=slug, endpoint=endpoint)
 
-        if response:
-            try:
-                if endpoint == "models":
-                    return response["items"][0]["model"]["id"]
-                if endpoint == "modelVersions":
-                    return response["items"][0]["model_version"]["id"]
-            except KeyError:
-                return None  # type: ignore
+    if not isinstance(response, dict) or not response.get("items"):
+        return None  # type: ignore
+
+    try:
+        if endpoint == "models":
+            return response["items"][0]["model"]["id"]
+        if endpoint == "modelVersions":
+            return response["items"][0]["model_version"]["id"]
+    except (KeyError, IndexError, TypeError):
+        return None  # type: ignore
 
     return None  # type: ignore
 
@@ -327,6 +335,8 @@ def resolve_resource_id(
         return get_resource_id(identifier, endpoint)
     except ValueError as exc:
         raise ResourceNotFoundError(identifier, endpoint) from exc
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
 
 
 def get_resource_info(
@@ -347,7 +357,7 @@ def raise_for_hub_error(
     exc: HTTPError,
     *,
     identifier: str | None = None,
-    endpoint: ResourceEndpoint | None = None,
+    endpoint: ResourceEndpoint | Literal["jobs"] | None = None,
     conflict_message: str | None = None,
 ) -> NoReturn:
     status_code = (
@@ -390,13 +400,13 @@ def run_cli(action: Callable[[], T]) -> T:
         return action()
     except HubApiError as exc:
         typer.echo(str(exc), err=True)
-        raise typer.Exit(code=1) from exc
+        raise SystemExit(1) from None
     except (InputError, FileNotFoundError) as exc:
         typer.echo(str(exc), err=True)
-        raise typer.Exit(code=1) from exc
+        raise SystemExit(1) from None
     except HTTPError as exc:
         typer.echo(_get_http_error_detail(exc), err=True)
-        raise typer.Exit(code=1) from exc
+        raise SystemExit(1) from None
 
 
 def get_variant_name(
@@ -419,11 +429,14 @@ def get_variant_name(
 
 
 def get_version_number(model_id: str) -> str:
-    versions = Request.get(
-        service="models",
-        endpoint="modelVersions/",
-        params={"model_id": model_id},
-    )
+    try:
+        versions = Request.get(
+            service="models",
+            endpoint="modelVersions/",
+            params={"model_id": model_id},
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
     if not versions:
         return "0.1.0"
     max_version = Version(versions[0]["version"])
@@ -437,7 +450,10 @@ def get_version_number(model_id: str) -> str:
 
 def wait_for_job(job_id: str) -> JobMessageResponse:
     def _get_job(job_id: str) -> JobMessageResponse:
-        response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
+        try:
+            response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
+        except HTTPError as exc:
+            raise_for_hub_error(exc, identifier=job_id, endpoint="jobs")
         return JobMessageResponse(**response)
 
     while True:
@@ -445,7 +461,7 @@ def wait_for_job(job_id: str) -> JobMessageResponse:
         if job.status == EnumJobStatusType.COMPLETED:
             return job
         if job.status == EnumJobStatusType.FAILED:
-            raise RuntimeError(
+            raise HubApiError(
                 f"Job '{job_id}' failed with error: {job.exception}"
             )
         sleep(1)

@@ -8,7 +8,12 @@ from luxonis_ml.nn_archive import is_nn_archive
 from luxonis_ml.typing import Kwargs, PathType
 from requests import HTTPError
 
-from hubai_sdk.errors import ResourceNotFoundError
+from hubai_sdk.errors import (
+    HubApiError,
+    InputError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
@@ -27,11 +32,12 @@ from hubai_sdk.typing import (
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
     get_configs,
-    get_resource_id,
     get_resource_info,
     get_target_specific_options,
     get_variant_name,
     get_version_number,
+    raise_for_hub_error,
+    resolve_resource_id,
     wait_for_job,
 )
 from hubai_sdk.utils.hub_requests import Request
@@ -174,7 +180,7 @@ def convert(
         opts.extend(["input_model", path])
         input_file_type = InputFileType.from_path(path)
         if input_file_type == InputFileType.PYTORCH and yolo_version is None:
-            raise ValueError(
+            raise InputError(
                 "YOLO version is required for PyTorch YOLO models. Use --yolo-version to specify the version."
             )
 
@@ -192,7 +198,7 @@ def convert(
     cleanup_extracted_path(SHARED_DIR)
 
     if len(cfg.stages) > 1:
-        raise ValueError(
+        raise InputError(
             "Only single-stage models are supported with online conversion."
         )
 
@@ -220,14 +226,14 @@ def convert(
                     is_yolo=is_yolo,
                 )
                 model_id = model.id
-            except ValueError:
-                model_id = get_resource_id(
+            except ResourceConflictError:
+                model_id = resolve_resource_id(
                     name.lower().replace(" ", "-"), "models"
                 )
 
         if variant_id is None:
             if model_id is None:
-                raise ValueError(
+                raise InputError(
                     "`--model-id` is required to create a new model"
                 )
 
@@ -249,7 +255,7 @@ def convert(
             variant = get_variant(variant_id)
             if variant_version is not None:
                 if model_id is None:
-                    raise ValueError(
+                    raise InputError(
                         "`--model-id` is required to create a new variant version."
                     )
                 variant = create_variant(
@@ -404,17 +410,28 @@ def _wait_for_exported_instance_ready(
                 ):
                     return latest_instance
             except HTTPError as exc:
+                status_code = (
+                    exc.response.status_code
+                    if exc.response is not None
+                    else None
+                )
+                if status_code not in {404, 409, 423}:
+                    raise_for_hub_error(
+                        exc,
+                        identifier=latest_instance.id,
+                        endpoint="modelInstances",
+                    )
                 last_error = exc
 
         sleep(poll_interval_seconds)
 
     if last_error is not None:
-        raise RuntimeError(
+        raise HubApiError(
             "Export job completed but the exported model instance is not "
             "downloadable yet."
         ) from last_error
 
-    raise RuntimeError(
+    raise HubApiError(
         "Export job completed but the exported model instance did not "
         "become available in time."
     )
@@ -432,7 +449,7 @@ def _export(
     **kwargs,
 ) -> JobMessageResponse:
     """Starts an export job for a model instance."""
-    model_instance_id = get_resource_id(str(identifier), "modelInstances")
+    model_instance_id = resolve_resource_id(str(identifier), "modelInstances")
     json: dict[str, object] = {
         "name": name,
         "quantization_data": quantization_data,
@@ -449,14 +466,22 @@ def _export(
         )
     if target is Target.RVC4:
         json["target_precision"] = quantization_mode
-    res = Request.post(
-        service="models",
-        endpoint=f"modelInstances/{model_instance_id}/export/{target.value}",
-        json=json,
-        params={
-            "legacy": not json.get("superblob", True) and target is Target.RVC2
-        },
-    )
+    try:
+        res = Request.post(
+            service="models",
+            endpoint=f"modelInstances/{model_instance_id}/export/{target.value}",
+            json=json,
+            params={
+                "legacy": not json.get("superblob", True)
+                and target is Target.RVC2
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc,
+            identifier=model_instance_id,
+            endpoint="modelInstances",
+        )
     job = JobMessageResponse(**res)
     logger.info(
         f"Export job '{job.id}' created for model instance '{model_instance_id}' "
