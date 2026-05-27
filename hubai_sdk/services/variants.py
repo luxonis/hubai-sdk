@@ -10,7 +10,7 @@ from hubai_sdk.utils.hub import (
     get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    raise_for_resource_not_found,
+    raise_for_hub_error,
     resolve_resource_id,
     run_cli,
 )
@@ -90,20 +90,23 @@ def list_variants(
             include_system_metadata=False,
         )
 
-    data = Request.get(
-        service="models",
-        endpoint="modelVersions",
-        params={
-            "model_id": str(model_id) if model_id else None,
-            "name": name,
-            "variant_slug": variant_slug,
-            "version": variant_version,
-            "is_public": is_public,
-            "limit": limit,
-            "sort": sort,
-            "order": order,
-        },
-    )
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelVersions",
+            params={
+                "model_id": str(model_id) if model_id else None,
+                "name": name,
+                "variant_slug": variant_slug,
+                "version": variant_version,
+                "is_public": is_public,
+                "limit": limit,
+                "sort": sort,
+                "order": order,
+            },
+        )
+    except requests.HTTPError as exc:
+        raise_for_hub_error(exc)
 
     if include_model_name:
         for variant in data:
@@ -225,12 +228,13 @@ def create_variant(
         res = Request.post(
             service="models", endpoint="modelVersions", json=data
         )
-    except requests.HTTPError as e:
-        if str(e).startswith("{'detail': 'Unique constraint error."):
-            raise ValueError(
+    except requests.HTTPError as exc:
+        raise_for_hub_error(
+            exc,
+            conflict_message=(
                 f"Model variant '{name}' already exists for model '{model_id}'"
-            ) from e
-        raise
+            ),
+        )
 
     telemetry = get_telemetry()
     if telemetry:
@@ -287,8 +291,9 @@ def delete_variant(identifier: UUID | str) -> None:
             service="models", endpoint=f"modelVersions/{variant_id}"
         )
     except requests.HTTPError as exc:
-        raise_for_resource_not_found(exc, identifier, "modelVersions")
-        raise
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelVersions"
+        )
     logger.info(f"Model variant '{variant_id}' deleted")
 
     telemetry = get_telemetry()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import hubai_sdk.services.convert as convert_service
-from hubai_sdk.utils.hub import ResourceNotFoundError
+from hubai_sdk.errors import ResourceNotFoundError
 from hubai_sdk.utils.hubai_models import JobMessageResponse
 
 

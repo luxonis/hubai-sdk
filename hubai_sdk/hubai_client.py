@@ -1,12 +1,14 @@
 import os
 
 from loguru import logger
+from requests import HTTPError
 
 import hubai_sdk.services.convert
 import hubai_sdk.services.instances
 import hubai_sdk.services.models
 import hubai_sdk.services.variants
 from hubai_sdk.utils.environ import environ
+from hubai_sdk.utils.hub import raise_for_hub_error
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.plugins import load_client_plugins
 from hubai_sdk.utils.telemetry import initialize_telemetry
@@ -58,8 +60,12 @@ class HubAIClient:
                 endpoint="models/",
                 params={"is_public": False, "limit": 1},
             )
-        except Exception as e:
-            logger.error(f"Error verifying API key: {e}")
-            return False
+        except HTTPError as exc:
+            status_code = (
+                exc.response.status_code if exc.response is not None else None
+            )
+            if status_code in {401, 403}:
+                return False
+            raise_for_hub_error(exc)
         else:
             return True
