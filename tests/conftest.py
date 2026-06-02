@@ -117,7 +117,11 @@ def pytorch_variant_id(request: pytest.FixtureRequest):
 
 
 @pytest.fixture
-def pytorch_model_path(client: HubAIClient, pytorch_variant_id: str):
+def pytorch_model_path(
+    client: HubAIClient,
+    pytorch_variant_id: str,
+    tmp_path_factory: pytest.TempPathFactory,
+):
     """Fixture to download a PyTorch source model for conversion
     tests."""
     instances = client.instances.list_instances(
@@ -134,8 +138,23 @@ def pytorch_model_path(client: HubAIClient, pytorch_variant_id: str):
             f"{pytorch_variant_id}."
         )
 
-    return client.instances.download_instance(
-        instances[0].id, output_dir=str(Path.cwd())
+    download_dir = tmp_path_factory.mktemp("pytorch-model")
+    downloaded_path = Path(
+        client.instances.download_instance(
+            instances[0].id, output_dir=str(download_dir)
+        )
+    )
+
+    if downloaded_path.suffix in {".pt", ".pth"}:
+        return downloaded_path
+
+    for pattern in ("*.pt", "*.pth"):
+        matches = sorted(download_dir.glob(pattern))
+        if matches:
+            return matches[0]
+
+    raise ValueError(
+        "Downloaded PyTorch base instance does not contain a .pt or .pth file."
     )
 
 

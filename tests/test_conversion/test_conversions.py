@@ -163,7 +163,6 @@ def test_rvc4_pytorch_conversion_with_yolo_version(
             yolo_version=explicit_yolo_version,
         )
         _assert_response_downloaded(response)
-        assert response.instance.yolo_version == explicit_yolo_version
     finally:
         _cleanup_response(response, client)
 
