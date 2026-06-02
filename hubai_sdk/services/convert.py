@@ -43,11 +43,14 @@ from hubai_sdk.utils.hub import (
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     EnumModelInstanceStatus,
-    JobMessageResponse,
 )
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.quantization import normalize_quantization_input
-from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ConvertResponse,
+    JobMessageResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
 

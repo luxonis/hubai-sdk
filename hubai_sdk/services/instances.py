@@ -32,11 +32,13 @@ from hubai_sdk.utils.hub import (
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
-    ModelInstanceFileResponse,
     ModelInstanceUploadResponse,
     UploadQuantizationZipResponse,
 )
-from hubai_sdk.utils.sdk_models import ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ModelInstanceFileResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry
 from hubai_sdk.utils.types import ModelType
 

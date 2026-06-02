@@ -81,6 +81,57 @@ def _variant_data(**overrides: object) -> dict[str, object]:
     return data
 
 
+def _instance_data(**overrides: object) -> dict[str, object]:
+    data: dict[str, object] = {
+        "model_version_id": "aimv_variant",
+        "parent_id": None,
+        "model_type": "RVC4",
+        "name": "test-instance",
+        "description": None,
+        "tags": [],
+        "job_id": None,
+        "hardware_parameters": None,
+        "input_shape": None,
+        "quantization_data": None,
+        "yolo_version": None,
+        "id": "aimi_instance",
+        "team_id": TEST_TEAM_ID,
+        "user_id": TEST_USER_ID,
+        "created": "2026-01-01T00:00:00.000000",
+        "updated": "2026-01-01T00:00:00.000000",
+        "slug": "test-instance",
+        "is_nn_archive": False,
+        "model_class": None,
+        "model_id": "aim_model",
+        "exportable_to": [],
+        "is_public": False,
+        "model_precision_type": "FP16",
+        "status": "available",
+        "platforms": ["RVC4"],
+        "hash": None,
+        "hash_short": None,
+        "model_version_name": None,
+        "training_run_name": None,
+    }
+    data.update(overrides)
+    return data
+
+
+def _file_data(**overrides: object) -> dict[str, object]:
+    data: dict[str, object] = {
+        "model_instance_id": "aimi_instance",
+        "filepath": "model.blob",
+        "id": "aimif_file",
+        "team_id": TEST_TEAM_ID,
+        "user_id": TEST_USER_ID,
+        "created": "2026-01-01T00:00:00.000000",
+        "updated": "2026-01-01T00:00:00.000000",
+        "file_size_bytes": 123,
+    }
+    data.update(overrides)
+    return data
+
+
 class _DummyConfig:
     def __init__(self, **kwargs: object) -> None:
         self.__dict__.update(kwargs)
@@ -124,6 +175,10 @@ def test_list_models_returns_typed_models(
 
     assert len(models) == 1
     assert models[0].id == "aim_model"
+    assert "team_id" not in type(models[0]).model_fields
+    assert "user_id" not in type(models[0]).model_fields
+    assert "team_id" not in models[0].model_dump()
+    assert "user_id" not in models[0].model_dump()
 
 
 def test_get_model_info_cli_prints_model(
@@ -211,6 +266,48 @@ def test_get_variant_returns_typed_variant(
 
     assert variant.id == "aimv_variant"
     assert variant.model_name == "test-model"
+    assert "team_id" not in type(variant).model_fields
+    assert "user_id" not in type(variant).model_fields
+
+
+def test_list_instances_returns_sdk_instance_without_owner_ids(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
+    monkeypatch.setattr(
+        instance_services.Request,
+        "get",
+        lambda *args, **kwargs: [_instance_data()],
+    )
+
+    instances = instance_services.list_instances()
+
+    assert len(instances) == 1
+    assert instances[0].id == "aimi_instance"
+    assert "team_id" not in type(instances[0]).model_fields
+    assert "user_id" not in type(instances[0]).model_fields
+    assert "team_id" not in instances[0].model_dump()
+    assert "user_id" not in instances[0].model_dump()
+
+
+def test_get_files_returns_sdk_files_without_owner_ids(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
+    monkeypatch.setattr(
+        instance_services,
+        "_get_instance_subresource",
+        lambda identifier, subpath: [_file_data()],
+    )
+
+    files = instance_services.get_files("aimi_instance")
+
+    assert len(files) == 1
+    assert files[0].id == "aimif_file"
+    assert "team_id" not in type(files[0]).model_fields
+    assert "user_id" not in type(files[0]).model_fields
+    assert "team_id" not in files[0].model_dump()
+    assert "user_id" not in files[0].model_dump()
 
 
 def test_get_config_cli_logs_config(monkeypatch: pytest.MonkeyPatch) -> None:
