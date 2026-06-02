@@ -8,6 +8,7 @@ import pytest
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 from hubai_sdk import HubAIClient
+from hubai_sdk.utils.types import ModelType
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -31,6 +32,13 @@ def pytest_addoption(parser: pytest.Parser):
         action="store",
         default=None,
         help="Base instance ID to download for conversion tests",
+    )
+
+    parser.addoption(
+        "--pytorch-variant-id",
+        action="store",
+        default=None,
+        help="PyTorch model variant ID to use for conversion tests",
     )
 
 
@@ -85,6 +93,49 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
 
     return client.instances.download_instance(
         base_instance.id, output_dir=str(Path.cwd())
+    )
+
+
+@pytest.fixture
+def pytorch_variant_id(request: pytest.FixtureRequest):
+    """Fixture to provide a stage-specific PyTorch variant ID."""
+    variant_id = request.config.getoption("--pytorch-variant-id", default=None)
+    if variant_id is not None:
+        return variant_id
+
+    variant_id = os.getenv("HUBAI_PYTORCH_VARIANT_ID")
+    if variant_id is not None:
+        return variant_id
+
+    stg_variant_id = "aimv_7yxPWY65q2dSCqK84JsAFL_stg"
+    prod_variant_id = "aimv_8UbzZDbeDpJzyARRnia9Yv"
+    return (
+        stg_variant_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_variant_id
+    )
+
+
+@pytest.fixture
+def pytorch_model_path(client: HubAIClient, pytorch_variant_id: str):
+    """Fixture to download a PyTorch source model for conversion
+    tests."""
+    instances = client.instances.list_instances(
+        variant_id=pytorch_variant_id,
+        model_type=ModelType.PYTORCH,
+        model_class="base",
+        status="available",
+        limit=10,
+    )
+
+    if not instances:
+        raise ValueError(
+            "No available PyTorch base instance found for variant "
+            f"{pytorch_variant_id}."
+        )
+
+    return client.instances.download_instance(
+        instances[0].id, output_dir=str(Path.cwd())
     )
 
 

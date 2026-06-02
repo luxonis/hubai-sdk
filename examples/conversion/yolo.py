@@ -19,8 +19,8 @@ parser.add_argument(
     "--yolo-version",
     "-y",
     type=str,
-    required=True,
-    help="YOLO version",
+    default=None,
+    help="YOLO version override",
 )
 
 args = parser.parse_args()
@@ -33,10 +33,14 @@ api_key = os.getenv("HUBAI_API_KEY")
 # Create HubAI client
 client = HubAIClient(api_key=api_key)
 
+model_name = "test-sdk-conversion-yolo"
+if args.yolo_version:
+    model_name = f"{model_name}-{args.yolo_version}"
+
 # Convert model to RVC4
 response = client.convert.RVC4(
     path=model_path,
-    name=f"test-sdk-conversion-yolo-{args.yolo_version}",
+    name=model_name,
     quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
     max_quantization_images=50,
@@ -57,4 +61,4 @@ assert Path.exists(downloaded_path)
 logger.info(f"Model downloaded to: {downloaded_path}")
 
 # Delete the model
-client.models.delete_model(f"test-sdk-conversion-yolo-{args.yolo_version}")
+client.models.delete_model(model_name)
