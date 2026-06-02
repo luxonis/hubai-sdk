@@ -76,6 +76,7 @@ QuantizationInputType: TypeAlias = Literal[
     "predefined_dataset",
     "dataset_id",
     "custom_zip",
+    "custom_path",
 ]
 
 DatasetId = Annotated[str, Field(pattern=r"^aid_[a-zA-Z0-9_]+")]

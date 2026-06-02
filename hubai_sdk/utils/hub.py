@@ -464,6 +464,14 @@ def wait_for_job(job_id: str) -> JobMessageResponse:
             raise HubApiError(
                 f"Job '{job_id}' failed with error: {job.exception}"
             )
+        if job.status in {
+            EnumJobStatusType.CANCELLED,
+            EnumJobStatusType.SHUTDOWN,
+        }:
+            detail = f": {job.exception}" if job.exception else ""
+            raise HubApiError(
+                f"Job '{job_id}' ended with status {job.status.value}{detail}"
+            )
         sleep(1)
 
 

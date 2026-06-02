@@ -10,6 +10,9 @@ import hubai_sdk.services.models as model_services
 import hubai_sdk.services.variants as variant_services
 from hubai_sdk.errors import ResourceNotFoundError
 
+TEST_TEAM_ID = "00000000-0000-0000-0000-000000000001"
+TEST_USER_ID = "00000000-0000-0000-0000-000000000002"
+
 
 def _model_data(**overrides: object) -> dict[str, object]:
     data: dict[str, object] = {
@@ -23,8 +26,10 @@ def _model_data(**overrides: object) -> dict[str, object]:
         "links": [],
         "is_yolo": False,
         "id": "aim_model",
+        "team_id": None,
         "team_name": None,
         "team_slug": None,
+        "user_id": TEST_USER_ID,
         "created": "2026-01-01T00:00:00.000000",
         "updated": "2026-01-01T00:00:00.000000",
         "slug": "test-model",
@@ -58,6 +63,8 @@ def _variant_data(**overrides: object) -> dict[str, object]:
         "training_run_name": None,
         "tags": [],
         "id": "aimv_variant",
+        "team_id": TEST_TEAM_ID,
+        "user_id": TEST_USER_ID,
         "created": "2026-01-01T00:00:00.000000",
         "updated": "2026-01-01T00:00:00.000000",
         "slug": "test-variant-0-1-0",
