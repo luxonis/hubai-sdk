@@ -8,7 +8,6 @@ import pytest
 os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 from hubai_sdk import HubAIClient
-from hubai_sdk.utils.types import ModelType
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -35,10 +34,10 @@ def pytest_addoption(parser: pytest.Parser):
     )
 
     parser.addoption(
-        "--pytorch-variant-id",
+        "--pytorch-instance-id",
         action="store",
         default=None,
-        help="PyTorch model variant ID to use for conversion tests",
+        help="PyTorch model instance ID to use for conversion tests",
     )
 
 
@@ -97,51 +96,40 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
 
 
 @pytest.fixture
-def pytorch_variant_id(request: pytest.FixtureRequest):
-    """Fixture to provide a stage-specific PyTorch variant ID."""
-    variant_id = request.config.getoption("--pytorch-variant-id", default=None)
-    if variant_id is not None:
-        return variant_id
+def pytorch_instance_id(request: pytest.FixtureRequest):
+    """Fixture to provide a stage-specific PyTorch source instance
+    ID."""
+    instance_id = request.config.getoption(
+        "--pytorch-instance-id", default=None
+    )
+    if instance_id is not None:
+        return instance_id
 
-    variant_id = os.getenv("HUBAI_PYTORCH_VARIANT_ID")
-    if variant_id is not None:
-        return variant_id
+    instance_id = os.getenv("HUBAI_PYTORCH_BASE_INSTANCE_ID")
+    if instance_id is not None:
+        return instance_id
 
-    stg_variant_id = "aimv_7yxPWY65q2dSCqK84JsAFL_stg"
-    prod_variant_id = "aimv_8UbzZDbeDpJzyARRnia9Yv"
+    stg_instance_id = "aimi_7yxPWbwNp5ziKYLGm2X34v_stg"
+    prod_instance_id = "aimi_8UbzZGbgSuG75P1iemzHJD"
     return (
-        stg_variant_id
+        stg_instance_id
         if os.getenv("HUBAI_STAGE", "") == "stg"
-        else prod_variant_id
+        else prod_instance_id
     )
 
 
 @pytest.fixture
 def pytorch_model_path(
     client: HubAIClient,
-    pytorch_variant_id: str,
+    pytorch_instance_id: str,
     tmp_path_factory: pytest.TempPathFactory,
 ):
     """Fixture to download a PyTorch source model for conversion
     tests."""
-    instances = client.instances.list_instances(
-        variant_id=pytorch_variant_id,
-        model_type=ModelType.PYTORCH,
-        model_class="base",
-        status="available",
-        limit=10,
-    )
-
-    if not instances:
-        raise ValueError(
-            "No available PyTorch base instance found for variant "
-            f"{pytorch_variant_id}."
-        )
-
     download_dir = tmp_path_factory.mktemp("pytorch-model")
     downloaded_path = Path(
         client.instances.download_instance(
-            instances[0].id, output_dir=str(download_dir)
+            pytorch_instance_id, output_dir=str(download_dir)
         )
     )
 
