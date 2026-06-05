@@ -288,8 +288,9 @@ def download_instance(
     identifier : UUID | str
         The model instance ID or slug.
     output_dir : str | None
-        The directory to save the downloaded files.
-        If not specified, the files will be saved in the current directory.
+        The directory path to save the downloaded files.
+        If not specified, the downloader creates a directory named after the
+        model instance slug under the current working directory.
     force : bool
         Whether to force download the files even if they already exist.
     """
@@ -421,15 +422,17 @@ def create_instance(
     parent_id : UUID | str | None
         The ID of the parent model instance.
     quantization_mode : QuantizationMode | None
-        The quantization mode of the model. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        The quantization mode of the model. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, INT8_INT16_MIXED_ACCURACY_FOCUSED, FP16_STANDARD.
         INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
         INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
         INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        INT8_INT16_MIXED_ACCURACY_FOCUSED is a mixed INT8 and INT16 calibration-based mode that prioritizes accuracy over throughput.
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | None
         The quantization data for the model. Can be one of predefined domains
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        or a dataset ID.
+        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, CUSTOM, UNKNOWN),
+        or a dataset ID. For conversion helpers, pass the local .zip path itself
+        instead of `CUSTOM`; the SDK normalizes that input before instance creation.
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None
