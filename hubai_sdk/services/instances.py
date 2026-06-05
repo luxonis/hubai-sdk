@@ -149,6 +149,10 @@ def list_instances(
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
+    normalized_model_class = (
+        model_class.upper() if model_class is not None else None
+    )
+
     try:
         data = Request.get(
             service="models",
@@ -162,7 +166,7 @@ def list_instances(
                 "model_version_id": str(variant_id) if variant_id else None,
                 "model_type": model_type,
                 "parent_id": str(parent_id) if parent_id else None,
-                "model_class": model_class,
+                "model_class": normalized_model_class,
                 "name": name,
                 "hash": hash,
                 "status": status,

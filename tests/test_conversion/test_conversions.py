@@ -128,6 +128,45 @@ def test_rvc4_conversion_with_custom_quantization_zip(
         _cleanup_response(response, client)
 
 
+def test_rvc4_pytorch_conversion_without_yolo_version(
+    client: HubAIClient,
+    pytorch_model_path: str,
+):
+    model_name = f"test-sdk-conversion-rvc4-pytorch-auto-{uuid.uuid4()}"
+    response: ConvertResponse | None = None
+
+    try:
+        response = client.convert.RVC4(
+            path=pytorch_model_path,
+            name=model_name,
+            quantization_mode="FP16_STANDARD",
+        )
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
+
+
+def test_rvc4_pytorch_conversion_with_yolo_version(
+    client: HubAIClient,
+    pytorch_model_path: str,
+    yolo_version: str | None,
+):
+    model_name = f"test-sdk-conversion-rvc4-pytorch-explicit-{uuid.uuid4()}"
+    response: ConvertResponse | None = None
+    explicit_yolo_version = yolo_version or "yolov6r4"
+
+    try:
+        response = client.convert.RVC4(
+            path=pytorch_model_path,
+            name=model_name,
+            quantization_mode="FP16_STANDARD",
+            yolo_version=explicit_yolo_version,
+        )
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
+
+
 def _create_quantization_zip(
     zip_path: Path, input_shape: list[int], num_samples: int = 2
 ) -> Path:

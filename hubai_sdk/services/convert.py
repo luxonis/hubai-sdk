@@ -52,7 +52,7 @@ from hubai_sdk.utils.sdk_models import (
     ModelInstanceResponse,
 )
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
-from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
+from hubai_sdk.utils.types import ModelType, PotDevice, Target
 
 
 def convert(
@@ -180,11 +180,6 @@ def convert(
 
     if path is not None and not is_archive and not is_yaml(path):
         opts.extend(["input_model", path])
-        input_file_type = InputFileType.from_path(path)
-        if input_file_type == InputFileType.PYTORCH and yolo_version is None:
-            raise InputError(
-                "YOLO version is required for PyTorch YOLO models. Use --yolo-version to specify the version."
-            )
 
     if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}:
         opts.extend(["disable_calibration", "True"])

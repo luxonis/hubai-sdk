@@ -33,6 +33,13 @@ def pytest_addoption(parser: pytest.Parser):
         help="Base instance ID to download for conversion tests",
     )
 
+    parser.addoption(
+        "--pytorch-instance-id",
+        action="store",
+        default=None,
+        help="PyTorch model instance ID to use for conversion tests",
+    )
+
 
 @pytest.fixture
 def client():
@@ -85,6 +92,57 @@ def base_model_path(request: pytest.FixtureRequest, client: HubAIClient):
 
     return client.instances.download_instance(
         base_instance.id, output_dir=str(Path.cwd())
+    )
+
+
+@pytest.fixture
+def pytorch_instance_id(request: pytest.FixtureRequest):
+    """Fixture to provide a stage-specific PyTorch source instance
+    ID."""
+    instance_id = request.config.getoption(
+        "--pytorch-instance-id", default=None
+    )
+    if instance_id is not None:
+        return instance_id
+
+    instance_id = os.getenv("HUBAI_PYTORCH_BASE_INSTANCE_ID")
+    if instance_id is not None:
+        return instance_id
+
+    stg_instance_id = "aimi_7yxPWbwNp5ziKYLGm2X34v_stg"
+    prod_instance_id = "aimi_8UbzZGbgSuG75P1iemzHJD"
+    return (
+        stg_instance_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_instance_id
+    )
+
+
+@pytest.fixture
+def pytorch_model_path(
+    client: HubAIClient,
+    pytorch_instance_id: str,
+    tmp_path_factory: pytest.TempPathFactory,
+):
+    """Fixture to download a PyTorch source model for conversion
+    tests."""
+    download_dir = tmp_path_factory.mktemp("pytorch-model")
+    downloaded_path = Path(
+        client.instances.download_instance(
+            pytorch_instance_id, output_dir=str(download_dir)
+        )
+    )
+
+    if downloaded_path.suffix in {".pt", ".pth"}:
+        return downloaded_path
+
+    for pattern in ("*.pt", "*.pth"):
+        matches = sorted(download_dir.glob(pattern))
+        if matches:
+            return matches[0]
+
+    raise ValueError(
+        "Downloaded PyTorch base instance does not contain a .pt or .pth file."
     )
 
 
