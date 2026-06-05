@@ -107,3 +107,8 @@ def test_normalize_quantization_input_classifies_sources(
     normalized = normalize_quantization_input(str(quantization_zip))
     assert normalized.input_type == "custom_zip"
     assert normalized.quantization_data == "CUSTOM"
+
+
+def test_normalize_quantization_input_rejects_remote_gcs_paths() -> None:
+    with pytest.raises(ValueError, match="does not support remote GCS paths"):
+        normalize_quantization_input("gs://bucket/calibration/data.zip")

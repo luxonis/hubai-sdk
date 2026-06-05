@@ -43,11 +43,14 @@ from hubai_sdk.utils.hub import (
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     EnumModelInstanceStatus,
-    JobMessageResponse,
 )
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.quantization import normalize_quantization_input
-from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ConvertResponse,
+    JobMessageResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
 
@@ -131,8 +134,7 @@ def convert(
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -804,8 +806,7 @@ def RVC4(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -914,8 +915,7 @@ def Hailo(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional

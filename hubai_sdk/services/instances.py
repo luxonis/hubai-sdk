@@ -32,11 +32,13 @@ from hubai_sdk.utils.hub import (
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
-    ModelInstanceFileResponse,
     ModelInstanceUploadResponse,
     UploadQuantizationZipResponse,
 )
-from hubai_sdk.utils.sdk_models import ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ModelInstanceFileResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry
 from hubai_sdk.utils.types import ModelType
 
@@ -423,7 +425,7 @@ def create_instance(
     quantization_data : QuantizationData | None
         The quantization data for the model. Can be one of predefined domains
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        or a dataset ID starting with "aid_".
+        or a dataset ID.
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None

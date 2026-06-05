@@ -6,6 +6,9 @@ import hubai_sdk.services.convert as convert_service
 from hubai_sdk.errors import ResourceNotFoundError
 from hubai_sdk.utils.hubai_models import JobMessageResponse
 
+TEST_TEAM_ID = "00000000-0000-0000-0000-000000000001"
+TEST_USER_ID = "00000000-0000-0000-0000-000000000002"
+
 
 def _instance_data(**overrides: object) -> dict[str, object]:
     data: dict[str, object] = {
@@ -21,6 +24,8 @@ def _instance_data(**overrides: object) -> dict[str, object]:
         "quantization_data": None,
         "yolo_version": None,
         "id": "aimi_exported",
+        "team_id": TEST_TEAM_ID,
+        "user_id": TEST_USER_ID,
         "created": "2026-01-01T00:00:00.000000",
         "updated": "2026-01-01T00:00:00.000000",
         "slug": "exported-instance",

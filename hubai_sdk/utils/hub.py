@@ -39,8 +39,9 @@ from hubai_sdk.utils.constants import (
 from hubai_sdk.utils.filesystem_utils import resolve_path
 from hubai_sdk.utils.general import sanitize_net_name
 from hubai_sdk.utils.hub_requests import Request
-from hubai_sdk.utils.hubai_models import EnumJobStatusType, JobMessageResponse
+from hubai_sdk.utils.hubai_models import EnumJobStatusType
 from hubai_sdk.utils.nn_archive import process_nn_archive
+from hubai_sdk.utils.sdk_models import JobMessageResponse
 from hubai_sdk.utils.types import ModelType, Target
 
 ResourceEndpoint = Literal["models", "modelVersions", "modelInstances"]
@@ -463,6 +464,14 @@ def wait_for_job(job_id: str) -> JobMessageResponse:
         if job.status == EnumJobStatusType.FAILED:
             raise HubApiError(
                 f"Job '{job_id}' failed with error: {job.exception}"
+            )
+        if job.status in {
+            EnumJobStatusType.CANCELLED,
+            EnumJobStatusType.SHUTDOWN,
+        }:
+            detail = f": {job.exception}" if job.exception else ""
+            raise HubApiError(
+                f"Job '{job_id}' ended with status {job.status.value}{detail}"
             )
         sleep(1)
 

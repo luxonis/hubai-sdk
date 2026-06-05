@@ -37,7 +37,6 @@ MODEL_INFO_KEYS = [
     "versions",
     "likes",
     "downloads",
-    "team_id",
 ]
 
 
