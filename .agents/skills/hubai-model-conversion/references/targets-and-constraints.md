@@ -9,11 +9,13 @@
 - `NN Archive`: `.tar.xz`
 - `Config-driven conversion`: `.yaml`, `.yml`
 
-PyTorch inputs require `yolo_version`.
+All of these go through the same `path` argument.
 
-## Common Hub Metadata
+PyTorch inputs are limited to YOLO models. Normally rely on auto-detected `yolo_version`. `yolo_input_shape` defaults to `[640, 640]` when omitted or invalid.
 
-Use these only when the task needs Hub-side resource management in addition to conversion:
+## Common Conversion and Hub Parameters
+
+Use these only when the task needs more than a simple one-off conversion:
 
 - `name`
 - `license_type`
@@ -37,6 +39,10 @@ Use these only when the task needs Hub-side resource management in addition to c
 - `output_dir`
 
 If no existing model or variant IDs are supplied, the SDK creates the Hub resources it needs and auto-increments the variant version.
+
+`output_dir` is a directory path. If it is omitted, the downloader creates a directory named from the exported instance slug under the current working directory.
+
+If the conversion created a fresh model hierarchy and the caller only wants local files afterward, prefer cleanup by deleting the created model via `client.models.delete_model(response.instance.model_id)` or `hubai model delete <model_id>`.
 
 ## RVC2
 
@@ -73,6 +79,8 @@ Behavior notes:
 
 Preferred helper: `client.convert.RVC4(...)`
 
+These settings are RVC4-only.
+
 Primary knobs:
 
 - `quantization_mode`
@@ -92,18 +100,18 @@ Supported quantization modes:
 - `INT8_INT16_MIXED`
 - `INT8_INT16_MIXED_ACCURACY_FOCUSED`
 - `FP16_STANDARD`
-- `FP32_STANDARD`
 
 Accepted `quantization_data` forms:
 
 - predefined dataset name such as `GENERAL`, `INDOORS`, or `WAREHOUSE`
 - dataset ID beginning with `aid_`
-- path to a custom `.zip` file
+- path to a local existing custom `.zip` file
 
 Behavior notes:
 
-- When `quantization_data` is omitted, the SDK defaults to `RANDOM` unless the mode is `FP16_STANDARD` or `FP32_STANDARD`.
-- Passing `CUSTOM` directly is an error. Pass the `.zip` path instead.
+- On calibration-based modes, omitted `quantization_data` defaults to `RANDOM`.
+- `FP16_STANDARD` does not use calibration data.
+- Passing `CUSTOM` directly is an error. Pass the `.zip` path instead; the SDK will normalize that input to `CUSTOM`.
 
 ## Hailo
 
@@ -121,6 +129,7 @@ Primary knobs:
 - Hosted conversion supports only single-stage models.
 - The SDK uploads the source artifact to Hub and downloads the exported instance when the job completes.
 - The returned object includes `downloaded_path`, the export `job`, and the exported `instance`.
+- OpenVINO IR can use `path` for the XML and `input_bin` for the BIN when they do not live together.
 
 ## Blobconverter Migration Hints
 
@@ -130,7 +139,7 @@ Common mappings when replacing `blobconverter`:
 - `xml` -> `path`
 - `bin` -> `opts["input_bin"]`
 - `version` -> `tool_version`
-- `data_type` -> `quantization_mode`
+- `data_type` -> `compress_to_fp16` for `RVC2` and `RVC3`, `quantization_mode` for `RVC4`
 - `shaves` -> `number_of_shaves`
 - `optimizer_params` -> `mo_args`
 - `compile_params` -> `compile_tool_args`
