@@ -8,10 +8,15 @@ from luxonis_ml.nn_archive import is_nn_archive
 from luxonis_ml.typing import Kwargs, PathType
 from requests import HTTPError
 
+from hubai_sdk.errors import (
+    HubApiError,
+    InputError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from hubai_sdk.services.instances import (
     create_instance,
     download_instance,
-    get_instance,
     upload_file,
     upload_quantization_zip,
 )
@@ -27,22 +32,27 @@ from hubai_sdk.typing import (
 from hubai_sdk.utils.constants import SHARED_DIR
 from hubai_sdk.utils.hub import (
     get_configs,
-    get_resource_id,
+    get_resource_info,
     get_target_specific_options,
     get_variant_name,
     get_version_number,
+    raise_for_hub_error,
+    resolve_resource_id,
     wait_for_job,
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     EnumModelInstanceStatus,
-    JobMessageResponse,
 )
 from hubai_sdk.utils.nn_archive import cleanup_extracted_path
 from hubai_sdk.utils.quantization import normalize_quantization_input
-from hubai_sdk.utils.sdk_models import ConvertResponse, ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ConvertResponse,
+    JobMessageResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
-from hubai_sdk.utils.types import InputFileType, ModelType, PotDevice, Target
+from hubai_sdk.utils.types import ModelType, PotDevice, Target
 
 
 def convert(
@@ -124,8 +134,7 @@ def convert(
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -171,11 +180,6 @@ def convert(
 
     if path is not None and not is_archive and not is_yaml(path):
         opts.extend(["input_model", path])
-        input_file_type = InputFileType.from_path(path)
-        if input_file_type == InputFileType.PYTORCH and yolo_version is None:
-            raise ValueError(
-                "YOLO version is required for PyTorch YOLO models. Use --yolo-version to specify the version."
-            )
 
     if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}:
         opts.extend(["disable_calibration", "True"])
@@ -191,7 +195,7 @@ def convert(
     cleanup_extracted_path(SHARED_DIR)
 
     if len(cfg.stages) > 1:
-        raise ValueError(
+        raise InputError(
             "Only single-stage models are supported with online conversion."
         )
 
@@ -217,18 +221,16 @@ def convert(
                     tasks=tasks or [],
                     links=links or [],
                     is_yolo=is_yolo,
-                    silent=True,
                 )
-                assert model is not None
                 model_id = model.id
-            except ValueError:
-                model_id = get_resource_id(
+            except ResourceConflictError:
+                model_id = resolve_resource_id(
                     name.lower().replace(" ", "-"), "models"
                 )
 
         if variant_id is None:
             if model_id is None:
-                raise ValueError(
+                raise InputError(
                     "`--model-id` is required to create a new model"
                 )
 
@@ -243,18 +245,14 @@ def convert(
                 commit_hash=commit_hash,
                 domain=domain,
                 tags=variant_tags or [],
-                silent=True,
             )
-            assert variant is not None
             variant_id = variant.id
 
         else:
             variant = get_variant(variant_id)
-            if variant is None:
-                raise ValueError(f"Variant with ID {variant_id} not found")
             if variant_version is not None:
                 if model_id is None:
-                    raise ValueError(
+                    raise InputError(
                         "`--model-id` is required to create a new variant version."
                     )
                 variant = create_variant(
@@ -266,9 +264,7 @@ def convert(
                     commit_hash=commit_hash,
                     domain=domain,
                     tags=variant_tags or [],
-                    silent=True,
                 )
-                assert variant is not None
                 variant_id = variant.id
 
         assert variant_id is not None
@@ -280,9 +276,7 @@ def convert(
             input_shape=input_shape or cfg.inputs[0].shape,
             is_deployable=is_deployable,
             tags=instance_tags or [],
-            silent=True,
         )
-        assert instance is not None
         instance_id = instance.id
 
         # TODO: IR support
@@ -372,11 +366,19 @@ def _resolve_exported_instance(
     instance_id = job.result["resulting_model_instance_id"]
     if not isinstance(instance_id, str):
         raise TypeError("resulting_model_instance_id must be a string")
-    return _wait_for_exported_instance_ready(get_instance(instance_id))
+    return _wait_for_exported_instance_ready(instance_id)
+
+
+def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
+    try:
+        data = get_resource_info(instance_id, "modelInstances")
+    except ResourceNotFoundError:
+        return None
+    return ModelInstanceResponse(**data)
 
 
 def _wait_for_exported_instance_ready(
-    instance: ModelInstanceResponse,
+    instance_id: str,
     *,
     timeout_seconds: int = 180,
     poll_interval_seconds: int = 2,
@@ -384,11 +386,15 @@ def _wait_for_exported_instance_ready(
     """Wait until an exported model instance is actually
     downloadable."""
     attempts = max(1, timeout_seconds // poll_interval_seconds)
-    latest_instance = instance
+    latest_instance = None
     last_error: Exception | None = None
 
     for _ in range(attempts):
-        latest_instance = get_instance(instance.id)
+        latest_instance = _get_instance_response(instance_id)
+        if latest_instance is None:
+            sleep(poll_interval_seconds)
+            continue
+
         is_available = (
             latest_instance.status == EnumModelInstanceStatus.available
         )
@@ -401,17 +407,28 @@ def _wait_for_exported_instance_ready(
                 ):
                     return latest_instance
             except HTTPError as exc:
+                status_code = (
+                    exc.response.status_code
+                    if exc.response is not None
+                    else None
+                )
+                if status_code not in {404, 409, 423}:
+                    raise_for_hub_error(
+                        exc,
+                        identifier=latest_instance.id,
+                        endpoint="modelInstances",
+                    )
                 last_error = exc
 
         sleep(poll_interval_seconds)
 
     if last_error is not None:
-        raise RuntimeError(
+        raise HubApiError(
             "Export job completed but the exported model instance is not "
             "downloadable yet."
         ) from last_error
 
-    raise RuntimeError(
+    raise HubApiError(
         "Export job completed but the exported model instance did not "
         "become available in time."
     )
@@ -429,7 +446,7 @@ def _export(
     **kwargs,
 ) -> JobMessageResponse:
     """Starts an export job for a model instance."""
-    model_instance_id = get_resource_id(str(identifier), "modelInstances")
+    model_instance_id = resolve_resource_id(str(identifier), "modelInstances")
     json: dict[str, object] = {
         "name": name,
         "quantization_data": quantization_data,
@@ -446,14 +463,22 @@ def _export(
         )
     if target is Target.RVC4:
         json["target_precision"] = quantization_mode
-    res = Request.post(
-        service="models",
-        endpoint=f"modelInstances/{model_instance_id}/export/{target.value}",
-        json=json,
-        params={
-            "legacy": not json.get("superblob", True) and target is Target.RVC2
-        },
-    )
+    try:
+        res = Request.post(
+            service="models",
+            endpoint=f"modelInstances/{model_instance_id}/export/{target.value}",
+            json=json,
+            params={
+                "legacy": not json.get("superblob", True)
+                and target is Target.RVC2
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc,
+            identifier=model_instance_id,
+            endpoint="modelInstances",
+        )
     job = JobMessageResponse(**res)
     logger.info(
         f"Export job '{job.id}' created for model instance '{model_instance_id}' "
@@ -776,8 +801,7 @@ def RVC4(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -886,8 +910,7 @@ def Hailo(
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a path to a custom
-        quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional

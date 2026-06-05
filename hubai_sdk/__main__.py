@@ -2,6 +2,7 @@ import os
 import sys
 import webbrowser
 from contextlib import suppress
+from functools import wraps
 from time import sleep
 from typing import Annotated
 
@@ -15,6 +16,7 @@ from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.environ import environ
+from hubai_sdk.utils.hub import run_cli
 from hubai_sdk.utils.plugins import load_cli_plugins
 from hubai_sdk.utils.telemetry import initialize_telemetry
 
@@ -34,7 +36,13 @@ app.command(variant := variant_app)
 
 app.command(instance := instance_app)
 
-app.command(convert := cli_convert)
+
+@wraps(cli_convert)
+def convert_cli(*args: object, **kwargs: object) -> object:
+    return run_cli(lambda: cli_convert(*args, **kwargs))
+
+
+app.command(convert := convert_cli)
 
 for plugin in load_cli_plugins():
     app.command(plugin)

@@ -1,8 +1,10 @@
 from pathlib import Path
 
 import pytest
+import requests
 
 import hubai_sdk.services.instances as instances_service
+from hubai_sdk.errors import ResourceNotFoundError
 from hubai_sdk.utils.quantization import normalize_quantization_input
 
 
@@ -68,6 +70,26 @@ def test_upload_quantization_zip_uses_signed_put_url(
     assert put_calls[0]["headers"] == {"Content-Type": "application/zip"}
 
 
+def test_upload_quantization_zip_maps_missing_job(
+    quantization_zip: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    response = requests.Response()
+    response.status_code = 404
+
+    monkeypatch.setattr(
+        instances_service.Request,
+        "post",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            requests.HTTPError(response=response)
+        ),
+    )
+
+    with pytest.raises(ResourceNotFoundError):
+        instances_service.upload_quantization_zip(
+            str(quantization_zip), "job-123"
+        )
+
+
 def test_convert_requires_zip_when_quantization_data_is_custom() -> None:
     with pytest.raises(ValueError, match="quantization_data='CUSTOM'"):
         normalize_quantization_input("CUSTOM")
@@ -85,3 +107,8 @@ def test_normalize_quantization_input_classifies_sources(
     normalized = normalize_quantization_input(str(quantization_zip))
     assert normalized.input_type == "custom_zip"
     assert normalized.quantization_data == "CUSTOM"
+
+
+def test_normalize_quantization_input_rejects_remote_gcs_paths() -> None:
+    with pytest.raises(ValueError, match="does not support remote GCS paths"):
+        normalize_quantization_input("gs://bucket/calibration/data.zip")

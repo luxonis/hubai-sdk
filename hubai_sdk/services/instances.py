@@ -1,15 +1,17 @@
 import signal
 from pathlib import Path
 from types import FrameType
-from typing import Annotated, Literal, overload
+from typing import Annotated, Literal
 from urllib.parse import unquote, urlparse
 from uuid import UUID
 
 import requests
 from cyclopts import App, Parameter
 from loguru import logger
+from requests import HTTPError
 from rich.progress import Progress
 
+from hubai_sdk.errors import HubApiError, InputError
 from hubai_sdk.typing import (
     ModelClass,
     Order,
@@ -18,22 +20,25 @@ from hubai_sdk.typing import (
     Status,
     YoloVersion,
 )
-from hubai_sdk.utils.general import is_cli_call
 from hubai_sdk.utils.hub import (
-    get_resource_id,
+    get_resource_info,
     print_hub_ls,
     print_hub_resource_info,
-    request_info,
+    raise_for_hub_error,
+    resolve_resource_id,
+    run_cli,
     wait_for_job,
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.hubai_models import (
     ArchiveConfigurationResponse,
-    ModelInstanceFileResponse,
     ModelInstanceUploadResponse,
     UploadQuantizationZipResponse,
 )
-from hubai_sdk.utils.sdk_models import ModelInstanceResponse
+from hubai_sdk.utils.sdk_models import (
+    ModelInstanceFileResponse,
+    ModelInstanceResponse,
+)
 from hubai_sdk.utils.telemetry import get_telemetry
 from hubai_sdk.utils.types import ModelType
 
@@ -43,8 +48,41 @@ app = App(
     group="Resource Management",
 )
 
+INSTANCE_LIST_KEYS = [
+    "slug",
+    "id",
+    "model_type",
+    "is_nn_archive",
+    "model_precision_type",
+]
+INSTANCE_LIST_KEYS_WITH_MODEL = [
+    "model_name",
+    "model_variant_name",
+    "slug",
+    "id",
+    "model_type",
+    "is_nn_archive",
+    "model_precision_type",
+]
+INSTANCE_INFO_KEYS = [
+    "model_name",
+    "model_variant_name",
+    "name",
+    "slug",
+    "id",
+    "model_version_id",
+    "model_id",
+    "created",
+    "updated",
+    "platforms",
+    "is_public",
+    "yolo_version",
+    "model_precision_type",
+    "is_nn_archive",
+    "downloads",
+]
 
-@overload
+
 def list_instances(
     *,
     platforms: list[ModelType] | None = None,
@@ -64,62 +102,7 @@ def list_instances(
     limit: int = 50,
     sort: str = "updated",
     order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelInstanceResponse]: ...
-
-
-@overload
-def list_instances(
-    *,
-    platforms: list[ModelType] | None = None,
-    search: str | None = None,
-    model_id: UUID | str | None = None,
-    variant_id: UUID | str | None = None,
-    model_type: ModelType | None = None,
-    parent_id: UUID | str | None = None,
-    model_class: ModelClass | None = None,
-    name: str | None = None,
-    hash: str | None = None,
-    status: Status | None = None,
-    is_public: bool | None = None,
-    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
-    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> None: ...
-
-
-@app.command(name="ls")
-def list_instances(
-    *,
-    platforms: list[ModelType] | None = None,
-    search: str | None = None,
-    model_id: UUID | str | None = None,
-    variant_id: UUID | str | None = None,
-    model_type: ModelType | None = None,
-    parent_id: UUID | str | None = None,
-    model_class: ModelClass | None = None,
-    name: str | None = None,
-    hash: str | None = None,
-    status: Status | None = None,
-    is_public: bool | None = None,
-    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
-    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
-    include_model_name: bool = False,
-    limit: int = 50,
-    sort: str = "updated",
-    order: Order = "desc",
-    field: Annotated[
-        list[str] | None, Parameter(name=["--field", "-f"])
-    ] = None,
-) -> list[ModelInstanceResponse] | None:
+) -> list[ModelInstanceResponse]:
     """List the model instances in the HubAI.
 
     Parameters
@@ -160,96 +143,106 @@ def list_instances(
         Sort the model instances by this field. It should be the field name from the ModelInstanceResponse. For example, "name", "id", "updated", etc.
     order : Literal["asc", "desc"]
         Order to sort the model instances by. It should be "asc" or "desc".
-    field : list[str] | None
-        Fields to include in the response in case of CLI usage.
-        By default, ["slug", "id", "model_type", "is_nn_archive", "model_precision_type"] are shown. If include_model_name is True, ["model_name", "model_variant_name"] are added.
     """
-
-    silent = not is_cli_call()
 
     telemetry = get_telemetry()
     if telemetry:
         telemetry.capture("instances.list", include_system_metadata=True)
 
-    data = Request.get(
-        service="models",
-        endpoint="modelInstances",
-        params={
-            "platforms": [platform.name for platform in platforms]
-            if platforms
-            else [],
-            "search": search,
-            "model_id": str(model_id) if model_id else None,
-            "model_version_id": str(variant_id) if variant_id else None,
-            "model_type": model_type,
-            "parent_id": str(parent_id) if parent_id else None,
-            "model_class": model_class,
-            "name": name,
-            "hash": hash,
-            "status": status,
-            "compression_level": compression_level,
-            "optimization_level": optimization_level,
-            "is_public": is_public,
-            "limit": limit,
-            "sort": sort,
-            "order": order,
-        },
+    normalized_model_class = (
+        model_class.upper() if model_class is not None else None
     )
+
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelInstances",
+            params={
+                "platforms": [platform.name for platform in platforms]
+                if platforms
+                else [],
+                "search": search,
+                "model_id": str(model_id) if model_id else None,
+                "model_version_id": str(variant_id) if variant_id else None,
+                "model_type": model_type,
+                "parent_id": str(parent_id) if parent_id else None,
+                "model_class": normalized_model_class,
+                "name": name,
+                "hash": hash,
+                "status": status,
+                "compression_level": compression_level,
+                "optimization_level": optimization_level,
+                "is_public": is_public,
+                "limit": limit,
+                "sort": sort,
+                "order": order,
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
 
     if include_model_name:
         for instance in data:
-            instance["model_name"] = request_info(
+            instance["model_name"] = get_resource_info(
                 instance["model_id"], "models"
             )["name"]
-            instance["model_variant_name"] = request_info(
+            instance["model_variant_name"] = get_resource_info(
                 instance["model_version_id"], "modelVersions"
             )["name"]
-
-    if not silent:
-        return print_hub_ls(
-            data,
-            keys=field
-            or (
-                [
-                    "slug",
-                    "id",
-                    "model_type",
-                    "is_nn_archive",
-                    "model_precision_type",
-                ]
-                if not include_model_name
-                else [
-                    "model_name",
-                    "model_variant_name",
-                    "slug",
-                    "id",
-                    "model_type",
-                    "is_nn_archive",
-                    "model_precision_type",
-                ]
-            ),
-            silent=silent,
-        )
 
     return [ModelInstanceResponse(**instance) for instance in data]
 
 
-@overload
-def get_instance(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelInstanceResponse: ...
+@app.command(name="ls")
+def list_instances_cli(
+    *,
+    platforms: list[ModelType] | None = None,
+    search: str | None = None,
+    model_id: UUID | str | None = None,
+    variant_id: UUID | str | None = None,
+    model_type: ModelType | None = None,
+    parent_id: UUID | str | None = None,
+    model_class: ModelClass | None = None,
+    name: str | None = None,
+    hash: str | None = None,
+    status: Status | None = None,
+    is_public: bool | None = None,
+    compression_level: Literal[0, 1, 2, 3, 4, 5] | None = None,
+    optimization_level: Literal[-100, 0, 1, 2, 3, 4] | None = None,
+    include_model_name: bool = False,
+    limit: int = 50,
+    sort: str = "updated",
+    order: Order = "desc",
+    field: Annotated[
+        list[str] | None, Parameter(name=["--field", "-f"])
+    ] = None,
+) -> None:
+    """List the model instances in the HubAI."""
+    instances = run_cli(
+        lambda: list_instances(
+            platforms=platforms,
+            search=search,
+            model_id=model_id,
+            variant_id=variant_id,
+            model_type=model_type,
+            parent_id=parent_id,
+            model_class=model_class,
+            name=name,
+            hash=hash,
+            status=status,
+            is_public=is_public,
+            compression_level=compression_level,
+            optimization_level=optimization_level,
+            include_model_name=include_model_name,
+            limit=limit,
+            sort=sort,
+            order=order,
+        )
+    )
+    _print_instance_list(instances, include_model_name, field)
 
 
-@overload
-def get_instance(
-    identifier: UUID | str, silent: bool | None = None
-) -> None: ...
-
-
-@app.command(name="info")
-def get_instance(
-    identifier: UUID | str, silent: bool | None = None
-) -> ModelInstanceResponse | None:
+def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
     """Returns information about a model instance.
 
     Parameters
@@ -259,12 +252,10 @@ def get_instance(
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    if silent is None:
-        silent = not is_cli_call()
-    data = request_info(identifier, "modelInstances")
+    data = get_resource_info(identifier, "modelInstances")
 
-    data["model_name"] = request_info(data["model_id"], "models")["name"]
-    data["model_variant_name"] = request_info(
+    data["model_name"] = get_resource_info(data["model_id"], "models")["name"]
+    data["model_variant_name"] = get_resource_info(
         data["model_version_id"], "modelVersions"
     )["name"]
 
@@ -276,34 +267,15 @@ def get_instance(
             include_system_metadata=True,
         )
 
-    if not silent:
-        return print_hub_resource_info(
-            data,
-            title="Model Instance Info",
-            json=False,
-            keys=[
-                "model_name",
-                "model_variant_name",
-                "name",
-                "slug",
-                "id",
-                "model_version_id",
-                "model_id",
-                "created",
-                "updated",
-                "platforms",
-                "is_public",
-                "yolo_version",
-                "model_precision_type",
-                "is_nn_archive",
-                "downloads",
-            ],
-            rename={"model_version_id": "variant_id"},
-        )
     return ModelInstanceResponse(**data)
 
 
-@app.command(name="download")
+@app.command(name="info")
+def get_instance_info_cli(identifier: UUID | str) -> None:
+    """Returns information about a model instance."""
+    _print_instance_info(run_cli(lambda: get_instance(identifier)))
+
+
 def download_instance(
     identifier: UUID | str,
     output_dir: str | None = None,
@@ -324,63 +296,81 @@ def download_instance(
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     dest = Path(output_dir) if output_dir else None
-    model_instance_id = get_resource_id(identifier, "modelInstances")
+    model_instance_id = resolve_resource_id(identifier, "modelInstances")
     downloaded_path = None
-    urls = Request.get(
-        service="models",
-        endpoint=f"modelInstances/{model_instance_id}/download",
-    )
+    file_path: Path | None = None
+    try:
+        urls = Request.get(
+            service="models",
+            endpoint=f"modelInstances/{model_instance_id}/download",
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
     if not urls:
-        raise ValueError("No files to download")
+        raise HubApiError("No files to download")
 
     def cleanup(sigint: int, _: FrameType | None) -> None:
         nonlocal file_path
         logger.info(f"Received signal {sigint}. Download interrupted...")
-        file_path.unlink(missing_ok=True)
+        if file_path is not None:
+            file_path.unlink(missing_ok=True)
+
+    if dest is None:
+        try:
+            instance_data = Request.get(
+                service="models",
+                endpoint=f"modelInstances/{model_instance_id}",
+            )
+        except HTTPError as exc:
+            raise_for_hub_error(
+                exc, identifier=identifier, endpoint="modelInstances"
+            )
+        dest = Path(instance_data.get("slug", model_instance_id))
 
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
     for url in urls:
-        with requests.get(url, stream=True, timeout=10) as response:
-            response.raise_for_status()
+        try:
+            with requests.get(url, stream=True, timeout=10) as response:
+                response.raise_for_status()
 
-            total_size = int(response.headers.get("Content-Length", 0))
-            filename = unquote(Path(urlparse(url).path).name)
-            if dest is None:
-                dest = Path(
-                    Request.get(
-                        service="models",
-                        endpoint=f"modelInstances/{model_instance_id}",
-                    ).get("slug", model_instance_id)
-                )
-            dest.mkdir(parents=True, exist_ok=True)
+                total_size = int(response.headers.get("Content-Length", 0))
+                filename = unquote(Path(urlparse(url).path).name)
+                dest.mkdir(parents=True, exist_ok=True)
 
-            file_path = dest / filename
-            if file_path.exists() and not force:
-                logger.info(
-                    f"File '{filename}' already exists. Skipping download. "
-                    "Use `force=True` to overwrite."
-                )
-                downloaded_path = file_path
-                continue
-
-            try:
-                with open(file_path, "wb") as f, Progress() as progress:
-                    task = progress.add_task(
-                        f"Downloading '{filename}'", total=total_size
+                file_path = dest / filename
+                if file_path.exists() and not force:
+                    logger.info(
+                        f"File '{filename}' already exists. Skipping "
+                        "download. Use `force=True` to overwrite."
                     )
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            progress.update(task, advance=len(chunk))
-            except:
-                logger.error(f"Failed to download '{filename}'")
-                file_path.unlink(missing_ok=True)
-                raise
+                    downloaded_path = file_path
+                    continue
 
-            logger.info(f"Downloaded '{file_path.name}'")
-            downloaded_path = file_path
+                try:
+                    with open(file_path, "wb") as f, Progress() as progress:
+                        task = progress.add_task(
+                            f"Downloading '{filename}'", total=total_size
+                        )
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                progress.update(task, advance=len(chunk))
+                except:
+                    logger.error(f"Failed to download '{filename}'")
+                    file_path.unlink(missing_ok=True)
+                    raise
+
+                logger.info(f"Downloaded '{file_path.name}'")
+                downloaded_path = file_path
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to download instance file from '{url}': "
+                f"{exc.response.status_code if exc.response else exc}"
+            ) from exc
 
     assert downloaded_path is not None
 
@@ -395,7 +385,16 @@ def download_instance(
     return downloaded_path
 
 
-@overload
+@app.command(name="download")
+def download_instance_cli(
+    identifier: UUID | str,
+    output_dir: str | None = None,
+    force: bool = False,
+) -> None:
+    """Downloads files from a model instance."""
+    run_cli(lambda: download_instance(identifier, output_dir, force))
+
+
 def create_instance(
     name: str,
     *,
@@ -408,59 +407,7 @@ def create_instance(
     input_shape: list[int] | None = None,
     is_deployable: bool | None = None,
     yolo_version: YoloVersion | None = None,
-    silent: bool = True,
-) -> ModelInstanceResponse: ...
-
-
-@overload
-def create_instance(
-    name: str,
-    *,
-    variant_id: UUID | str,
-    model_type: ModelType,
-    parent_id: UUID | str | None = None,
-    quantization_mode: QuantizationMode | None = None,
-    quantization_data: QuantizationData | None = None,
-    tags: list[str] | None = None,
-    input_shape: list[int] | None = None,
-    is_deployable: bool | None = None,
-    yolo_version: YoloVersion | None = None,
-    silent: bool = False,
-) -> None: ...
-
-
-@overload
-def create_instance(
-    name: str,
-    *,
-    variant_id: UUID | str,
-    model_type: ModelType,
-    parent_id: UUID | str | None = None,
-    quantization_mode: QuantizationMode | None = None,
-    quantization_data: QuantizationData | None = None,
-    tags: list[str] | None = None,
-    input_shape: list[int] | None = None,
-    is_deployable: bool | None = None,
-    yolo_version: YoloVersion | None = None,
-    silent: bool | None = None,
-) -> ModelInstanceResponse: ...
-
-
-@app.command(name="create")
-def create_instance(
-    name: str,
-    *,
-    variant_id: UUID | str,
-    model_type: ModelType,
-    parent_id: UUID | str | None = None,
-    quantization_mode: QuantizationMode | None = None,
-    quantization_data: QuantizationData | None = None,
-    tags: list[str] | None = None,
-    input_shape: list[int] | None = None,
-    is_deployable: bool | None = None,
-    yolo_version: YoloVersion | None = None,
-    silent: bool | None = None,
-) -> ModelInstanceResponse | None:
+) -> ModelInstanceResponse:
     """Creates a new model instance.
 
     Parameters
@@ -482,7 +429,7 @@ def create_instance(
     quantization_data : QuantizationData | None
         The quantization data for the model. Can be one of predefined domains
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        or a dataset ID starting with "aid_".
+        or a dataset ID.
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None
@@ -491,12 +438,7 @@ def create_instance(
         Whether the model instance is deployable.
     yolo_version: YoloVersion | None
         The YOLO version of the model instance if it is a YOLO model.
-    silent : bool
-        Whether to print the model instance information after creation.
     """
-
-    if silent is None:
-        silent = not is_cli_call()
     data = {
         "name": name,
         "model_version_id": str(variant_id) if variant_id else None,
@@ -509,7 +451,12 @@ def create_instance(
         "is_deployable": is_deployable,
         "yolo_version": yolo_version,
     }
-    res = Request.post(service="models", endpoint="modelInstances", json=data)
+    try:
+        res = Request.post(
+            service="models", endpoint="modelInstances", json=data
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(exc)
     logger.info(
         f"Model instance '{res['name']}' created with ID '{res['id']}'"
     )
@@ -520,10 +467,41 @@ def create_instance(
             "instances.create", properties=data, include_system_metadata=True
         )
 
-    return get_instance(res["id"], silent)
+    return get_instance(res["id"])
 
 
-@app.command(name="delete")
+@app.command(name="create")
+def create_instance_cli(
+    name: str,
+    *,
+    variant_id: UUID | str,
+    model_type: ModelType,
+    parent_id: UUID | str | None = None,
+    quantization_mode: QuantizationMode | None = None,
+    quantization_data: QuantizationData | None = None,
+    tags: list[str] | None = None,
+    input_shape: list[int] | None = None,
+    is_deployable: bool | None = None,
+    yolo_version: YoloVersion | None = None,
+) -> None:
+    """Creates a new model instance."""
+    instance = run_cli(
+        lambda: create_instance(
+            name,
+            variant_id=variant_id,
+            model_type=model_type,
+            parent_id=parent_id,
+            quantization_mode=quantization_mode,
+            quantization_data=quantization_data,
+            tags=tags,
+            input_shape=input_shape,
+            is_deployable=is_deployable,
+            yolo_version=yolo_version,
+        )
+    )
+    _print_instance_info(instance)
+
+
 def delete_instance(identifier: UUID | str) -> None:
     """Deletes a model instance.
 
@@ -534,8 +512,15 @@ def delete_instance(identifier: UUID | str) -> None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    instance_id = get_resource_id(identifier, "modelInstances")
-    Request.delete(service="models", endpoint=f"modelInstances/{instance_id}")
+    instance_id = resolve_resource_id(identifier, "modelInstances")
+    try:
+        Request.delete(
+            service="models", endpoint=f"modelInstances/{instance_id}"
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
     logger.info(f"Model instance '{identifier}' deleted")
 
     telemetry = get_telemetry()
@@ -547,16 +532,13 @@ def delete_instance(identifier: UUID | str) -> None:
         )
 
 
-@overload
-def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse: ...
+@app.command(name="delete")
+def delete_instance_cli(identifier: UUID | str) -> None:
+    """Deletes a model instance."""
+    run_cli(lambda: delete_instance(identifier))
 
 
-@overload
-def get_config(identifier: UUID | str) -> None: ...
-
-
-@app.command(name="config")
-def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
+def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
     """Returns the configuration of a model instance.
 
     Parameters
@@ -566,11 +548,7 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    silent = not is_cli_call()
-    model_instance_id = get_resource_id(identifier, "modelInstances")
-    data = Request.get(
-        service="models", endpoint=f"modelInstances/{model_instance_id}/config"
-    )
+    data = _get_instance_subresource(identifier, "config")
 
     telemetry = get_telemetry()
     if telemetry:
@@ -580,24 +558,19 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse | None:
             include_system_metadata=True,
         )
 
-    if not silent:
-        logger.info(data)
-        return None
-    return ArchiveConfigurationResponse(**data)
+    return ArchiveConfigurationResponse(**data)  # type: ignore
 
 
-@overload
-def get_files(identifier: UUID | str) -> list[ModelInstanceFileResponse]: ...
+@app.command(name="config")
+def get_config_cli(identifier: UUID | str) -> None:
+    """Returns the configuration of a model instance."""
+    config = run_cli(lambda: get_config(identifier))
+    logger.info(_dump_for_cli(config))
 
 
-@overload
-def get_files(identifier: UUID | str) -> None: ...
-
-
-@app.command(name="files")
 def get_files(
     identifier: UUID | str,
-) -> list[ModelInstanceFileResponse] | None:
+) -> list[ModelInstanceFileResponse]:
     """Returns the files of a model instance.
 
     Parameters
@@ -607,11 +580,7 @@ def get_files(
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
-    silent = not is_cli_call()
-    model_instance_id = get_resource_id(identifier, "modelInstances")
-    data = Request.get(
-        service="models", endpoint=f"modelInstances/{model_instance_id}/files"
-    )
+    data = _get_instance_subresource(identifier, "files")
 
     telemetry = get_telemetry()
     if telemetry:
@@ -621,13 +590,16 @@ def get_files(
             include_system_metadata=True,
         )
 
-    if not silent:
-        logger.info(data)
-        return None
-    return [ModelInstanceFileResponse(**file) for file in data]
+    return [ModelInstanceFileResponse(**file) for file in data]  # type: ignore
 
 
-@app.command(name="upload")
+@app.command(name="files")
+def get_files_cli(identifier: UUID | str) -> None:
+    """Returns the files of a model instance."""
+    files = run_cli(lambda: get_files(identifier))
+    logger.info([_dump_for_cli(file) for file in files])
+
+
 def upload_file(file_path: str, identifier: UUID | str) -> None:
     """Uploads a file to a model instance using async upload.
 
@@ -652,14 +624,18 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     file_size = path.stat().st_size
     file_name = path.name
 
-    model_instance_id = get_resource_id(identifier, "modelInstances")
+    model_instance_id = resolve_resource_id(identifier, "modelInstances")
 
-    # Get signed upload policy
-    upload_response = Request.post(
-        service="models",
-        endpoint=f"modelInstances/{model_instance_id}/upload_async",
-        params={"size": file_size, "name": file_name},
-    )
+    try:
+        upload_response = Request.post(
+            service="models",
+            endpoint=f"modelInstances/{model_instance_id}/upload_async",
+            params={"size": file_size, "name": file_name},
+        )
+    except requests.HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
 
     upload_response = ModelInstanceUploadResponse(**upload_response)
 
@@ -668,7 +644,6 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     fields = policy.fields
     job_id = upload_response.job.id
 
-    # Prepare form data with policy fields
     form_data = {
         "key": fields.key,
         "policy": fields.policy,
@@ -679,11 +654,9 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
         "x-goog-signature": fields.x_goog_signature,
     }
 
-    # Upload file to GCS with progress tracking
     with open(file_path, "rb") as file, Progress() as progress:
         task = progress.add_task(f"Uploading '{file_name}'", total=file_size)
 
-        # Read file and track progress
         file_content = file.read()
         progress.update(task, advance=file_size)
 
@@ -694,7 +667,12 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
             files=files,
             timeout=600,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to upload '{file_name}' to storage.",
+            ) from exc
 
     wait_for_job(job_id)
 
@@ -711,6 +689,12 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
         )
 
 
+@app.command(name="upload")
+def upload_file_cli(file_path: str, identifier: UUID | str) -> None:
+    """Uploads a file to a model instance using async upload."""
+    run_cli(lambda: upload_file(file_path, identifier))
+
+
 def upload_quantization_zip(
     file_path: str,
     job_id: UUID | str,
@@ -723,14 +707,17 @@ def upload_quantization_zip(
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
     if path.suffix.lower() != ".zip":
-        raise ValueError(
+        raise InputError(
             "Custom quantization data must be provided as a .zip file."
         )
 
-    upload_response = Request.post(
-        service="models",
-        endpoint=f"modelInstances/export/{job_id}/upload_quantization_zip",
-    )
+    try:
+        upload_response = Request.post(
+            service="models",
+            endpoint=f"modelInstances/export/{job_id}/upload_quantization_zip",
+        )
+    except requests.HTTPError as exc:
+        raise_for_hub_error(exc, identifier=job_id, endpoint="jobs")
     upload_response = UploadQuantizationZipResponse(**upload_response)
 
     file_size = path.stat().st_size
@@ -747,7 +734,12 @@ def upload_quantization_zip(
             headers={"Content-Type": "application/zip"},
             timeout=600,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise HubApiError(
+                f"Failed to upload custom quantization zip '{file_name}'."
+            ) from exc
 
     logger.info(
         f"Custom quantization zip '{file_path}' uploaded for job '{job_id}'"
@@ -760,3 +752,61 @@ def upload_quantization_zip(
             properties={"job_id": job_id},
             include_system_metadata=True,
         )
+
+
+def _print_instance_list(
+    instances: list[ModelInstanceResponse],
+    include_model_name: bool,
+    field: list[str] | None = None,
+) -> None:
+    print_hub_ls(
+        [_instance_to_cli_data(instance) for instance in instances],
+        keys=field
+        or (
+            INSTANCE_LIST_KEYS_WITH_MODEL
+            if include_model_name
+            else INSTANCE_LIST_KEYS
+        ),
+    )
+
+
+def _print_instance_info(instance: ModelInstanceResponse) -> None:
+    print_hub_resource_info(
+        _instance_to_cli_data(instance),
+        title="Model Instance Info",
+        json=False,
+        keys=INSTANCE_INFO_KEYS,
+        rename={"model_version_id": "variant_id"},
+    )
+
+
+def _get_instance_subresource(
+    identifier: UUID | str,
+    subpath: str,
+) -> dict[str, object] | list[dict[str, object]]:
+    identifier_str = str(identifier)
+    model_instance_id = resolve_resource_id(identifier_str, "modelInstances")
+
+    try:
+        return Request.get(
+            service="models",
+            endpoint=f"modelInstances/{model_instance_id}/{subpath}",
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc,
+            identifier=identifier_str,
+            endpoint="modelInstances",
+        )
+
+
+def _dump_for_cli(resource: object) -> object:
+    if hasattr(resource, "model_dump"):
+        return resource.model_dump(mode="json")
+    return dict(resource.__dict__)
+
+
+def _instance_to_cli_data(
+    instance: ModelInstanceResponse,
+) -> dict[str, object]:
+    return instance.model_dump(mode="json")

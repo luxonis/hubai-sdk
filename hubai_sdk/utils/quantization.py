@@ -27,6 +27,14 @@ def normalize_quantization_input(
             )
         quantization_data = str(quantization_data)
 
+    if isinstance(
+        quantization_data, str
+    ) and quantization_data.lower().startswith(("gs://", "gcs://")):
+        raise ValueError(
+            "`quantization_data` does not support remote GCS paths. "
+            "Pass a predefined domain, a dataset ID, or a local .zip file."
+        )
+
     if isinstance(quantization_data, str) and is_custom_quantization_zip_path(
         quantization_data
     ):
