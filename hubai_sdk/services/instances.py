@@ -425,7 +425,7 @@ def create_instance(
     quantization_data : QuantizationData | None
         The quantization data for the model. Can be one of predefined domains
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID starting with "aid_", or a custom GCS path.
+        or a dataset ID.
     tags : list[str] | None
         List of tags for the model instance.
     input_shape : list[int] | None

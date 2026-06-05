@@ -5,8 +5,6 @@ from luxonis_ml.typing import PathType
 
 from hubai_sdk.typing import QuantizationData, QuantizationInputType
 
-REMOTE_QUANTIZATION_PATH_PREFIXES = ("gs://", "gcs://")
-
 
 @dataclass(frozen=True)
 class NormalizedQuantizationInput:
@@ -19,10 +17,6 @@ def is_custom_quantization_zip_path(path: str | Path) -> bool:
     return Path(path).suffix.lower() == ".zip"
 
 
-def is_remote_quantization_path(path: str) -> bool:
-    return path.lower().startswith(REMOTE_QUANTIZATION_PATH_PREFIXES)
-
-
 def normalize_quantization_input(
     quantization_data: QuantizationData | PathType | None,
 ) -> NormalizedQuantizationInput:
@@ -33,13 +27,12 @@ def normalize_quantization_input(
             )
         quantization_data = str(quantization_data)
 
-    if isinstance(quantization_data, str) and is_remote_quantization_path(
-        quantization_data
-    ):
-        return NormalizedQuantizationInput(
-            quantization_data=quantization_data,
-            custom_zip_path=None,
-            input_type="custom_path",
+    if isinstance(
+        quantization_data, str
+    ) and quantization_data.lower().startswith(("gs://", "gcs://")):
+        raise ValueError(
+            "`quantization_data` does not support remote GCS paths. "
+            "Pass a predefined domain, a dataset ID, or a local .zip file."
         )
 
     if isinstance(quantization_data, str) and is_custom_quantization_zip_path(

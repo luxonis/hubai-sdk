@@ -866,7 +866,7 @@ class ModelInstancePatchRequest(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | UUID | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
             title="Quantization Data",
         ),
     ] = None
@@ -961,7 +961,7 @@ class ModelInstanceRequest(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | UUID | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
             title="Quantization Data",
         ),
     ] = None
@@ -1085,7 +1085,7 @@ class ModelInstanceResponse(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | str | None,
         Field(
-            description="The data used to quantize this ModelInstance. It could be a Dataset, pre-defined domain or a custom GCS path.",
+            description="The data used to quantize this ModelInstance. It could be a Dataset or a pre-defined domain.",
             title="Quantization Data",
         ),
     ] = None
@@ -1841,7 +1841,7 @@ class RVC2ExportParametersOnnxIrPresetResponse(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | str | None,
         Field(
-            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE), a UUID specifying a custom dataset, or CUSTOM to upload your own quantization dataset.",
+            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE) or a UUID specifying a custom dataset.",
             title="Quantization Data",
         ),
     ] = None
@@ -1924,7 +1924,7 @@ class RVC3ExportParametersOnnxIr(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | str | None,
         Field(
-            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE), a UUID specifying a custom dataset, or CUSTOM to upload your own quantization dataset.",
+            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE) or a UUID specifying a custom dataset.",
             title="Quantization Data",
         ),
     ] = None
@@ -2010,7 +2010,7 @@ class RVC4ExportParametersOnnxIr(BaseModel):
     quantization_data: Annotated[
         EnumQuantizationDataType | str | None,
         Field(
-            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE), a UUID specifying a custom dataset, or CUSTOM to upload your own quantization dataset.",
+            description="Either the domain name of the predefined quantization data (e.g. WAREHOUSE) or a UUID specifying a custom dataset.",
             title="Quantization Data",
         ),
     ] = None
