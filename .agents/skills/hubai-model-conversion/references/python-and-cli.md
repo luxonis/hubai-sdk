@@ -35,20 +35,27 @@ client = HubAIClient(api_key=os.getenv("HUBAI_API_KEY"))
 
 `HubAIClient(...)` verifies the resolved API key on initialization, so bad auth fails early.
 
-## Minimal RVC2 Conversion
+## Minimal SDK Pattern
 
 ```python
-response = client.convert.RVC2(
+response = client.convert.RVC4(
     path="/path/to/model.onnx",
-    name="my-rvc2-model",
+    name="converted-model",
 )
 
 print(response.downloaded_path)
 ```
 
-## Download Location
+Prefer the target helper `client.convert.<TARGET>(...)`. Use the generic `convert(target=...)` entrypoint only when the target is dynamic.
 
-`output_dir` is a directory path. If you omit it, the downloader creates a directory named from the exported instance slug in the current working directory.
+## Parameter Routing Rules
+
+- Put target-specific knobs on the target helper directly when a named parameter exists.
+- Use `opts` only for settings that do not have a direct helper parameter, such as OpenVINO `input_bin`.
+- On the CLI, normal Hub fields stay as flags such as `--name` or `--quantization-mode`.
+- On the CLI, extra config settings use positional `key value` pairs after the target.
+
+## Explicit Download Directory
 
 ```python
 response = client.convert.RVC2(
@@ -62,7 +69,7 @@ print(response.downloaded_path)
 
 ## YAML Config or NN Archive Input
 
-The same `path` parameter can point to a model file, a YAML config, or an NN Archive:
+The same `path` parameter can point to a YAML config or an NN Archive:
 
 ```python
 response = client.convert.RVC4(
@@ -75,18 +82,6 @@ response = client.convert.RVC4(
     path="/path/to/model.tar.xz",
     name="my-rvc4-model",
     quantization_mode="FP16_STANDARD",
-)
-```
-
-## Legacy RVC2 Blob Export
-
-Use this when the consumer needs the legacy blob format instead of a superblob:
-
-```python
-response = client.convert.RVC2(
-    path="/path/to/model.onnx",
-    name="my-rvc2-legacy-model",
-    superblob=False,
 )
 ```
 
@@ -120,7 +115,7 @@ response = client.convert.RVC2(
 )
 ```
 
-## RVC4 With Hosted Quantization
+## Target-Specific Examples
 
 ```python
 response = client.convert.RVC4(
@@ -132,10 +127,6 @@ response = client.convert.RVC4(
 )
 ```
 
-## RVC4 With Custom Calibration Zip
-
-Pass the local existing zip path itself. Do not pass `CUSTOM` by itself; the SDK maps the zip path to `CUSTOM` automatically.
-
 ```python
 response = client.convert.RVC4(
     path="/path/to/model.onnx",
@@ -146,9 +137,15 @@ response = client.convert.RVC4(
 )
 ```
 
-## PyTorch YOLO Input
+```python
+response = client.convert.RVC2(
+    path="/path/to/model.onnx",
+    name="my-rvc2-legacy-model",
+    superblob=False,
+)
+```
 
-PyTorch inputs are supported only for YOLO models. Normally rely on auto-detection:
+## PyTorch YOLO Input
 
 ```python
 response = client.convert.RVC4(
@@ -168,9 +165,9 @@ Preferred recovery path:
 2. Otherwise, if the required local framework dependencies are available and the workflow allows a small local prep step, load the checkpoint locally and export it to ONNX first.
 3. Then continue with the normal hosted conversion flow using the exported ONNX, TFLite, IR, or NN Archive artifact.
 
-## Cleanup of Created Hub Resources
+## Cleanup Command
 
-If the conversion created a fresh model hierarchy and you only want the downloaded files, prefer deleting the created model after download:
+When cleanup is explicitly requested:
 
 ```python
 client.models.delete_model(response.instance.model_id)
@@ -181,8 +178,6 @@ Equivalent CLI:
 ```bash
 hubai model delete <model_id>
 ```
-
-Do not delete `model_id`, `variant_id`, or other Hub resources that were supplied up front instead of being created by the current conversion flow.
 
 ## Generic Entry Point
 
@@ -210,8 +205,11 @@ hubai convert RVC4 --path /path/to/model.onnx --name my-rvc4-model --quantizatio
 hubai convert Hailo --path /path/to/model.onnx --name my-hailo-model
 ```
 
-For extra target-specific settings, pass positional `key value` pairs after the target, for example `rvc2.superblob False`.
-
-For extra non-target config settings, use the same positional form, for example `input_bin /other/path/model.bin`.
+For extra settings, pass positional `key value` pairs after the target, for example `rvc2.superblob False` or `input_bin /other/path/model.bin`.
 
 Use `hubai convert --help` or `hubai convert <TARGET> --help` when you need the current CLI spelling inside a live environment.
+
+## Troubleshooting
+
+- If automation or CI cannot use desktop secret storage or keyring-backed login, prefer `HUBAI_API_KEY` over `hubai login`.
+- If CLI extra settings are rejected, check that positional settings were passed as complete `key value` pairs with an even number of tokens.

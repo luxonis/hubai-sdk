@@ -11,7 +11,7 @@
 
 All of these go through the same `path` argument.
 
-PyTorch inputs are limited to YOLO models. Normally rely on auto-detected `yolo_version`. `yolo_input_shape` defaults to `[640, 640]` when omitted or invalid.
+PyTorch inputs are limited to YOLO models. `yolo_input_shape` defaults to `[640, 640]` when omitted or invalid.
 
 ## Common Conversion and Hub Parameters
 
@@ -41,8 +41,6 @@ Use these only when the task needs more than a simple one-off conversion:
 If no existing model or variant IDs are supplied, the SDK creates the Hub resources it needs and auto-increments the variant version.
 
 `output_dir` is a directory path. If it is omitted, the downloader creates a directory named from the exported instance slug under the current working directory.
-
-If the conversion created a fresh model hierarchy and the caller only wants local files afterward, prefer cleanup by deleting the created model via `client.models.delete_model(response.instance.model_id)` or `hubai model delete <model_id>`.
 
 ## RVC2
 
@@ -130,6 +128,7 @@ Primary knobs:
 - The SDK uploads the source artifact to Hub and downloads the exported instance when the job completes.
 - The returned object includes `downloaded_path`, the export `job`, and the exported `instance`.
 - OpenVINO IR can use `path` for the XML and `input_bin` for the BIN when they do not live together.
+- `FP32_STANDARD` may appear in runtime types, but do not suggest it, document it as a supported mode, or use it in conversions.
 
 ## Blobconverter Migration Hints
 
