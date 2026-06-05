@@ -223,6 +223,7 @@ response = client.convert.RVC4(
     path="/path/to/model.onnx",
     name="converted-model",
     quantization_mode="INT8_STANDARD",
+    quantization_data="GENERAL",
     use_per_channel_quantization=True,
     htp_socs=["sm8550"]
 )
@@ -236,10 +237,11 @@ Convert to any supported target:
 from hubai_sdk.utils.types import Target
 
 response = client.convert.convert(
-    target=Target.RVC2,  # or Target.RVC4, Target.HAILO, etc.
+    target=Target.RVC4,  # or Target.RVC2, Target.HAILO, etc.
     path="/path/to/model.onnx",
     name="converted-model",
     quantization_mode="INT8_STANDARD",
+    quantization_data="GENERAL",
     input_shape=[1, 3, 288, 512]
 )
 ```
@@ -277,6 +279,7 @@ For more CLI options, use the `--help` flag:
 hubai --help
 hubai model --help
 hubai convert --help
+hubai convert RVC4 --help
 ```
 
 ## 📚 Examples
@@ -292,22 +295,22 @@ See the `examples/` directory for more detailed usage examples:
 
 [BlobConverter](https://pypi.org/project/blobconverter/) is our previous library for converting models to the BLOB format usable with `RVC2` and `RVC3` devices. This library is being replaced by `modelconverter` and `HubAI SDK`, which eventually become the only supported way of converting models in the future.
 
-`blobconverter` is still available and can be used for conversion, but we recommend using `HubAI SDK` for new projects. The API of `HUBAI SDK` is similar to that of `blobconverter`, but there are some differences in the parameters and the way the conversion is done.
+`blobconverter` is still available and can be used for conversion, but we recommend using `HubAI SDK` for new projects. The API of `HUBAI SDK` is similar to that of `blobconverter`, but there are some differences in the parameters and the way the conversion is done. Hosted HubAI conversion is also the replacement for the older [tools.luxonis.com](https://tools.luxonis.com/) YOLO-conversion workflow.
 
 `blobconverter` offers several functions for converting models from different frameworks, such as `from_onnx`, `from_openvino`, and `from_tf`. These functions are now replaced by the `convert.RVC2` (or `convert.RVC3`) function in `HubAI SDK`, which takes a single argument `path` that specifies the path to the model file.
 
 The following table shows the mapping between the parameters of `blobconverter` and `HUBAI SDK`. The parameters are grouped by their purpose. The first column shows the parameters of `blobconverter`, the second column shows the equivalent parameters in `HubAI SDK`, and the third column contains additional notes.
 
-| `blobconverter`    | `HubAI SDK`         | Notes                                                                                                     |
-| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------- |
-| `model`            | `path`              | The model file path.                                                                                      |
-| `xml`              | `path`              | The XML file path. Only for conversion from OpenVINO IR                                                   |
-| `bin`              | `opts["input_bin"]` | The BIN file path. Only for conversion from OpenVINO IR. See the [example](#conversion-from-openvino-ir). |
-| `version`          | `tool_version`      | The version of the conversion tool.                                                                       |
-| `data_type`        | `quantization_mode` | The quantization mode of the model.                                                                       |
-| `shaves`           | `number_of_shaves`  | The number of shaves to use.                                                                              |
-| `optimizer_params` | `mo_args`           | The arguments to pass to the model optimizer.                                                             |
-| `compile_params`   | `compile_tool_args` | The arguments to pass to the BLOB compiler.                                                               |
+| `blobconverter`    | `HubAI SDK`                              | Notes                                                                                                                                        |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`            | `path`                                   | The model file path.                                                                                                                         |
+| `xml`              | `path`                                   | The XML file path. Only for conversion from OpenVINO IR                                                                                      |
+| `bin`              | `opts["input_bin"]`                      | The BIN file path. Only for conversion from OpenVINO IR when it is not beside the XML file. See the [example](#conversion-from-openvino-ir). |
+| `version`          | `tool_version`                           | The version of the conversion tool.                                                                                                          |
+| `data_type`        | `compress_to_fp16` / `quantization_mode` | `RVC2` and `RVC3` use `compress_to_fp16`. `RVC4` uses `quantization_mode`.                                                                   |
+| `shaves`           | `number_of_shaves`                       | The number of shaves to use.                                                                                                                 |
+| `optimizer_params` | `mo_args`                                | The arguments to pass to the model optimizer.                                                                                                |
+| `compile_params`   | `compile_tool_args`                      | The arguments to pass to the BLOB compiler.                                                                                                  |
 
 By default, `HubAI SDK` has `superblob` enabled which is only supported on DepthAI v3. If you want to convert a model to legacy RVC2 format (blob), you can pass `superblob=False` to the `convert.RVC2` function.
 
@@ -355,12 +358,12 @@ blob = blobconverter.from_openvino(
 response = client.convert.RVC2("resnet18.xml")
 blob = response.downloaded_path
 
-# Otherwise, the BIN file can be specified using
+# Otherwise, specify the BIN file explicitly using
 # the `opts` parameter
 response = client.convert.RVC2(
     path="resnet18.xml",
     opts={
-        "input_bin": "resnet18.bin",
+        "input_bin": "/other/path/resnet18.bin",
     }
 )
 blob = response.downloaded_path
@@ -419,7 +422,7 @@ blob = blobconverter.from_onnx(
 ```python
 response = client.convert.RVC2(
     path="resnet18.onnx",
-    quantization_mode="FP16_STANDARD",
+    compress_to_fp16=True,
     tool_version="2021.4.0",
     number_of_shaves=6,
     mo_args=[

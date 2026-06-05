@@ -405,7 +405,7 @@ class SingleStageConfig(CustomBaseModel):
         input_file_type = InputFileType.from_path(value["input_model"])
         if input_file_type == InputFileType.IR:
             bin_path, xml_path = _extract_bin_xml_from_ir(
-                value.get("input_model")
+                value.get("input_model"), value.get("input_bin")
             )
             value["input_bin"] = bin_path
             value["input_model"] = xml_path
@@ -470,11 +470,13 @@ class Config(LuxonisConfig):
         return self
 
 
-def _extract_bin_xml_from_ir(ir_path: Any) -> tuple[Path, Path]:
+def _extract_bin_xml_from_ir(
+    ir_path: Any, input_bin_path: Any | None = None
+) -> tuple[Path, Path]:
     """Extracts the corresponding second path from a single IR path.
 
     We assume that the base filename matches between the .bin and .xml
-    file. Otherwise, an error will be thrown.
+    file unless an explicit `input_bin_path` is provided.
     """
 
     if not isinstance(ir_path, str) and not isinstance(ir_path, Path):
@@ -482,15 +484,19 @@ def _extract_bin_xml_from_ir(ir_path: Any) -> tuple[Path, Path]:
     ir_path = Path(ir_path)
 
     if ir_path.suffix == ".bin":
-        bin_path = ir_path
-        xml_path = str(bin_path.with_suffix(".xml"))
+        default_bin_path = ir_path
+        xml_path = str(default_bin_path.with_suffix(".xml"))
     elif ir_path.suffix == ".xml":
         xml_path = ir_path
-        bin_path = str(xml_path.with_suffix(".bin"))
+        default_bin_path = str(xml_path.with_suffix(".bin"))
     else:
         raise ValueError(
             "`ir_path` is invalid: does not have .bin or .xml extension."
         )
+
+    bin_path = (
+        input_bin_path if input_bin_path is not None else default_bin_path
+    )
 
     # fix any remote path corruption from pathlib
     bin_path = str(bin_path).replace(":/", "://")
@@ -499,6 +505,8 @@ def _extract_bin_xml_from_ir(ir_path: Any) -> tuple[Path, Path]:
     try:
         bin_path = resolve_path(bin_path, MODELS_DIR)
     except Exception as e:
+        if input_bin_path is not None:
+            raise ValueError(f"`input_bin` {bin_path} was not found.") from e
         raise ValueError(
             f"`bin_path` {bin_path} was not found. "
             "Please ensure that your xml and bin file have matching file basenames "
