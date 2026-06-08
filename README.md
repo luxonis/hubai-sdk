@@ -41,7 +41,7 @@ pip install -e .
 ### Get Your API Key
 
 1. Visit [HubAI Team Settings](https://hub.luxonis.com/team-settings)
-1. Generate or copy your API key
+2. Generate or copy your API key
 
 ### Set API Key
 

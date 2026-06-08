@@ -126,15 +126,16 @@ def convert(
     commit_hash : str, optional
         Commit hash.
     quantization_mode : QuantizationMode
-        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, INT8_INT16_MIXED_ACCURACY_FOCUSED, FP16_STANDARD.
         INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
         INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
         INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        INT8_INT16_MIXED_ACCURACY_FOCUSED is a mixed INT8 and INT16 calibration-based mode that prioritizes accuracy over throughput.
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData | PathType, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID, or a path to a local quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file. Pass the .zip path itself instead of `CUSTOM`; the SDK will normalize local zip inputs automatically.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -148,7 +149,7 @@ def convert(
     is_deployable : bool, optional
         Whether the model instance is deployable.
     output_dir : str, optional
-        Output directory for the downloaded files.
+        Directory path for the downloaded files. If not specified, the downloader creates a directory named after the exported instance slug under the current working directory.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
     yolo_input_shape : list[int], optional
@@ -560,7 +561,7 @@ def RVC2(
     is_deployable : bool, optional
         Whether the model instance is deployable.
     output_dir : str, optional
-        Output directory for the downloaded files.
+        Directory path for the downloaded files. If not specified, the downloader creates a directory named after the exported instance slug under the current working directory.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
     yolo_input_shape : list[int], optional
@@ -677,7 +678,7 @@ def RVC3(
     is_deployable : bool, optional
         Whether the model instance is deployable.
     output_dir : str, optional
-        Output directory for the downloaded files.
+        Directory path for the downloaded files. If not specified, the downloader creates a directory named after the exported instance slug under the current working directory.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
     yolo_input_shape : list[int], optional
@@ -793,15 +794,16 @@ def RVC4(
     commit_hash : str, optional
         Commit hash.
     quantization_mode : QuantizationMode
-        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
+        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, INT8_INT16_MIXED_ACCURACY_FOCUSED, FP16_STANDARD.
         INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
         INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
         INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
+        INT8_INT16_MIXED_ACCURACY_FOCUSED is a mixed INT8 and INT16 calibration-based mode that prioritizes accuracy over throughput.
         FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
     quantization_data : QuantizationData, optional
         The data used to quantize this model. Can be a predefined domain
         (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID, or a path to a local quantization .zip file.
+        a dataset ID, or a path to a local quantization .zip file. Pass the .zip path itself instead of `CUSTOM`; the SDK will normalize local zip inputs automatically.
     max_quantization_images : int, optional
         Maximum number of quantization images.
     domain : str, optional
@@ -815,7 +817,7 @@ def RVC4(
     is_deployable : bool, optional
         Whether the model instance is deployable.
     output_dir : str, optional
-        Output directory for the downloaded files.
+        Directory path for the downloaded files. If not specified, the downloader creates a directory named after the exported instance slug under the current working directory.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
     yolo_input_shape : list[int], optional
@@ -924,7 +926,7 @@ def Hailo(
     is_deployable : bool, optional
         Whether the model instance is deployable.
     output_dir : str, optional
-        Output directory for the downloaded files.
+        Directory path for the downloaded files. If not specified, the downloader creates a directory named after the exported instance slug under the current working directory.
     tool_version : str, optional
         Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
     yolo_input_shape : list[int], optional

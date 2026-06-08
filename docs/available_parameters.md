@@ -18,22 +18,22 @@ The Python API for conversion is available through `HubAIClient.convert` namespa
 
 General parameters applicable to all conversion functions.
 
-| argument            | type                                                                                                      | description                                                                                                            |
-| ------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `path`              | `str`                                                                                                     | The path to the model file.                                                                                            |
-| `tool_version`      | `str \| None`                                                                                             | The version of the conversion tool.                                                                                    |
-| `quantization_mode` | `Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "FP16_STANDARD", "FP32_STANDARD"]` | The quantization mode of the model. Defaults to `"INT8_STANDARD"`. Only applicable for RVC4                            |
-| `output_dir`        | `str \| None`                                                                                             | The directory to save the converted model. If not specified, the model will be saved in the current working directory. |
+| argument            | type                                                                                                                          | description                                                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`              | `str`                                                                                                                         | The path to the input model file, YAML config, or NN Archive.                                                                                                          |
+| `tool_version`      | `str \| None`                                                                                                                 | The version of the conversion tool.                                                                                                                                    |
+| `quantization_mode` | `Literal["INT8_STANDARD", "INT8_ACCURACY_FOCUSED", "INT8_INT16_MIXED", "INT8_INT16_MIXED_ACCURACY_FOCUSED", "FP16_STANDARD"]` | The quantization mode of the model. Defaults to `"INT8_STANDARD"`. Only applicable for RVC4. `FP16_STANDARD` skips calibration.                                        |
+| `output_dir`        | `str \| None`                                                                                                                 | Directory path for downloaded output files. If omitted, the downloader creates a directory named after the exported instance slug under the current working directory. |
 
 ## YOLO Parameters
 
 These parameters are only relevant if you're converting a YOLO model.
 
-| argument           | type                | description                        |
-| ------------------ | ------------------- | ---------------------------------- |
-| `yolo_input_shape` | `list[int] \| None` | The input shape of the YOLO model. |
-| `yolo_version`     | `str \| None`       | YOLO version (e.g. "yolov8").      |
-| `yolo_class_names` | `list[str] \| None` | The class names of the model.      |
+| argument           | type                | description                                                                                                                   |
+| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `yolo_input_shape` | `list[int] \| None` | The input shape of the YOLO model. Defaults to `[640, 640]` when omitted or invalid.                                          |
+| `yolo_version`     | `str \| None`       | YOLO version (e.g. `"yolov8"`). Usually omit this and rely on auto-detection; set it only as a fallback when detection fails. |
+| `yolo_class_names` | `list[str] \| None` | The class names of the model.                                                                                                 |
 
 ## Model Parameters
 
@@ -70,15 +70,15 @@ Parameters that specify creation of a new `ModelVersion` resource on HubAI.
 
 Parameters that specify creation of a new `ModelInstance` resource on HubAI.
 
-| argument                  | type                                                                                                                         | description                                                                                                                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variant_id`              | `str`                                                                                                                        | The ID of the associated variant. Use in case you want to add a new model instance to an already existing model variant or if you want to add a new version of the variant. |
-| `parent_id`               | `str \| None`                                                                                                                | Unique identifier of the parent `ModelInstance`.                                                                                                                            |
-| `quantization_data`       | `Literal["DRIVING", "FOOD", "GENERAL", "INDOORS", "RANDOM", "WAREHOUSE", "CLIP", "CUSTOM", "UNKNOWN"] \| Dataset ID \| None` | The data used to quantize this `ModelInstance`. Can be a predefined domain, a dataset ID (`aid_...`), or `CUSTOM` when using an uploaded quantization zip.                  |
-| `max_quantization_images` | `int \| None`                                                                                                                | The maximum number of images to use for quantization.                                                                                                                       |
-| `instance_tags`           | `list[str] \| None`                                                                                                          | Tags associated with this instance.                                                                                                                                         |
-| `input_shape`             | `list[int] \| None`                                                                                                          | The input shape of the model.                                                                                                                                               |
-| `is_deployable`           | `bool \| None`                                                                                                               | Whether the model is deployable.                                                                                                                                            |
+| argument                  | type                                                                                                                                | description                                                                                                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `variant_id`              | `str`                                                                                                                               | The ID of the associated variant. Use in case you want to add a new model instance to an already existing model variant or if you want to add a new version of the variant.                                         |
+| `parent_id`               | `str \| None`                                                                                                                       | Unique identifier of the parent `ModelInstance`.                                                                                                                                                                    |
+| `quantization_data`       | `Literal["DRIVING", "FOOD", "GENERAL", "INDOORS", "RANDOM", "WAREHOUSE", "CLIP", "CUSTOM", "UNKNOWN"] \| Dataset ID \| str \| None` | Calibration source for RVC4. Use a predefined domain, a dataset ID (`aid_...`), or a local custom `.zip` path. Do not pass `CUSTOM` directly to conversion helpers; local `.zip` inputs are normalized to `CUSTOM`. |
+| `max_quantization_images` | `int \| None`                                                                                                                       | The maximum number of images to use for quantization.                                                                                                                                                               |
+| `instance_tags`           | `list[str] \| None`                                                                                                                 | Tags associated with this instance.                                                                                                                                                                                 |
+| `input_shape`             | `list[int] \| None`                                                                                                                 | The input shape of the model.                                                                                                                                                                                       |
+| `is_deployable`           | `bool \| None`                                                                                                                      | Whether the model is deployable.                                                                                                                                                                                    |
 
 ## RVC2 Parameters
 
