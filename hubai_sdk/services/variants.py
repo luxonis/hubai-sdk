@@ -70,6 +70,9 @@ def list_variants(
         limit: int. Limit the number of model versions to show.
         sort: str. Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
         order: Literal["asc", "desc"]. Order to sort the model versions by. It should be "asc" or "desc".
+
+    Returns:
+        A list of matching model version resources.
     """
 
     telemetry = get_telemetry()
@@ -144,6 +147,9 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse:
 
     Args:
         identifier: UUID | str. The model version ID or slug.
+
+    Returns:
+        The resolved model version resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -190,6 +196,9 @@ def create_variant(
         commit_hash: str | None. Commit hash.
         domain: str | None. Domain of the model variant.
         tags: list[str] | None. List of tags for the model variant.
+
+    Returns:
+        The created model version resource.
     """
 
     data = {

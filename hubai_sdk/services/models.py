@@ -61,6 +61,9 @@ def list_models(
         limit: int. Maximum number of models to return.
         sort: str. Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
         order: Order. Order to sort the models by. It should be "asc" or "desc".
+
+    Returns:
+        A list of matching model resources.
     """
     telemetry = get_telemetry()
     if telemetry:
@@ -122,6 +125,9 @@ def get_model(identifier: UUID | str) -> ModelResponse:
 
     Args:
         identifier: UUID | str. The model ID or slug.
+
+    Returns:
+        The resolved model resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -168,6 +174,9 @@ def create_model(
         tasks: list[Task] | None. List of tasks this model supports.
         links: list[str] | None. List of links to related resources.
         is_yolo: bool. Whether the model is a YOLO model.
+
+    Returns:
+        The created model resource.
     """
     data = {
         "name": name,
@@ -251,6 +260,9 @@ def update_model(
         tasks: list[Task] | None. List of tasks this model supports.
         links: list[str] | None. List of links to related resources.
         is_yolo: bool | None. Whether the model is a YOLO model.
+
+    Returns:
+        The updated model resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

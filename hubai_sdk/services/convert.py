@@ -158,6 +158,10 @@ def convert(
         yolo_version: YOLO version.
         yolo_class_names: Class names for YOLO models.
         opts: Additional options for the conversion process.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
 
     logger.info(f"Converting model to {target.name} format")
@@ -360,8 +364,11 @@ def convert(
 def _resolve_exported_instance(
     job: JobMessageResponse,
 ) -> ModelInstanceResponse:
-    """Resolve the exported model instance from a completed export
-    job."""
+    """Resolve the exported model instance from a completed export job.
+
+    Returns:
+        The exported model instance once it is ready to download.
+    """
     instance_id = job.result["resulting_model_instance_id"]
     if not isinstance(instance_id, str):
         raise TypeError("resulting_model_instance_id must be a string")
@@ -369,7 +376,12 @@ def _resolve_exported_instance(
 
 
 def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
-    """Fetch a model instance response, returning `None` if missing."""
+    """Fetch a model instance response, returning `None` if missing.
+
+    Returns:
+        The model instance response, or `None` if the instance does not
+        exist yet.
+    """
     try:
         data = get_resource_info(instance_id, "modelInstances")
     except ResourceNotFoundError:
@@ -383,8 +395,11 @@ def _wait_for_exported_instance_ready(
     timeout_seconds: int = 180,
     poll_interval_seconds: int = 2,
 ) -> ModelInstanceResponse:
-    """Wait until an exported model instance is actually
-    downloadable."""
+    """Wait until an exported model instance is actually downloadable.
+
+    Returns:
+        The exported model instance once it becomes downloadable.
+    """
     attempts = max(1, timeout_seconds // poll_interval_seconds)
     latest_instance = None
     last_error: Exception | None = None
@@ -445,7 +460,11 @@ def _export(
     yolo_class_names: list[str] | None = None,
     **kwargs,
 ) -> JobMessageResponse:
-    """Starts an export job for a model instance."""
+    """Starts an export job for a model instance.
+
+    Returns:
+        The created export job response.
+    """
     model_instance_id = resolve_resource_id(str(identifier), "modelInstances")
     json: dict[str, object] = {
         "name": name,
@@ -548,6 +567,10 @@ def RVC2(
         yolo_input_shape: Input shape for YOLO models.
         yolo_version: YOLO version.
         yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
 
     if hub_kwargs.get("quantization_mode") is not None:
@@ -645,6 +668,10 @@ def RVC3(
         yolo_input_shape: Input shape for YOLO models.
         yolo_version: YOLO version.
         yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     if hub_kwargs.get("quantization_mode") is not None:
         logger.warning(
@@ -777,6 +804,10 @@ def RVC4(
         yolo_input_shape: Input shape for YOLO models.
         yolo_version: YOLO version.
         yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     htp_socs = htp_socs or ["sm8550"]
     return convert(
@@ -863,6 +894,10 @@ def Hailo(
         yolo_input_shape: Input shape for YOLO models.
         yolo_version: YOLO version.
         yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     return convert(
         Target.HAILO,
@@ -884,7 +919,11 @@ def Hailo(
 def _combine_opts(
     target: Target, target_kwargs: Kwargs, opts: list[str] | Kwargs | None
 ) -> list[str]:
-    """Merge generic options with target-prefixed conversion options."""
+    """Merge generic options with target-prefixed conversion options.
+
+    Returns:
+        A flat option list ready for config parsing.
+    """
     opts = opts or []
     if isinstance(opts, dict):
         opts_list = []

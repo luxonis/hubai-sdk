@@ -130,6 +130,9 @@ def list_instances(
             name from `ModelInstanceResponse`, such as `"name"`, `"id"`,
             or `"updated"`.
         order: Sort order. Must be `"asc"` or `"desc"`.
+
+    Returns:
+        A list of matching model instance resources.
     """
 
     telemetry = get_telemetry()
@@ -234,6 +237,9 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
 
     Args:
         identifier: The model instance ID or slug.
+
+    Returns:
+        The resolved model instance resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -275,6 +281,10 @@ def download_instance(
             model instance slug under the current working directory.
         force: Whether to force download the files even if they already
             exist.
+
+    Returns:
+        Path to the downloaded file or last downloaded file when the
+        instance contains multiple files.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -428,6 +438,9 @@ def create_instance(
         is_deployable: Whether the model instance is deployable.
         yolo_version: YOLO version for the model instance if it is a
             YOLO model.
+
+    Returns:
+        The created model instance resource.
     """
     data = {
         "name": name,
@@ -531,6 +544,9 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
 
     Args:
         identifier: The model instance ID or slug.
+
+    Returns:
+        The NN archive configuration for the model instance.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -561,6 +577,9 @@ def get_files(
 
     Args:
         identifier: The model instance ID or slug.
+
+    Returns:
+        File metadata for the model instance.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
