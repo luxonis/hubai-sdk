@@ -62,10 +62,8 @@ def login(
 ) -> None:
     """Login to HubAI.
 
-    Parameters
-    ----------
-    relogin: bool
-        Relogin if already logged in.
+    Args:
+        relogin: Relogin if already logged in.
     """
     if environ.HUBAI_API_KEY and not relogin:
         logger.info(

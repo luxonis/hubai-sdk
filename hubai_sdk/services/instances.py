@@ -105,44 +105,31 @@ def list_instances(
 ) -> list[ModelInstanceResponse]:
     """List the model instances in the HubAI.
 
-    Parameters
-    ----------
-    platforms : list[ModelType] | None
-        Filter the listed model instances by platforms.
-    search : str | None
-        Search the listed model instances by a free-text query.
-    model_id : UUID | str | None
-        Filter the listed model instances by model ID.
-    variant_id : UUID | str | None
-        Filter the listed model instances by variant ID.
-    model_type : ModelType | None
-        Filter the listed model instances by model type.
-    parent_id : UUID | str | None
-        Filter the listed model instances by parent ID.
-    model_class : ModelClass | None
-        Filter the listed model instances by model class.
-    name : str | None
-        Filter the listed model instances by name.
-    hash : str | None
-        Filter the listed model instances by hash.
-    status : Status | None
-        Filter the listed model instances by status.
-    is_public : bool | None
-        Filter the listed model instances by visibility.
-    compression_level : Literal[0, 1, 2, 3, 4, 5] | None
-        Filter the listed model instances by compression level.
-        Only relevant for Hailo models.
-    optimization_level : Literal[-100, 0, 1, 2, 3, 4] | None
-        Filter the listed model instances by optimization level.
-        Only relevant for Hailo models.
-    include_model_name : bool
-        Whether to include the model name and model variant name in the response. By default, it is False and the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as None. If True, the ModelInstanceResponse will have "model_name" and "model_variant_name" fields as the name of the model and model variant.
-    limit : int
-        Limit the number of model instances to show.
-    sort : str
-        Sort the model instances by this field. It should be the field name from the ModelInstanceResponse. For example, "name", "id", "updated", etc.
-    order : Literal["asc", "desc"]
-        Order to sort the model instances by. It should be "asc" or "desc".
+    Args:
+        platforms: Filter the listed model instances by platform.
+        search: Search the listed model instances by a free-text query.
+        model_id: Filter the listed model instances by model ID.
+        variant_id: Filter the listed model instances by variant ID.
+        model_type: Filter the listed model instances by model type.
+        parent_id: Filter the listed model instances by parent ID.
+        model_class: Filter the listed model instances by model class.
+        name: Filter the listed model instances by name.
+        hash: Filter the listed model instances by hash.
+        status: Filter the listed model instances by status.
+        is_public: Filter the listed model instances by visibility.
+        compression_level: Filter the listed model instances by
+            compression level. Only relevant for Hailo models.
+        optimization_level: Filter the listed model instances by
+            optimization level. Only relevant for Hailo models.
+        include_model_name: If `True`, include the model name and model
+            variant name in the response. Otherwise,
+            `ModelInstanceResponse.model_name` and
+            `ModelInstanceResponse.model_variant_name` are `None`.
+        limit: Maximum number of model instances to return.
+        sort: Field to sort the model instances by. It should be a field
+            name from `ModelInstanceResponse`, such as `"name"`, `"id"`,
+            or `"updated"`.
+        order: Sort order. Must be `"asc"` or `"desc"`.
     """
 
     telemetry = get_telemetry()
@@ -245,10 +232,8 @@ def list_instances_cli(
 def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
     """Returns information about a model instance.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model instance ID or slug.
+    Args:
+        identifier: The model instance ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -283,16 +268,13 @@ def download_instance(
 ) -> Path:
     """Downloads files from a model instance.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model instance ID or slug.
-    output_dir : str | None
-        The directory path to save the downloaded files.
-        If not specified, the downloader creates a directory named after the
-        model instance slug under the current working directory.
-    force : bool
-        Whether to force download the files even if they already exist.
+    Args:
+        identifier: The model instance ID or slug.
+        output_dir: Directory path to save the downloaded files. If not
+            specified, the downloader creates a directory named after the
+            model instance slug under the current working directory.
+        force: Whether to force download the files even if they already
+            exist.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -411,36 +393,41 @@ def create_instance(
 ) -> ModelInstanceResponse:
     """Creates a new model instance.
 
-    Parameters
-    ----------
-    name : str
-        The name of the model instance.
-    variant_id : UUID | str
-        The ID of the model variant to create an instance for.
-    model_type : ModelType
-        The type of the model.
-    parent_id : UUID | str | None
-        The ID of the parent model instance.
-    quantization_mode : QuantizationMode | None
-        The quantization mode of the model. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, INT8_INT16_MIXED_ACCURACY_FOCUSED, FP16_STANDARD.
-        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
-        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
-        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
-        INT8_INT16_MIXED_ACCURACY_FOCUSED is a mixed INT8 and INT16 calibration-based mode that prioritizes accuracy over throughput.
-        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
-    quantization_data : QuantizationData | None
-        The quantization data for the model. Can be one of predefined domains
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, CUSTOM, UNKNOWN),
-        or a dataset ID. For conversion helpers, pass the local .zip path itself
-        instead of `CUSTOM`; the SDK normalizes that input before instance creation.
-    tags : list[str] | None
-        List of tags for the model instance.
-    input_shape : list[int] | None
-        The input shape of the model instance.
-    is_deployable : bool | None
-        Whether the model instance is deployable.
-    yolo_version: YoloVersion | None
-        The YOLO version of the model instance if it is a YOLO model.
+    Args:
+        name: The name of the model instance.
+        variant_id: The ID of the model variant to create an instance for.
+        model_type: The type of the model.
+        parent_id: The ID of the parent model instance.
+        quantization_mode: Quantization mode for the model. Must be one
+            of `INT8_STANDARD`, `INT8_ACCURACY_FOCUSED`,
+            `INT8_INT16_MIXED`,
+            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
+            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            quantization with calibration for optimal performance and
+            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            with calibration that may improve accuracy without reducing
+            performance or increasing model size, depending on the
+            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            activations across all layers for improved numeric
+            stability and accuracy at the cost of performance and model
+            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            and INT16 calibration-based mode that prioritizes accuracy
+            over throughput. `FP16_STANDARD` is FP16 quantization
+            without calibration for models that require higher accuracy
+            and numeric stability at the cost of performance and model
+            size.
+        quantization_data: Quantization data for the model. This can be
+            one of the predefined domains `DRIVING`, `FOOD`,
+            `GENERAL`, `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`,
+            `CUSTOM`, or `UNKNOWN`, or a dataset ID. For conversion
+            helpers, pass the local `.zip` path itself instead of
+            `CUSTOM`; the SDK normalizes that input before instance
+            creation.
+        tags: Tags for the model instance.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        yolo_version: YOLO version for the model instance if it is a
+            YOLO model.
     """
     data = {
         "name": name,
@@ -508,10 +495,8 @@ def create_instance_cli(
 def delete_instance(identifier: UUID | str) -> None:
     """Deletes a model instance.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model instance ID or slug.
+    Args:
+        identifier: The model instance ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -544,10 +529,8 @@ def delete_instance_cli(identifier: UUID | str) -> None:
 def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
     """Returns the configuration of a model instance.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model instance ID or slug.
+    Args:
+        identifier: The model instance ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -576,10 +559,8 @@ def get_files(
 ) -> list[ModelInstanceFileResponse]:
     """Returns the files of a model instance.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model instance ID or slug.
+    Args:
+        identifier: The model instance ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -610,12 +591,9 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     upload policy from the server, then uploading the file directly to
     cloud storage.
 
-    Parameters
-    ----------
-    file_path : str
-        The path to the file to upload.
-    identifier : UUID | str
-        The model instance ID or slug.
+    Args:
+        file_path: Path to the file to upload.
+        identifier: The model instance ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

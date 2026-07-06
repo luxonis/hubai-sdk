@@ -20,11 +20,10 @@ def sanitize_net_name(name: str, with_suffix: bool = False) -> str:
     basename. If input is a name, sanitize the whole string. Collapse
     multiple underscores.
 
-    @type name: str
-    @param name: The name or path to sanitize.
-    @type with_suffix: bool
-    @param with_suffix: If True, the suffix (file extension) is
-        preserved and not sanitized.
+    Args:
+        name: The name or path to sanitize.
+        with_suffix: If `True`, preserve the suffix (file extension)
+            without sanitizing it.
     """
     p = Path(name)
     base, stem, suffix = p.name, p.stem, p.suffix

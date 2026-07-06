@@ -72,13 +72,13 @@ def get_configs(
 ) -> tuple[Config, NNArchiveConfig | None, str | None]:
     """Sets up the configuration.
 
-    @type path: Optional[str]
-    @param path: Path to the configuration file or NN Archive.
-    @type opts: Optional[List[str]]
-    @param opts: Optional CLI overrides of the config file.
-    @rtype: Tuple[Config, Optional[NNArchiveConfig], Optional[str]]
-    @return: Tuple of the parsed modelconverter L{Config},
-        L{NNArchiveConfig} and the main stage key.
+    Args:
+        path: Path to the configuration file or NN Archive.
+        opts: Optional CLI overrides for the config file.
+
+    Returns:
+        Tuple of the parsed modelconverter `Config`, optional
+        `NNArchiveConfig`, and the main stage key.
     """
 
     opts = opts or []

@@ -60,26 +60,16 @@ def list_variants(
 ) -> list[ModelVersionResponse]:
     """List the model versions in the HubAI.
 
-    Parameters
-    ----------
-    model_id : UUID | str | None
-        Filter the listed model versions by model ID.
-    name : str | None
-        Filter the listed model versions by name.
-    variant_slug : str | None
-        Filter the listed model versions by variant slug.
-    variant_version : str | None
-        Filter the listed model versions by version.
-    is_public : bool | None
-        Filter the listed model versions by visibility.
-    include_model_name : bool
-        Whether to include the model name in the response. By default, it is False and the ModelVersionResponse will have "model_name" field as None. If True, the ModelVersionResponse will have "model_name" field as the name of the model.
-    limit : int
-        Limit the number of model versions to show.
-    sort : str
-        Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
-    order : Literal["asc", "desc"]
-        Order to sort the model versions by. It should be "asc" or "desc".
+    Args:
+        model_id: UUID | str | None. Filter the listed model versions by model ID.
+        name: str | None. Filter the listed model versions by name.
+        variant_slug: str | None. Filter the listed model versions by variant slug.
+        variant_version: str | None. Filter the listed model versions by version.
+        is_public: bool | None. Filter the listed model versions by visibility.
+        include_model_name: bool. Whether to include the model name in the response. By default, it is False and the ModelVersionResponse will have "model_name" field as None. If True, the ModelVersionResponse will have "model_name" field as the name of the model.
+        limit: int. Limit the number of model versions to show.
+        sort: str. Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
+        order: Literal["asc", "desc"]. Order to sort the model versions by. It should be "asc" or "desc".
     """
 
     telemetry = get_telemetry()
@@ -152,10 +142,8 @@ def list_variants_cli(
 def get_variant(identifier: UUID | str) -> ModelVersionResponse:
     """Returns information about a model version.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model version ID or slug.
+    Args:
+        identifier: UUID | str. The model version ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -193,24 +181,15 @@ def create_variant(
 ) -> ModelVersionResponse:
     """Creates a new variant of a model.
 
-    Parameters
-    ----------
-    name : str
-        The name of the model variant.
-    model_id : UUID | str
-        The ID of the model to create a variant for.
-    variant_version : str
-        The version of the model variant.
-    description : str | None
-        Full description of the model variant.
-    repository_url : str | None
-        URL of the related repository.
-    commit_hash : str | None
-        Commit hash.
-    domain : str | None
-        Domain of the model variant.
-    tags : list[str] | None
-        List of tags for the model variant.
+    Args:
+        name: str. The name of the model variant.
+        model_id: UUID | str. The ID of the model to create a variant for.
+        variant_version: str. The version of the model variant.
+        description: str | None. Full description of the model variant.
+        repository_url: str | None. URL of the related repository.
+        commit_hash: str | None. Commit hash.
+        domain: str | None. Domain of the model variant.
+        tags: list[str] | None. List of tags for the model variant.
     """
 
     data = {
@@ -278,10 +257,8 @@ def create_variant_cli(
 def delete_variant(identifier: UUID | str) -> None:
     """Deletes a model variant.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model variant ID or slug.
+    Args:
+        identifier: UUID | str. The model variant ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
