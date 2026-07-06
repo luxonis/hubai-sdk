@@ -15,6 +15,17 @@ class Metadata:
 
 
 def get_metadata(model_path: Path) -> Metadata:
+    """Extract input and output metadata from a supported model file.
+
+    Args:
+        model_path: Path to an ONNX, OpenVINO IR, or TFLite model.
+
+    Returns:
+        Input and output shapes and dtypes for the model.
+
+    Raises:
+        ValueError: If the model format is unsupported.
+    """
     suffix = model_path.suffix
     if suffix == ".onnx":
         return _get_metadata_onnx(model_path)
@@ -32,6 +43,7 @@ def get_metadata(model_path: Path) -> Metadata:
 
 
 def _get_metadata_ir(bin_path: Path, xml_path: Path) -> Metadata:
+    """Extract metadata from an OpenVINO IR model."""
     from openvino.runtime import Core
 
     ie = Core()
@@ -69,6 +81,7 @@ def _get_metadata_ir(bin_path: Path, xml_path: Path) -> Metadata:
 
 
 def _get_metadata_onnx(onnx_path: Path) -> Metadata:
+    """Extract metadata from an ONNX model."""
     try:
         model = onnx.load(str(onnx_path))
     except Exception as e:
@@ -102,6 +115,7 @@ def _get_metadata_onnx(onnx_path: Path) -> Metadata:
 
 
 def _get_metadata_tflite(model_path: Path) -> Metadata:
+    """Extract metadata from a TFLite model."""
     import tflite
 
     with open(model_path, "rb") as f:

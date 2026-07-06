@@ -40,6 +40,7 @@ class DataType(Enum):
 
     @classmethod
     def from_tensorflow_dtype(cls, dtype: int) -> "DataType":
+        """Create a `DataType` from a TFLite tensor dtype value."""
         from tflite.TensorType import TensorType
 
         tensor_types = {
@@ -62,6 +63,7 @@ class DataType(Enum):
 
     @classmethod
     def from_dlc_dtype(cls, dtype: str) -> "DataType":
+        """Create a `DataType` from an SNPE DLC dtype name."""
         dtype_map = {
             "Float_16": "float16",
             "Float_32": "float32",
@@ -87,6 +89,7 @@ class DataType(Enum):
 
     @classmethod
     def from_onnx_dtype(cls, dtype: int) -> "DataType":
+        """Create a `DataType` from an ONNX tensor dtype value."""
         dtype_map = {
             TensorProto.FLOAT16: "float16",
             TensorProto.FLOAT: "float32",
@@ -108,6 +111,7 @@ class DataType(Enum):
 
     @classmethod
     def from_numpy_dtype(cls, dtype: np.dtype) -> "DataType":
+        """Create a `DataType` from a NumPy dtype."""
         dtype_map = {
             np.float16: "float16",
             np.float32: "float32",
@@ -127,6 +131,7 @@ class DataType(Enum):
 
     @classmethod
     def from_ir_ie_dtype(cls, dtype: str) -> "DataType":
+        """Create a `DataType` from an OpenVINO IR dtype string."""
         dtype_map = {
             "FP16": "float16",
             "FP32": "float32",
@@ -147,6 +152,7 @@ class DataType(Enum):
 
     @classmethod
     def from_ir_runtime_dtype(cls, dtype: str) -> "DataType":
+        """Create a `DataType` from an OpenVINO runtime dtype string."""
         dtype_map = {
             "f16": "float16",
             "f32": "float32",
@@ -166,6 +172,7 @@ class DataType(Enum):
         return cls(dtype_map[dtype])
 
     def as_numpy_dtype(self) -> np.dtype:
+        """Convert this data type to the corresponding NumPy dtype."""
         return {
             "float16": np.float16,
             "float32": np.float32,
@@ -181,6 +188,8 @@ class DataType(Enum):
         }[self.value]
 
     def as_openvino_dtype(self) -> str:
+        """Convert this data type to the corresponding OpenVINO
+        dtype."""
         return {
             "float16": "f16",
             "float32": "f32",
@@ -196,9 +205,11 @@ class DataType(Enum):
         }[self.value]
 
     def as_snpe_dtype(self) -> str:
+        """Convert this data type to the corresponding SNPE dtype."""
         return self.value
 
     def as_nn_archive_dtype(self) -> str:
+        """Convert this data type to the NN Archive dtype spelling."""
         if self.value.startswith("ufxp"):
             return self.value.replace("ufxp", "uint")
         if self.value.startswith("fxp"):
@@ -234,6 +245,7 @@ class InputFileType(Enum):
 
     @classmethod
     def from_path(cls, path: str | Path) -> "InputFileType":
+        """Infer the input file type from a model path suffix."""
         path = Path(path)
         if path.suffix == ".onnx":
             return cls.ONNX
@@ -262,6 +274,7 @@ class ModelType(str, Enum):
 
     @classmethod
     def from_suffix(cls, suffix: str) -> "ModelType":
+        """Infer a model type from a file suffix."""
         if suffix == ".onnx":
             return cls.ONNX
         if suffix == ".tflite":

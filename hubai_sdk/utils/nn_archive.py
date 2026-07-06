@@ -200,6 +200,7 @@ def process_nn_archive(
 
 
 def cleanup_extracted_path(path: Path) -> None:
+    """Delete an extracted NN archive path if it exists."""
     if not path.exists():
         return
     if path.is_dir():

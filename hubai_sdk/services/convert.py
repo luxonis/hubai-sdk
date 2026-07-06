@@ -369,6 +369,7 @@ def _resolve_exported_instance(
 
 
 def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
+    """Fetch a model instance response, returning `None` if missing."""
     try:
         data = get_resource_info(instance_id, "modelInstances")
     except ResourceNotFoundError:
@@ -883,6 +884,7 @@ def Hailo(
 def _combine_opts(
     target: Target, target_kwargs: Kwargs, opts: list[str] | Kwargs | None
 ) -> list[str]:
+    """Merge generic options with target-prefixed conversion options."""
     opts = opts or []
     if isinstance(opts, dict):
         opts_list = []

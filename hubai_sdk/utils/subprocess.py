@@ -13,6 +13,8 @@ class SubprocessResult(subprocess.CompletedProcess):
     memory usage."""
 
     def __init__(self, *args, peak_memory: int, total_time: float, **kwargs):
+        """Initialize a subprocess result with memory and timing
+        data."""
         super().__init__(*args, **kwargs)
         self.peak_memory = peak_memory
         self.total_time = total_time

@@ -765,6 +765,8 @@ def _get_instance_subresource(
     identifier: UUID | str,
     subpath: str,
 ) -> dict[str, object] | list[dict[str, object]]:
+    """Fetch a subresource for a model instance after resolving its
+    ID."""
     identifier_str = str(identifier)
     model_instance_id = resolve_resource_id(identifier_str, "modelInstances")
 
@@ -782,6 +784,7 @@ def _get_instance_subresource(
 
 
 def _dump_for_cli(resource: object) -> object:
+    """Convert SDK response objects into JSON-serializable CLI data."""
     if hasattr(resource, "model_dump"):
         return resource.model_dump(mode="json")
     return dict(resource.__dict__)

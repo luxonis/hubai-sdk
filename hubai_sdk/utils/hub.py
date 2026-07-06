@@ -51,6 +51,7 @@ T = TypeVar("T")
 def get_output_dir_name(
     target: Target, name: str, output_dir: str | None
 ) -> Path:
+    """Build an output directory path for a conversion result."""
     name = sanitize_net_name(name)
     date = datetime.now(timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
     if output_dir is not None:
@@ -62,6 +63,7 @@ def get_output_dir_name(
 
 
 def init_dirs() -> None:
+    """Create the SDK working directories if they do not exist."""
     for p in [CONFIGS_DIR, MODELS_DIR, OUTPUTS_DIR, CALIBRATION_DIR]:
         logger.debug(f"Creating {p}")
         p.mkdir(parents=True, exist_ok=True)
@@ -119,6 +121,7 @@ def print_hub_resource_info(
     rename: dict[str, str] | None = None,
     **kwargs,
 ) -> None:
+    """Render a single HubAI resource in CLI-friendly rich output."""
     rename = rename or {}
 
     if json:
@@ -216,6 +219,7 @@ def print_hub_ls(
     keys: list[str],
     rename: dict[str, str] | None = None,
 ) -> None:
+    """Render a list of HubAI resources as a rich table."""
     rename = rename or {}
     table = Table(row_styles=["yellow", "cyan"], box=ROUNDED)
     for key in keys:
@@ -235,6 +239,7 @@ def print_hub_ls(
 
 
 def is_valid_uuid(uuid_string: str) -> bool:
+    """Return whether a string is a valid UUID."""
     try:
         UUID(uuid_string)
     except Exception:
@@ -244,6 +249,7 @@ def is_valid_uuid(uuid_string: str) -> bool:
 
 
 def is_hubai_id(identifier: str) -> bool:
+    """Return whether an identifier looks like a HubAI resource ID."""
     temp = identifier
     if not temp.startswith("ai"):
         return False
@@ -255,6 +261,7 @@ def slug_to_id(
     slug: str,
     endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
+    """Resolve a simple slug to a resource ID by querying HubAI."""
     for is_public in [True, False]:
         params = {
             "is_public": is_public,
@@ -277,6 +284,7 @@ def slug_to_id(
 def full_slug_to_id(
     slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]
 ) -> str:
+    """Resolve a full HubAI slug to a resource ID using the slug API."""
     data = {"items": [{"identifier": 0, "slug": slug}]}
 
     try:
@@ -307,6 +315,18 @@ def get_resource_id(
     identifier: str,
     endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
+    """Resolve a UUID, HubAI ID, or slug into a resource ID.
+
+    Args:
+        identifier: User-supplied UUID, HubAI ID, or slug.
+        endpoint: Resource endpoint to resolve against.
+
+    Returns:
+        The resolved HubAI resource ID.
+
+    Raises:
+        ValueError: If the identifier cannot be resolved.
+    """
     if is_valid_uuid(identifier):
         return identifier
 
@@ -332,6 +352,8 @@ def resolve_resource_id(
     identifier: str,
     endpoint: ResourceEndpoint,
 ) -> str:
+    """Resolve an identifier and translate lookup failures to SDK
+    errors."""
     try:
         return get_resource_id(identifier, endpoint)
     except ValueError as exc:
@@ -344,6 +366,7 @@ def get_resource_info(
     identifier: str,
     endpoint: ResourceEndpoint,
 ) -> dict[str, Any]:
+    """Fetch raw HubAI resource data for a resolved identifier."""
     resource_id = resolve_resource_id(identifier, endpoint)
 
     try:
@@ -361,6 +384,8 @@ def raise_for_hub_error(
     endpoint: ResourceEndpoint | Literal["jobs"] | None = None,
     conflict_message: str | None = None,
 ) -> NoReturn:
+    """Translate a requests `HTTPError` into an SDK-specific
+    exception."""
     status_code = (
         exc.response.status_code if exc.response is not None else None
     )
@@ -397,6 +422,7 @@ def raise_for_hub_error(
 
 
 def run_cli(action: Callable[[], T]) -> T:
+    """Run a CLI action and convert SDK exceptions into clean exits."""
     try:
         return action()
     except HubApiError as exc:
@@ -413,6 +439,7 @@ def run_cli(action: Callable[[], T]) -> T:
 def get_variant_name(
     cfg: SingleStageConfig, model_type: ModelType, name: str
 ) -> str:
+    """Derive a variant name, appending input resolution when known."""
     shape = cfg.inputs[0].shape
     layout = cfg.inputs[0].layout
 
@@ -430,6 +457,7 @@ def get_variant_name(
 
 
 def get_version_number(model_id: str) -> str:
+    """Return the next patch version for a model's variants."""
     try:
         versions = Request.get(
             service="models",
@@ -450,6 +478,19 @@ def get_version_number(model_id: str) -> str:
 
 
 def wait_for_job(job_id: str) -> JobMessageResponse:
+    """Poll a HubAI job until it completes or fails.
+
+    Args:
+        job_id: HubAI job ID.
+
+    Returns:
+        The completed job response.
+
+    Raises:
+        HubApiError: If the job fails or ends in a terminal non-success
+            status.
+    """
+
     def _get_job(job_id: str) -> JobMessageResponse:
         try:
             response = Request.get(service="jobs", endpoint=f"jobs/{job_id}")
@@ -479,6 +520,7 @@ def wait_for_job(job_id: str) -> JobMessageResponse:
 def get_target_specific_options(
     target: Target, cfg: SingleStageConfig, tool_version: str | None = None
 ) -> dict[str, Any]:
+    """Build export options for a target from a parsed config."""
     json_cfg = cfg.model_dump(mode="json")
     options = {
         "disable_onnx_simplification": cfg.disable_onnx_simplification,

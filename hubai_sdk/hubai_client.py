@@ -16,6 +16,17 @@ from hubai_sdk.utils.telemetry import initialize_telemetry
 
 class HubAIClient:
     def __init__(self, api_key: str | None = None):
+        """Initialize a HubAI SDK client.
+
+        Args:
+            api_key: HubAI API key. If omitted, the client falls back to
+                `HUBAI_API_KEY` and then to the key loaded into
+                `environ`.
+
+        Raises:
+            ValueError: If no API key is available or the provided key
+                is invalid.
+        """
         # If api_key is not provided, try to get it from environment variable
         if api_key is None:
             api_key = os.getenv("HUBAI_API_KEY")
@@ -54,6 +65,12 @@ class HubAIClient:
             setattr(self, attr_name, plugin)
 
     def _verify_api_key(self) -> bool:
+        """Check whether the configured API key is accepted by HubAI.
+
+        Returns:
+            `True` if the API key is valid, otherwise `False` for
+            authentication failures.
+        """
         try:
             _ = Request.get(
                 service="models",
