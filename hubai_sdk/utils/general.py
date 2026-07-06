@@ -12,6 +12,7 @@ PYPI_URL = "https://pypi.org/pypi/hubai-sdk/json"
 
 
 def _normalize_underscores(s: str) -> str:
+    """Collapse consecutive underscores into a single underscore."""
     return re.sub(r"_+", "_", s)
 
 
@@ -20,11 +21,10 @@ def sanitize_net_name(name: str, with_suffix: bool = False) -> str:
     basename. If input is a name, sanitize the whole string. Collapse
     multiple underscores.
 
-    @type name: str
-    @param name: The name or path to sanitize.
-    @type with_suffix: bool
-    @param with_suffix: If True, the suffix (file extension) is
-        preserved and not sanitized.
+    Args:
+        name: The name or path to sanitize.
+        with_suffix: If `True`, preserve the suffix (file extension)
+            without sanitizing it.
     """
     p = Path(name)
     base, stem, suffix = p.name, p.stem, p.suffix
@@ -62,6 +62,7 @@ def sanitize_net_name(name: str, with_suffix: bool = False) -> str:
 
 
 def is_cli_call() -> bool:
+    """Return whether the current process is running via the CLI."""
     return os.environ.get("HUBAI_CALL_SOURCE") == "CLI"
 
 
@@ -85,6 +86,7 @@ def is_pip_package(filepath: str = __name__) -> bool:
 
 
 def significant_update_available(cur: Version, new: Version) -> bool:
+    """Return whether a newer version warrants notifying the user."""
     # Must be newer at all
     if new <= cur:
         return False
@@ -98,6 +100,8 @@ def significant_update_available(cur: Version, new: Version) -> bool:
 
 
 def version_check(current_version: str) -> None:
+    """Check PyPI for a newer SDK version and exit on major/minor
+    updates."""
     try:
         response = requests.get(PYPI_URL, timeout=2)
         data = response.json()

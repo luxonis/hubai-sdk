@@ -14,12 +14,28 @@ class NormalizedQuantizationInput:
 
 
 def is_custom_quantization_zip_path(path: str | Path) -> bool:
+    """Return whether a path points to a local quantization zip file."""
     return Path(path).suffix.lower() == ".zip"
 
 
 def normalize_quantization_input(
     quantization_data: QuantizationData | PathType | None,
 ) -> NormalizedQuantizationInput:
+    """Normalize quantization input into a structured representation.
+
+    Args:
+        quantization_data: Quantization input provided as a predefined
+            domain, dataset ID, local `.zip` path, or `None`.
+
+    Returns:
+        A normalized quantization input record describing the resolved
+        value and input type.
+
+    Raises:
+        ValueError: If the value is unsupported or incomplete.
+        FileNotFoundError: If a local quantization zip path does not
+            exist.
+    """
     if isinstance(quantization_data, Path):
         if not is_custom_quantization_zip_path(quantization_data):
             raise ValueError(

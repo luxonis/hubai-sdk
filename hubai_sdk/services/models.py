@@ -52,24 +52,18 @@ def list_models(
 ) -> list[ModelResponse]:
     """List the models in the HubAI.
 
-    Parameters
-    ----------
-    tasks : list[Task] | None
-        Filter the listed models by tasks.
-    license_type : License | None
-        Filter the listed models by license type.
-    is_public : bool | None
-        Filter the listed models by public status.
-    project_id : str | None
-        Filter the listed models by project ID.
-    luxonis_only : bool
-        Filter the listed models by Luxonis only.
-    limit : int
-        Maximum number of models to return.
-    sort : str
-        Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
-    order : Order
-        Order to sort the models by. It should be "asc" or "desc".
+    Args:
+        tasks: list[Task] | None. Filter the listed models by tasks.
+        license_type: License | None. Filter the listed models by license type.
+        is_public: bool | None. Filter the listed models by public status.
+        project_id: str | None. Filter the listed models by project ID.
+        luxonis_only: bool. Filter the listed models by Luxonis only.
+        limit: int. Maximum number of models to return.
+        sort: str. Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
+        order: Order. Order to sort the models by. It should be "asc" or "desc".
+
+    Returns:
+        A list of matching model resources.
     """
     telemetry = get_telemetry()
     if telemetry:
@@ -129,10 +123,11 @@ def list_models_cli(
 def get_model(identifier: UUID | str) -> ModelResponse:
     """Get the model information from the HubAI.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model ID or slug.
+    Args:
+        identifier: UUID | str. The model ID or slug.
+
+    Returns:
+        The resolved model resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -169,26 +164,19 @@ def create_model(
 ) -> ModelResponse:
     """Creates a new model resource.
 
-    Parameters
-    ----------
-    name : str
-        The name of the model.
-    license_type : License
-        The type of the license.
-    is_public : bool | None
-        Whether the model is public (True), private (False), or team (None).
-    description : str | None
-        Full description of the model.
-    description_short : str
-        Short description of the model.
-    architecture_id : UUID | str | None
-        The architecture ID.
-    tasks : list[Task] | None
-        List of tasks this model supports.
-    links : list[str] | None
-        List of links to related resources.
-    is_yolo : bool
-        Whether the model is a YOLO model.
+    Args:
+        name: str. The name of the model.
+        license_type: License. The type of the license.
+        is_public: bool | None. Whether the model is public (True), private (False), or team (None).
+        description: str | None. Full description of the model.
+        description_short: str. Short description of the model.
+        architecture_id: UUID | str | None. The architecture ID.
+        tasks: list[Task] | None. List of tasks this model supports.
+        links: list[str] | None. List of links to related resources.
+        is_yolo: bool. Whether the model is a YOLO model.
+
+    Returns:
+        The created model resource.
     """
     data = {
         "name": name,
@@ -262,26 +250,19 @@ def update_model(
 ) -> ModelResponse:
     """Updates a model.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model ID or slug.
-    license_type : License | None
-        The type of the license.
-    is_public : bool | None
-        Whether the model is public (True), private (False), or team (None).
-    description : str | None
-        Full description of the model.
-    description_short : str | None
-        Short description of the model.
-    architecture_id : UUID | str | None
-        The architecture ID.
-    tasks : list[Task] | None
-        List of tasks this model supports.
-    links : list[str] | None
-        List of links to related resources.
-    is_yolo : bool | None
-        Whether the model is a YOLO model.
+    Args:
+        identifier: UUID | str. The model ID or slug.
+        license_type: License | None. The type of the license.
+        is_public: bool | None. Whether the model is public (True), private (False), or team (None).
+        description: str | None. Full description of the model.
+        description_short: str | None. Short description of the model.
+        architecture_id: UUID | str | None. The architecture ID.
+        tasks: list[Task] | None. List of tasks this model supports.
+        links: list[str] | None. List of links to related resources.
+        is_yolo: bool | None. Whether the model is a YOLO model.
+
+    Returns:
+        The updated model resource.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -360,10 +341,8 @@ def update_model_cli(
 def delete_model(identifier: UUID | str) -> None:
     """Deletes a model.
 
-    Parameters
-    ----------
-    identifier : UUID | str
-        The model ID or slug.
+    Args:
+        identifier: UUID | str. The model ID or slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

@@ -259,6 +259,13 @@ class SingleStageConfig(CustomBaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_model(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Expand top-level config shortcuts into explicit tensor
+        config.
+
+        This fills in inferred metadata, default inputs and outputs, and
+        propagates shared calibration and preprocessing settings down to
+        per-input configuration.
+        """
         mean_values = data.pop("mean_values", None)
         scale_values = data.pop("scale_values", None)
         encoding = data.pop("encoding", {})
@@ -400,6 +407,8 @@ class SingleStageConfig(CustomBaseModel):
     @model_validator(mode="before")
     @classmethod
     def _download_input_model(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """Resolve input model paths and normalize OpenVINO IR
+        inputs."""
         if "input_model" not in value:
             raise ValueError("`input_model` must be provided.")
         input_file_type = InputFileType.from_path(value["input_model"])
@@ -423,6 +432,8 @@ class Config(LuxonisConfig):
     rich_logging: bool = True
 
     def get_stage_config(self, stage: str | None) -> SingleStageConfig:
+        """Return a stage config, inferring it for single-stage
+        models."""
         if stage is None:
             if len(self.stages) == 1:
                 return next(iter(self.stages.values()))
@@ -527,6 +538,7 @@ def _extract_bin_xml_from_ir(
 def _get_onnx_node_info(
     model_path: Path, node_name: str
 ) -> tuple[list[int], DataType]:
+    """Read shape and dtype information for an ONNX node output."""
     onnx_model = onnx.load(str(model_path))
     graph = onnx_model.graph
 
@@ -560,6 +572,7 @@ def _get_onnx_node_info(
 def _get_onnx_tensor_info(
     model_path: Path | str, tensor_name: str
 ) -> tuple[list[int], DataType]:
+    """Read shape and dtype information for an ONNX tensor."""
     model = onnx.load(str(model_path))
 
     def extract_tensor_info(
@@ -593,6 +606,7 @@ def _get_onnx_tensor_info(
 def _get_onnx_inter_info(
     model_path: Path, name: str
 ) -> tuple[list[int] | None, DataType | None]:
+    """Try tensor lookup first, then node lookup, for ONNX metadata."""
     try:
         logger.info(
             f"Attempting to find shape and data type for tensor '{name}'."

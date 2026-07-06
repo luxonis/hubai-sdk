@@ -39,6 +39,8 @@ app.command(instance := instance_app)
 
 @wraps(cli_convert)
 def convert_cli(*args: object, **kwargs: object) -> object:
+    """Run the conversion command through the shared CLI error
+    handler."""
     return run_cli(lambda: cli_convert(*args, **kwargs))
 
 
@@ -49,6 +51,7 @@ for plugin in load_cli_plugins():
 
 
 def validate_api_key(_: str) -> bool:
+    """Placeholder API key validator used by the login flow."""
     # TODO
     return True
 
@@ -62,10 +65,8 @@ def login(
 ) -> None:
     """Login to HubAI.
 
-    Parameters
-    ----------
-    relogin: bool
-        Relogin if already logged in.
+    Args:
+        relogin: Relogin if already logged in.
     """
     if environ.HUBAI_API_KEY and not relogin:
         logger.info(

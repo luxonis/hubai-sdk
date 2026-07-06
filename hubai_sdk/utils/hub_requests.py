@@ -11,10 +11,19 @@ from hubai_sdk.utils.environ import environ
 class Request:
     @staticmethod
     def url(service: HubService) -> str:
+        """Build the API base URL for a HubAI service."""
         return f"{environ.HUBAI_URL.rstrip('/')}/{service}/api/v1"
 
     @staticmethod
     def headers() -> dict[str, str]:
+        """Build authenticated request headers for HubAI API calls.
+
+        Returns:
+            Headers containing the bearer token and JSON accept header.
+
+        Raises:
+            ValueError: If `HUBAI_API_KEY` is not configured.
+        """
         if environ.HUBAI_API_KEY is None:
             raise ValueError("HUBAI_API_KEY is not set")
 
@@ -25,16 +34,19 @@ class Request:
 
     @staticmethod
     def _process_response(response: Response) -> Any:
+        """Validate a response and decode its JSON payload."""
         return Request._get_json(Request._check_response(response))
 
     @staticmethod
     def _check_response(response: Response) -> Response:
+        """Raise an HTTP error for non-success responses."""
         if response.status_code >= 400:
             raise HTTPError(Request._get_json(response), response=response)
         return response
 
     @staticmethod
     def _get_json(response: Response) -> Any:
+        """Decode a JSON response or raise a readable HTTP error."""
         try:
             return response.json()
         except JSONDecodeError as e:
@@ -45,6 +57,7 @@ class Request:
 
     @staticmethod
     def get(service: HubService, endpoint: str = "", **kwargs) -> Any:
+        """Send an authenticated GET request to HubAI."""
         return Request._process_response(
             requests.get(
                 Request._get_url(endpoint, Request.url(service)),
@@ -56,6 +69,7 @@ class Request:
 
     @staticmethod
     def post(service: HubService, endpoint: str = "", **kwargs) -> Any:
+        """Send an authenticated POST request to HubAI."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**Request.headers(), **kwargs.pop("headers")}
@@ -70,6 +84,7 @@ class Request:
 
     @staticmethod
     def delete(service: HubService, endpoint: str = "", **kwargs) -> Any:
+        """Send an authenticated DELETE request to HubAI."""
         return Request._process_response(
             requests.delete(
                 Request._get_url(endpoint, Request.url(service)),
@@ -81,6 +96,7 @@ class Request:
 
     @staticmethod
     def put(service: HubService, endpoint: str = "", **kwargs) -> Any:
+        """Send an authenticated PUT request to HubAI."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**headers, **kwargs.pop("headers")}
@@ -95,6 +111,7 @@ class Request:
 
     @staticmethod
     def patch(service: HubService, endpoint: str = "", **kwargs) -> Any:
+        """Send an authenticated PATCH request to HubAI."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**headers, **kwargs.pop("headers")}
@@ -109,5 +126,6 @@ class Request:
 
     @staticmethod
     def _get_url(endpoint: str, base_url: str | None = None) -> str:
+        """Join a base API URL with an endpoint path."""
         base_url = base_url or Request.url("models")
         return f"{base_url}/{endpoint.lstrip('/')}".rstrip("/")

@@ -1,6 +1,9 @@
 # HubAI SDK
 
-Python SDK for interacting with Luxonis HubAI - a platform for managing, converting, and deploying machine learning models for Luxonis OAK devices. If you want to convert models locally, check out [modelconverter](https://github.com/luxonis/modelconverter) instead.
+Python SDK for interacting with Luxonis HubAI, a platform for
+managing, converting, and deploying machine learning models for
+Luxonis OAK devices. If you want to convert models locally, check out
+[modelconverter](https://github.com/luxonis/modelconverter) instead.
 
 ## ✨ Features
 
@@ -8,10 +11,10 @@ Python SDK for interacting with Luxonis HubAI - a platform for managing, convert
 - **Variant Management**: Manage HubAI model variants and versions
 - **Instance Management**: Create and manage HubAI model instances
 - **Model Conversion**: Convert HubAI models to various formats including:
-  - RVC2
-  - RVC3
-  - RVC4
-  - Hailo
+  - `RVC2`
+  - `RVC3`
+  - `RVC4`
+  - `Hailo`
 - **CLI Tools**: Command-line interface for all operations
 - **Type Safety**: Full type hints for better developer experience
 
@@ -34,14 +37,15 @@ pip install -e .
 ## 📋 Requirements
 
 - Python 3.10 or higher
-- Valid Luxonis HubAI API key - you can get it from [HubAI Team Settings](https://hub.luxonis.com/team-settings)
+- Valid Luxonis HubAI API key available from
+  [HubAI Team Settings](https://hub.luxonis.com/team-settings)
 
 ## 🔐 Authentication
 
 ### Get Your API Key
 
 1. Visit [HubAI Team Settings](https://hub.luxonis.com/team-settings)
-1. Generate or copy your API key
+2. Generate or copy your API key
 
 ### Set API Key
 
@@ -61,7 +65,10 @@ This will store the API key in your environment variable and will be used by the
 hubai login
 ```
 
-This will open a browser to generate a new API key and prompt you to enter it, which will be securely stored. Use `hubai login --relogin` to relogin with different API key or `hubai logout` to logout.
+This opens a browser where you can generate a new API key and then
+prompts you to enter it for secure local storage. Use
+`hubai login --relogin` to replace an existing key, or `hubai logout`
+to remove it.
 
 **Option 3: Pass API Key Directly**
 
@@ -77,6 +84,7 @@ client = HubAIClient(api_key="your-api-key-here")
 
 ```python
 import os
+
 from hubai_sdk import HubAIClient
 
 # Initialize client
@@ -94,7 +102,7 @@ print(f"Model: {model.name}")
 # Convert a model to RVC2 format
 response = client.convert.RVC2(
     path="/path/to/your/model.onnx",
-    name="my-converted-model"
+    name="my-converted-model",
 )
 
 print(f"Converted model downloaded to: {response.downloaded_path}")
@@ -106,7 +114,8 @@ The SDK provides four main services accessible through the `HubAIClient`:
 
 ### Using Slugs from HubAI
 
-You can copy slugs directly from the HubAI platform and use them as identifiers in the SDK for models and variants. For example like this:
+You can copy slugs directly from the HubAI platform and use them as
+identifiers in the SDK for models and variants:
 
 ```bash
 hubai model info luxonis/yolov6-nano:r2-coco-512x384
@@ -121,7 +130,7 @@ Manage ML models in HubAI.
 models = client.models.list_models(
     tasks=["OBJECT_DETECTION"],
     is_public=True,
-    limit=10
+    limit=10,
 )
 
 # Get model by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
@@ -133,18 +142,18 @@ new_model = client.models.create_model(
     license_type="MIT",
     is_public=False,
     description="My awesome model",
-    tasks=["OBJECT_DETECTION"]
+    tasks=["OBJECT_DETECTION"],
 )
 
 # Update a model
 updated_model = client.models.update_model(
-    model_id,
+    model.id,
     license_type="Apache 2.0",
-    description="Updated description"
+    description="Updated description",
 )
 
 # Delete a model
-client.models.delete_model(model_id)
+client.models.delete_model(model.id)
 ```
 
 ### 🔄 Variants Service (`client.variants`)
@@ -152,8 +161,10 @@ client.models.delete_model(model_id)
 Manage model variants and versions.
 
 ```python
+# Assume `model` is a `ModelResponse`.
+
 # List variants (optionally filtered by model)
-variants = client.variants.list_variants(model_id="model-id")
+variants = client.variants.list_variants(model_id=model.id)
 
 # Get variant by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
 variant = client.variants.get_variant("variant-id-or-slug")
@@ -161,9 +172,9 @@ variant = client.variants.get_variant("variant-id-or-slug")
 # Create a new variant
 new_variant = client.variants.create_variant(
     name="my-variant",
-    model_id="model-id",
+    model_id=model.id,
     variant_version="1.0.0",
-    description="First version"
+    description="First version",
 )
 
 # Delete a variant
@@ -175,12 +186,14 @@ client.variants.delete_variant("variant-id")
 Manage model instances (specific configurations of variants).
 
 ```python
+from hubai_sdk.utils.types import ModelType
+
 # Create an instance
 instance = client.instances.create_instance(
     name="my-instance",
     variant_id="variant-id",
     model_type=ModelType.ONNX,
-    input_shape=[1, 3, 288, 512]
+    input_shape=[1, 3, 288, 512],
 )
 
 # Upload a file to instance
@@ -210,7 +223,7 @@ response = client.convert.RVC2(
     name="converted-model",
     compress_to_fp16=True,
     number_of_shaves=8,
-    superblob=True
+    superblob=True,
 )
 ```
 
@@ -225,7 +238,7 @@ response = client.convert.RVC4(
     quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
     use_per_channel_quantization=True,
-    htp_socs=["sm8550"]
+    htp_socs=["sm8550"],
 )
 ```
 
@@ -242,7 +255,7 @@ response = client.convert.convert(
     name="converted-model",
     quantization_mode="INT8_STANDARD",
     quantization_data="GENERAL",
-    input_shape=[1, 3, 288, 512]
+    input_shape=[1, 3, 288, 512],
 )
 ```
 
@@ -286,20 +299,36 @@ hubai convert RVC4 --help
 
 See the `examples/` directory for more detailed usage examples:
 
-- **`examples/models.py`**: Model management operations
-- **`examples/variants.py`**: Variant management operations
-- **`examples/instances.py`**: Instance management and file operations
-- **`examples/conversion/`**: Model conversion examples for different formats
+- [examples/models.py](examples/models.py): Model management operations
+- [examples/variants.py](examples/variants.py): Variant management operations
+- [examples/instances.py](examples/instances.py): Instance management and
+  file operations
+- [examples/conversion](examples/conversion): Model conversion examples
+  for different formats
 
 ## Migration from `blobconverter`
 
-[BlobConverter](https://pypi.org/project/blobconverter/) is our previous library for converting models to the BLOB format usable with `RVC2` and `RVC3` devices. This library is being replaced by `modelconverter` and `HubAI SDK`, which eventually become the only supported way of converting models in the future.
+[BlobConverter](https://pypi.org/project/blobconverter/) is our
+previous library for converting models to the BLOB format usable with
+`RVC2` and `RVC3` devices. It is being replaced by `modelconverter`
+and `HubAI SDK`, which will eventually become the supported
+conversion path.
 
-`blobconverter` is still available and can be used for conversion, but we recommend using `HubAI SDK` for new projects. The API of `HUBAI SDK` is similar to that of `blobconverter`, but there are some differences in the parameters and the way the conversion is done. Hosted HubAI conversion is also the replacement for the older [tools.luxonis.com](https://tools.luxonis.com/) YOLO-conversion workflow.
+`blobconverter` is still available and can be used for conversion, but
+we recommend using `HubAI SDK` for new projects. The HubAI SDK API is
+similar to `blobconverter`, but there are differences in parameters
+and in how conversion is performed. Hosted HubAI conversion also
+replaces the older
+[tools.luxonis.com](https://tools.luxonis.com/) YOLO conversion
+workflow.
 
-`blobconverter` offers several functions for converting models from different frameworks, such as `from_onnx`, `from_openvino`, and `from_tf`. These functions are now replaced by the `convert.RVC2` (or `convert.RVC3`) function in `HubAI SDK`, which takes a single argument `path` that specifies the path to the model file.
+`blobconverter` offers separate functions for different source
+frameworks, such as `from_onnx`, `from_openvino`, and `from_tf`.
+These are now replaced by `convert.RVC2` or `convert.RVC3` in
+`HubAI SDK`, both of which take a `path` to the source model.
 
-The following table shows the mapping between the parameters of `blobconverter` and `HUBAI SDK`. The parameters are grouped by their purpose. The first column shows the parameters of `blobconverter`, the second column shows the equivalent parameters in `HubAI SDK`, and the third column contains additional notes.
+The following table shows the mapping between `blobconverter`
+parameters and `HubAI SDK` parameters.
 
 | `blobconverter`    | `HubAI SDK`                              | Notes                                                                                                                                        |
 | ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -312,14 +341,15 @@ The following table shows the mapping between the parameters of `blobconverter` 
 | `optimizer_params` | `mo_args`                                | The arguments to pass to the model optimizer.                                                                                                |
 | `compile_params`   | `compile_tool_args`                      | The arguments to pass to the BLOB compiler.                                                                                                  |
 
-By default, `HubAI SDK` has `superblob` enabled which is only supported on DepthAI v3. If you want to convert a model to legacy RVC2 format (blob), you can pass `superblob=False` to the `convert.RVC2` function.
+By default, `HubAI SDK` enables `superblob`, which is only supported
+on DepthAI v3. To produce the legacy RVC2 blob format, pass
+`superblob=False` to `convert.RVC2`.
 
 ### Simple Conversion
 
 **Simple ONNX conversion using `blobconverter`**
 
 ```python
-
 import blobconverter
 
 blob = blobconverter.from_onnx(
@@ -364,7 +394,7 @@ response = client.convert.RVC2(
     path="resnet18.xml",
     opts={
         "input_bin": "/other/path/resnet18.bin",
-    }
+    },
 )
 blob = response.downloaded_path
 ```
@@ -372,12 +402,12 @@ blob = response.downloaded_path
 ### Conversion from `tflite`
 
 > [!WARNING]
-> `HubAI` online conversion does not support conversion from frozen PB files, only TFLITE files are supported.
+> HubAI online conversion does not support frozen PB files. Only
+> TFLite files are supported.
 
 `blobconverter`
 
 ```python
-
 import blobconverter
 
 blob = blobconverter.from_tf(
@@ -390,7 +420,6 @@ blob = blobconverter.from_tf(
 ```python
 response = client.convert.RVC2(
     path="resnet18.tflite",
-
 )
 
 blob = response.downloaded_path
@@ -413,7 +442,6 @@ blob = blobconverter.from_onnx(
         "--scale_values=[255,255,255]",
     ],
     compile_params=["-ip U8"],
-
 )
 ```
 
@@ -427,7 +455,7 @@ response = client.convert.RVC2(
     number_of_shaves=6,
     mo_args=[
         "mean_values=[127.5,127.5,127.5]",
-        "scale_values=[255,255,255]"
+        "scale_values=[255,255,255]",
     ],
     compile_tool_args=["-ip", "U8"],
 )
@@ -439,9 +467,10 @@ blob = response.downloaded_path
 
 Conversion from the `Caffe` framework is not supported.
 
-## 📄 All Available Parameters
+## 📄 Available Parameters
 
-See the [All available parameters](docs/available_parameters.md) file for all available parameters during conversion.
+See [docs/available_parameters.md](docs/available_parameters.md) for
+the full conversion parameter reference.
 
 ## 🔨 Development
 

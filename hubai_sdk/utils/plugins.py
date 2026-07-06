@@ -4,14 +4,21 @@ from typing import Any
 
 
 def iter_plugin_entry_points() -> list[EntryPoint]:
+    """Return installed HubAI plugin entry points."""
     return list(entry_points(group="hubai.plugins"))
 
 
 def load_cli_plugins() -> list[Any]:
+    """Load CLI plugin command objects from installed entry points."""
     return [ep.load() for ep in iter_plugin_entry_points()]
 
 
 def load_client_plugins() -> dict[str, Any]:
+    """Load client plugins keyed by their entry-point names.
+
+    Returns:
+        Mapping of plugin names to loaded modules or plugin objects.
+    """
     plugins: dict[str, Any] = {}
 
     for ep in iter_plugin_entry_points():

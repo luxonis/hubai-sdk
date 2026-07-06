@@ -92,73 +92,76 @@ def convert(
 ) -> ConvertResponse:
     """Starts the online conversion process.
 
-    Parameters
-    ----------
-    target : Target
-        The target platform.
-    path : str
-        Path to the model file, NN Archive, or configuration file.
-    name : str, optional
-        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
-    license_type : License, optional
-        The type of the license.
-    is_public : bool, optional
-        Whether the model is public (True), private (False), or team (None).
-    description_short : str, optional
-        Short description of the model.
-    description : str, optional
-        Full description of the model.
-    architecture_id : UUID | str, optional
-        The architecture ID.
-    tasks : list[Task], optional
-        List of tasks this model supports.
-    links : list[str], optional
-        List of links to related resources.
-    is_yolo : bool, optional
-        Whether the model is a YOLO model.
-    model_id : UUID | str, optional
-        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
-    variant_version : str, optional
-        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
-        If no versions exist, the version will be "0.1.0".
-    repository_url : str, optional
-        URL of the repository.
-    commit_hash : str, optional
-        Commit hash.
-    quantization_mode : QuantizationMode
-        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
-        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
-        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
-        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
-        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
-    quantization_data : QuantizationData | PathType, optional
-        The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID, or a path to a local quantization .zip file.
-    max_quantization_images : int, optional
-        Maximum number of quantization images.
-    domain : str, optional
-        Domain of the model.
-    variant_tags : list[str], optional
-        List of tags for the model variant.
-    variant_id : UUID | str, optional
-        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
-    input_shape : list[int], optional
-        The input shape of the model instance.
-    is_deployable : bool, optional
-        Whether the model instance is deployable.
-    output_dir : str, optional
-        Output directory for the downloaded files.
-    tool_version : str, optional
-        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : list[int], optional
-        Input shape for YOLO models.
-    yolo_version : YoloVersion, optional
-        YOLO version.
-    yolo_class_names : list[str], optional
-        List of class names for YOLO models.
-    opts : list[str], optional
-        Additional options for the conversion process.
+    Args:
+        target: Target platform.
+        path: Path to the model file, NN Archive, or configuration file.
+        name: Model name. If not specified, the name is taken from the
+            configuration file or the model file.
+        license_type: License type.
+        is_public: Whether the model is public (`True`), private
+            (`False`), or team-scoped (`None`).
+        description_short: Short description of the model.
+        description: Full description of the model.
+        architecture_id: Architecture ID.
+        tasks: Tasks this model supports.
+        links: Links to related resources.
+        is_yolo: Whether the model is a YOLO model.
+        model_id: ID of an existing model resource. If specified, that
+            model is used instead of creating a new one.
+        variant_version: Model version. If not specified, the version is
+            auto-incremented from the latest version of the model. If no
+            versions exist, the version is `"0.1.0"`.
+        variant_description: Full description of the model variant.
+        repository_url: URL of the repository.
+        commit_hash: Commit hash.
+        quantization_mode: Quantization mode to use during conversion.
+            Must be one of `INT8_STANDARD`,
+            `INT8_ACCURACY_FOCUSED`, `INT8_INT16_MIXED`,
+            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
+            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            quantization with calibration for optimal performance and
+            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            with calibration that may improve accuracy without reducing
+            performance or increasing model size, depending on the
+            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            activations across all layers for improved numeric
+            stability and accuracy at the cost of performance and model
+            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            and INT16 calibration-based mode that prioritizes accuracy
+            over throughput. `FP16_STANDARD` is FP16 quantization
+            without calibration for models that require higher accuracy
+            and numeric stability at the cost of performance and model
+            size.
+        domain: Domain of the model.
+        variant_tags: Tags for the model variant.
+        variant_id: ID of an existing model version resource. If
+            specified, that version is used instead of creating a new
+            one.
+        quantization_data: Data used to quantize this model. This can be
+            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
+            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
+            dataset ID, or a path to a local quantization `.zip` file.
+            Pass the `.zip` path itself instead of `CUSTOM`; the SDK
+            normalizes local zip inputs automatically.
+        max_quantization_images: Maximum number of quantization images.
+        instance_tags: Tags for the model instance.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        output_dir: Directory path for the downloaded files. If not
+            specified, the downloader creates a directory named after
+            the exported instance slug under the current working
+            directory.
+        tool_version: Version of the tool used for conversion. For
+            RVC2 and RVC3 this is the IR version, while for RVC4 this
+            is the SNPE version.
+        yolo_input_shape: Input shape for YOLO models.
+        yolo_version: YOLO version.
+        yolo_class_names: Class names for YOLO models.
+        opts: Additional options for the conversion process.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
 
     logger.info(f"Converting model to {target.name} format")
@@ -361,8 +364,11 @@ def convert(
 def _resolve_exported_instance(
     job: JobMessageResponse,
 ) -> ModelInstanceResponse:
-    """Resolve the exported model instance from a completed export
-    job."""
+    """Resolve the exported model instance from a completed export job.
+
+    Returns:
+        The exported model instance once it is ready to download.
+    """
     instance_id = job.result["resulting_model_instance_id"]
     if not isinstance(instance_id, str):
         raise TypeError("resulting_model_instance_id must be a string")
@@ -370,6 +376,12 @@ def _resolve_exported_instance(
 
 
 def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
+    """Fetch a model instance response, returning `None` if missing.
+
+    Returns:
+        The model instance response, or `None` if the instance does not
+        exist yet.
+    """
     try:
         data = get_resource_info(instance_id, "modelInstances")
     except ResourceNotFoundError:
@@ -383,8 +395,11 @@ def _wait_for_exported_instance_ready(
     timeout_seconds: int = 180,
     poll_interval_seconds: int = 2,
 ) -> ModelInstanceResponse:
-    """Wait until an exported model instance is actually
-    downloadable."""
+    """Wait until an exported model instance is actually downloadable.
+
+    Returns:
+        The exported model instance once it becomes downloadable.
+    """
     attempts = max(1, timeout_seconds // poll_interval_seconds)
     latest_instance = None
     last_error: Exception | None = None
@@ -445,7 +460,11 @@ def _export(
     yolo_class_names: list[str] | None = None,
     **kwargs,
 ) -> JobMessageResponse:
-    """Starts an export job for a model instance."""
+    """Starts an export job for a model instance.
+
+    Returns:
+        The created export job response.
+    """
     model_instance_id = resolve_resource_id(str(identifier), "modelInstances")
     json: dict[str, object] = {
         "name": name,
@@ -499,76 +518,59 @@ def RVC2(
 ) -> ConvertResponse:
     """Convert a model to RVC2 format.
 
-    Parameters
-    ----------
-    path : PathType
-        Path to the model file to be converted.
-    mo_args : list[str] | None, optional
-        Additional arguments for the Model Optimizer (MO).
-    compile_tool_args : list[str] | None, optional
-        Additional arguments for the compile tool.
-    compress_to_fp16 : bool, default True
-        Whether to compress the model's weights to FP16.
-    number_of_shaves : int, default 8
-        Number of shaves to use for the conversion.
-    superblob : bool, default True
-        Whether to create a superblob for the model.
-    opts : dict[str, Any] | list[str] | None, optional
-        Additional options for the conversion. Can be used
-        to override configuration values.
-    **hub_kwargs
-        Additional keyword arguments to be passed to the
-        online conversion. See also `convert` function.
+    Args:
+        path: Path to the model file to convert.
+        mo_args: Additional arguments for the Model Optimizer.
+        compile_tool_args: Additional arguments for the compile tool.
+        compress_to_fp16: Whether to compress the model weights to
+            FP16.
+        number_of_shaves: Number of shaves to use for the conversion.
+        superblob: Whether to create a superblob for the model.
+        opts: Additional conversion options. These can override config
+            values.
+        **hub_kwargs: Additional keyword arguments passed to `convert`.
 
-    Hub kwargs
-    ----------
-    name : str, optional
-        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
-    license_type : License, optional
-        The type of the license.
-    is_public : bool, optional
-        Whether the model is public (True), private (False), or team (None).
-    description_short : str, optional
-        Short description of the model.
-    description : str, optional
-        Full description of the model.
-    architecture_id : UUID | str, optional
-        The architecture ID.
-    tasks : list[Task], optional
-        List of tasks this model supports.
-    links : list[str], optional
-        List of links to related resources.
-    is_yolo : bool, optional
-        Whether the model is a YOLO model.
-    model_id : UUID | str, optional
-        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
-    variant_version : str, optional
-        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
-        If no versions exist, the version will be "0.1.0".
-    repository_url : str, optional
-        URL of the repository.
-    commit_hash : str, optional
-        Commit hash.
-    domain : str, optional
-        Domain of the model.
-    variant_tags : list[str], optional
-        List of tags for the model variant.
-    variant_id : UUID | str, optional
-        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
-    input_shape : list[int], optional
-        The input shape of the model instance.
-    is_deployable : bool, optional
-        Whether the model instance is deployable.
-    output_dir : str, optional
-        Output directory for the downloaded files.
-    tool_version : str, optional
-        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : list[int], optional
-        Input shape for YOLO models.
-    yolo_version : YoloVersion, optional
-        YOLO version.
-    yolo_class_names : list[str], optional
-        List of class names for YOLO models.
+    Keyword Args:
+        name: Model name. If not specified, the name is taken from the
+            configuration file or the model file.
+        license_type: License type.
+        is_public: Whether the model is public (`True`), private
+            (`False`), or team-scoped (`None`).
+        description_short: Short description of the model.
+        description: Full description of the model.
+        architecture_id: Architecture ID.
+        tasks: Tasks this model supports.
+        links: Links to related resources.
+        is_yolo: Whether the model is a YOLO model.
+        model_id: ID of an existing model resource. If specified, that
+            model is used instead of creating a new one.
+        variant_version: Model version. If not specified, the version is
+            auto-incremented from the latest version of the model. If no
+            versions exist, the version is `"0.1.0"`.
+        variant_description: Full description of the model variant.
+        repository_url: URL of the repository.
+        commit_hash: Commit hash.
+        domain: Domain of the model.
+        variant_tags: Tags for the model variant.
+        variant_id: ID of an existing model version resource. If
+            specified, that version is used instead of creating a new
+            one.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        output_dir: Directory path for the downloaded files. If not
+            specified, the downloader creates a directory named after
+            the exported instance slug under the current working
+            directory.
+        tool_version: Version of the tool used for conversion. For
+            RVC2 and RVC3 this is the IR version, while for RVC4 this
+            is the SNPE version.
+        yolo_input_shape: Input shape for YOLO models.
+        yolo_version: YOLO version.
+        yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
 
     if hub_kwargs.get("quantization_mode") is not None:
@@ -618,74 +620,58 @@ def RVC3(
 ) -> ConvertResponse:
     """Convert a model to RVC3 format.
 
-    Parameters
-    ----------
-    path : PathType
-        Path to the model file to be converted.
-    mo_args : list[str] | None, optional
-        Additional arguments for the Model Optimizer (MO).
-    compile_tool_args : list[str] | None, optional
-        Additional arguments for the compile tool.
-    compress_to_fp16 : bool, default True
-        Whether to compress the model's weights to FP16.
-    pot_target_device : PotDevice | Literal["VPU", "ANY"], default PotDevice.VPU
-        Target device for POT quantization.
-    opts : dict[str, Any] | list[str] | None, optional
-        Additional options for the conversion. Can be used
-        to override configuration values.
-    **hub_kwargs
-        Additional keyword arguments to be passed to the
-        online conversion.
+    Args:
+        path: Path to the model file to convert.
+        mo_args: Additional arguments for the Model Optimizer.
+        compile_tool_args: Additional arguments for the compile tool.
+        compress_to_fp16: Whether to compress the model weights to
+            FP16.
+        pot_target_device: Target device for POT quantization.
+        opts: Additional conversion options. These can override config
+            values.
+        **hub_kwargs: Additional keyword arguments passed to `convert`.
 
-    Hub kwargs
-    ----------
-    name : str, optional
-        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
-    license_type : License, optional
-        The type of the license.
-    is_public : bool, optional
-        Whether the model is public (True), private (False), or team (None).
-    description_short : str, optional
-        Short description of the model.
-    description : str, optional
-        Full description of the model.
-    architecture_id : UUID | str, optional
-        The architecture ID.
-    tasks : list[Task], optional
-        List of tasks this model supports.
-    links : list[str], optional
-        List of links to related resources.
-    is_yolo : bool, optional
-        Whether the model is a YOLO model.
-    model_id : UUID | str, optional
-        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
-    variant_version : str, optional
-        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
-        If no versions exist, the version will be "0.1.0".
-    repository_url : str, optional
-        URL of the repository.
-    commit_hash : str, optional
-        Commit hash.
-    domain : str, optional
-        Domain of the model.
-    variant_tags : list[str], optional
-        List of tags for the model variant.
-    variant_id : UUID | str, optional
-        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
-    input_shape : list[int], optional
-        The input shape of the model instance.
-    is_deployable : bool, optional
-        Whether the model instance is deployable.
-    output_dir : str, optional
-        Output directory for the downloaded files.
-    tool_version : str, optional
-        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : list[int], optional
-        Input shape for YOLO models.
-    yolo_version : YoloVersion, optional
-        YOLO version.
-    yolo_class_names : list[str], optional
-        List of class names for YOLO models.
+    Keyword Args:
+        name: Model name. If not specified, the name is taken from the
+            configuration file or the model file.
+        license_type: License type.
+        is_public: Whether the model is public (`True`), private
+            (`False`), or team-scoped (`None`).
+        description_short: Short description of the model.
+        description: Full description of the model.
+        architecture_id: Architecture ID.
+        tasks: Tasks this model supports.
+        links: Links to related resources.
+        is_yolo: Whether the model is a YOLO model.
+        model_id: ID of an existing model resource. If specified, that
+            model is used instead of creating a new one.
+        variant_version: Model version. If not specified, the version is
+            auto-incremented from the latest version of the model. If no
+            versions exist, the version is `"0.1.0"`.
+        variant_description: Full description of the model variant.
+        repository_url: URL of the repository.
+        commit_hash: Commit hash.
+        domain: Domain of the model.
+        variant_tags: Tags for the model variant.
+        variant_id: ID of an existing model version resource. If
+            specified, that version is used instead of creating a new
+            one.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        output_dir: Directory path for the downloaded files. If not
+            specified, the downloader creates a directory named after
+            the exported instance slug under the current working
+            directory.
+        tool_version: Version of the tool used for conversion. For
+            RVC2 and RVC3 this is the IR version, while for RVC4 this
+            is the SNPE version.
+        yolo_input_shape: Input shape for YOLO models.
+        yolo_version: YOLO version.
+        yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     if hub_kwargs.get("quantization_mode") is not None:
         logger.warning(
@@ -740,90 +726,88 @@ def RVC4(
 ) -> ConvertResponse:
     """Convert a model to RVC4 format.
 
-    Parameters
-    ----------
-    path : PathType
-        Path to the model file to be converted.
-    snpe_onnx_to_dlc_args : list[str] | None, optional
-        Additional arguments for the SNPE ONNX to DLC conversion.
-    snpe_dlc_quant_args : list[str] | None, optional
-        Additional arguments for the SNPE DLC quantization.
-    snpe_dlc_graph_prepare_args : list[str] | None, optional
-        Additional arguments for the SNPE DLC graph preparation.
-    use_per_channel_quantization : bool, default True
-        Whether to use per-channel quantization.
-    use_per_row_quantization : bool, default False
-        Whether to use per-row quantization.
-    htp_socs : list[str] | None, optional
-        List of HTP SoCs for the final DLC graph.
-    opts : dict[str, Any] | list[str] | None, optional
-        Additional options for the conversion. Can be used
-        to override configuration values.
-    **hub_kwargs
-        Additional keyword arguments to be passed to the
-        online conversion. See also `convert` function.
+    Args:
+        path: Path to the model file to convert.
+        snpe_onnx_to_dlc_args: Additional arguments for the SNPE ONNX to
+            DLC conversion.
+        snpe_dlc_quant_args: Additional arguments for SNPE DLC
+            quantization.
+        snpe_dlc_graph_prepare_args: Additional arguments for SNPE DLC
+            graph preparation.
+        use_per_channel_quantization: Whether to use per-channel
+            quantization.
+        use_per_row_quantization: Whether to use per-row quantization.
+        htp_socs: HTP SoCs for the final DLC graph.
+        opts: Additional conversion options. These can override config
+            values.
+        **hub_kwargs: Additional keyword arguments passed to `convert`.
 
-    Hub kwargs
-    ----------
-    name : str, optional
-        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
-    license_type : License, optional
-        The type of the license.
-    is_public : bool, optional
-        Whether the model is public (True), private (False), or team (None).
-    description_short : str, optional
-        Short description of the model.
-    description : str, optional
-        Full description of the model.
-    architecture_id : UUID | str, optional
-        The architecture ID.
-    tasks : list[Task], optional
-        List of tasks this model supports.
-    links : list[str], optional
-        List of links to related resources.
-    is_yolo : bool, optional
-        Whether the model is a YOLO model.
-    model_id : UUID | str, optional
-        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
-    variant_version : str, optional
-        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
-        If no versions exist, the version will be "0.1.0".
-    repository_url : str, optional
-        URL of the repository.
-    commit_hash : str, optional
-        Commit hash.
-    quantization_mode : QuantizationMode
-        Quantization mode to use during conversion. Must be one of: INT8_STANDARD, INT8_ACCURACY_FOCUSED, INT8_INT16_MIXED, FP16_STANDARD.
-        INT8_STANDARD is standard INT8 quantization with calibration (default), for optimal performance (FPS) and model size.
-        INT8_ACCURACY_FOCUSED is  INT8 quantization with calibration. This mode utilizes more advanced quantization techniques that may improve accuracy without reducing performance or increasing the model size, depending on the model.
-        INT8_INT16_MIXED is mixed INT8 and INT16 quantization with calibration. This mode uses 8-bit weights and 16-bit activations across all layers for improved numeric stability and accuracy at the cost of reduced performance (FPS) and increased model size.
-        FP16_STANDARD is FP16 quantization without calibration, for models that require higher accuracy and numeric stability, at the cost of performance (FPS) and increased model size.
-    quantization_data : QuantizationData, optional
-        The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID, or a path to a local quantization .zip file.
-    max_quantization_images : int, optional
-        Maximum number of quantization images.
-    domain : str, optional
-        Domain of the model.
-    variant_tags : list[str], optional
-        List of tags for the model variant.
-    variant_id : UUID | str, optional
-        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
-    input_shape : list[int], optional
-        The input shape of the model instance.
-    is_deployable : bool, optional
-        Whether the model instance is deployable.
-    output_dir : str, optional
-        Output directory for the downloaded files.
-    tool_version : str, optional
-        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : list[int], optional
-        Input shape for YOLO models.
-    yolo_version : YoloVersion, optional
-        YOLO version.
-    yolo_class_names : list[str], optional
-        List of class names for YOLO models.
+    Keyword Args:
+        name: Model name. If not specified, the name is taken from the
+            configuration file or the model file.
+        license_type: License type.
+        is_public: Whether the model is public (`True`), private
+            (`False`), or team-scoped (`None`).
+        description_short: Short description of the model.
+        description: Full description of the model.
+        architecture_id: Architecture ID.
+        tasks: Tasks this model supports.
+        links: Links to related resources.
+        is_yolo: Whether the model is a YOLO model.
+        model_id: ID of an existing model resource. If specified, that
+            model is used instead of creating a new one.
+        variant_version: Model version. If not specified, the version is
+            auto-incremented from the latest version of the model. If no
+            versions exist, the version is `"0.1.0"`.
+        variant_description: Full description of the model variant.
+        repository_url: URL of the repository.
+        commit_hash: Commit hash.
+        quantization_mode: Quantization mode to use during conversion.
+            Must be one of `INT8_STANDARD`,
+            `INT8_ACCURACY_FOCUSED`, `INT8_INT16_MIXED`,
+            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
+            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            quantization with calibration for optimal performance and
+            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            with calibration that may improve accuracy without reducing
+            performance or increasing model size, depending on the
+            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            activations across all layers for improved numeric
+            stability and accuracy at the cost of performance and model
+            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            and INT16 calibration-based mode that prioritizes accuracy
+            over throughput. `FP16_STANDARD` is FP16 quantization
+            without calibration for models that require higher accuracy
+            and numeric stability at the cost of performance and model
+            size.
+        domain: Domain of the model.
+        variant_tags: Tags for the model variant.
+        variant_id: ID of an existing model version resource. If
+            specified, that version is used instead of creating a new
+            one.
+        quantization_data: Data used to quantize this model. This can be
+            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
+            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
+            dataset ID, or a path to a local quantization `.zip` file.
+            Pass the `.zip` path itself instead of `CUSTOM`; the SDK
+            normalizes local zip inputs automatically.
+        max_quantization_images: Maximum number of quantization images.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        output_dir: Directory path for the downloaded files. If not
+            specified, the downloader creates a directory named after
+            the exported instance slug under the current working
+            directory.
+        tool_version: Version of the tool used for conversion. For
+            RVC2 and RVC3 this is the IR version, while for RVC4 this
+            is the SNPE version.
+        yolo_input_shape: Input shape for YOLO models.
+        yolo_version: YOLO version.
+        yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     htp_socs = htp_socs or ["sm8550"]
     return convert(
@@ -857,82 +841,63 @@ def Hailo(
 ) -> ConvertResponse:
     """Convert a model to Hailo format.
 
-    Parameters
-    ----------
-    path : PathType
-        Path to the model file to be converted.
-    optimization_level : int, default 2
-        Optimization level for the conversion.
-    compression_level : int, default 2
-        Compression level for the conversion.
-    batch_size : int, default 8
-        Batch size for the conversion.
-    alls : list[str] | None, optional
-        List of `alls` parameters for the conversion.
-    opts : dict[str, Any] | list[str] | None, optional
-        Additional options for the conversion. Can be used
-        to override configuration values.
-    **hub_kwargs
-        Additional keyword arguments to be passed to the
-        online conversion. See also `convert` function.
+    Args:
+        path: Path to the model file to convert.
+        optimization_level: Optimization level for the conversion.
+        compression_level: Compression level for the conversion.
+        batch_size: Batch size for the conversion.
+        alls: `alls` parameters for the conversion.
+        opts: Additional conversion options. These can override config
+            values.
+        **hub_kwargs: Additional keyword arguments passed to `convert`.
 
-    Hub kwargs
-    ----------
-    name : str, optional
-        Name of the model. If not specified, the name will be taken from the configuration file or the model file.
-    license_type : License, optional
-        The type of the license.
-    is_public : bool, optional
-        Whether the model is public (True), private (False), or team (None).
-    description_short : str, optional
-        Short description of the model.
-    description : str, optional
-        Full description of the model.
-    architecture_id : UUID | str, optional
-        The architecture ID.
-    tasks : list[Task], optional
-        List of tasks this model supports.
-    links : list[str], optional
-        List of links to related resources.
-    is_yolo : bool, optional
-        Whether the model is a YOLO model.
-    model_id : UUID | str, optional
-        ID of an existing Model resource. If specified, this model will be used instead of creating a new one.
-    variant_version : str, optional
-        Version of the model. If not specified, the version will be auto-incremented from the latest version of the model.
-        If no versions exist, the version will be "0.1.0".
-    repository_url : str, optional
-        URL of the repository.
-    commit_hash : str, optional
-        Commit hash.
-    quantization_model : QuantizationMode
-        Quantization mode.
-    quantization_data : QuantizationData, optional
-        The data used to quantize this model. Can be a predefined domain
-        (DRIVING, FOOD, GENERAL, INDOORS, RANDOM, WAREHOUSE, CLIP, UNKNOWN),
-        a dataset ID, or a path to a local quantization .zip file.
-    max_quantization_images : int, optional
-        Maximum number of quantization images.
-    domain : str, optional
-        Domain of the model.
-    variant_tags : list[str], optional
-        List of tags for the model variant.
-    variant_id : UUID | str, optional
-        ID of an existing Model Version resource. If specified, this version will be used instead of creating a new one.
-    input_shape : list[int], optional
-        The input shape of the model instance.
-    is_deployable : bool, optional
-        Whether the model instance is deployable.
-    output_dir : str, optional
-        Output directory for the downloaded files.
-    tool_version : str, optional
-        Version of the tool used for conversion. For RVC2 & RVC3, this is the IR version while for RVC4, this is the SNPE version.
-    yolo_input_shape : list[int], optional
-        Input shape for YOLO models.
-    yolo_version : YoloVersion, optional
-        YOLO version.
-    yolo_class_names : list[str], optional
-        List of class names for YOLO models.
+    Keyword Args:
+        name: Model name. If not specified, the name is taken from the
+            configuration file or the model file.
+        license_type: License type.
+        is_public: Whether the model is public (`True`), private
+            (`False`), or team-scoped (`None`).
+        description_short: Short description of the model.
+        description: Full description of the model.
+        architecture_id: Architecture ID.
+        tasks: Tasks this model supports.
+        links: Links to related resources.
+        is_yolo: Whether the model is a YOLO model.
+        model_id: ID of an existing model resource. If specified, that
+            model is used instead of creating a new one.
+        variant_version: Model version. If not specified, the version is
+            auto-incremented from the latest version of the model. If no
+            versions exist, the version is `"0.1.0"`.
+        variant_description: Full description of the model variant.
+        repository_url: URL of the repository.
+        commit_hash: Commit hash.
+        quantization_mode: Quantization mode.
+        quantization_data: Data used to quantize this model. This can be
+            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
+            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
+            dataset ID, or a path to a local quantization `.zip` file.
+        max_quantization_images: Maximum number of quantization images.
+        domain: Domain of the model.
+        variant_tags: Tags for the model variant.
+        variant_id: ID of an existing model version resource. If
+            specified, that version is used instead of creating a new
+            one.
+        input_shape: Input shape for the model instance.
+        is_deployable: Whether the model instance is deployable.
+        output_dir: Directory path for the downloaded files. If not
+            specified, the downloader creates a directory named after
+            the exported instance slug under the current working
+            directory.
+        tool_version: Version of the tool used for conversion. For
+            RVC2 and RVC3 this is the IR version, while for RVC4 this
+            is the SNPE version.
+        yolo_input_shape: Input shape for YOLO models.
+        yolo_version: YOLO version.
+        yolo_class_names: Class names for YOLO models.
+
+    Returns:
+        Conversion result containing the downloaded output path, export
+        job, and exported model instance.
     """
     return convert(
         Target.HAILO,
@@ -954,6 +919,11 @@ def Hailo(
 def _combine_opts(
     target: Target, target_kwargs: Kwargs, opts: list[str] | Kwargs | None
 ) -> list[str]:
+    """Merge generic options with target-prefixed conversion options.
+
+    Returns:
+        A flat option list ready for config parsing.
+    """
     opts = opts or []
     if isinstance(opts, dict):
         opts_list = []

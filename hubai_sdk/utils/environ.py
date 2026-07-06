@@ -12,6 +12,7 @@ from typing_extensions import Self
 def _get_password_win(
     q: multiprocessing.Queue, service_name: str, username: str
 ) -> None:
+    """Fetch a keyring password in a worker process and return it."""
     try:
         result = keyring.get_password(service_name, username)
         q.put(result)
@@ -25,6 +26,7 @@ def _get_password_win(
 def get_password_with_timeout_win(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
+    """Read a keyring password with a timeout using a subprocess."""
     # if system is mac with arm, use direct keyring call
     if platform.system() == "Darwin" and platform.machine() == "arm64":
         return keyring.get_password(service_name, username)
@@ -47,6 +49,7 @@ def get_password_with_timeout_win(
 def get_password_with_timeout(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
+    """Read a keyring password with a timeout using multiprocessing."""
 
     # if system is mac with arm, use direct keyring call
     if platform.system() == "Darwin" and platform.machine() == "arm64":
@@ -81,6 +84,7 @@ class Environ(BaseEnviron):
 
     @model_validator(mode="after")
     def validate_hubai_api_key(self) -> Self:
+        """Populate `HUBAI_API_KEY` from keyring when available."""
 
         keyring_api_key = None
 

@@ -19,13 +19,13 @@ def process_nn_archive(
 ) -> tuple[Config, NNArchiveConfig, str]:
     """Extracts the archive from tar and parses its config.
 
-    @type path: Path
-    @param path: Path to the archive.
-    @type overrides: Optional[Dict[str, Any]]
-    @param overrides: Config overrides.
-    @rtype: Tuple[Config, NNArchiveConfig, str]
-    @return: Tuple of the parsed config, NNArchiveConfig and the main
-        stage key.
+    Args:
+        path: Path to the archive.
+        overrides: Config overrides.
+
+    Returns:
+        Tuple of the parsed config, `NNArchiveConfig`, and the main stage
+        key.
     """
 
     untar_path = MISC_DIR / path.stem
@@ -200,6 +200,7 @@ def process_nn_archive(
 
 
 def cleanup_extracted_path(path: Path) -> None:
+    """Delete an extracted NN archive path if it exists."""
     if not path.exists():
         return
     if path.is_dir():

@@ -45,12 +45,10 @@ class Telemetry:
     ) -> None:
         """Initialize the Telemetry instance.
 
-        Parameters
-        ----------
-        project_api_key: str | None
-            PostHog project API key. If None, uses the default.
-        host: str | None
-            PostHog host URL. If None, uses the default.
+        Args:
+            project_api_key: PostHog project API key. If `None`, uses the
+                default.
+            host: PostHog host URL. If `None`, uses the default.
         """
         # Check if telemetry is disabled via environment variable
         telemetry_enabled = os.getenv(
@@ -140,17 +138,14 @@ class Telemetry:
     ) -> None:
         """Capture a telemetry event.
 
-        Sends events to PostHog.
-        Should not be thread blocking because posthog handles it asynchronously.
+        Sends events to PostHog. This should not block the caller because
+        PostHog handles delivery asynchronously.
 
-        Parameters
-        ----------
-        event_name: str
-            Name of the event to capture
-        properties: dict[str, Any] | None
-            Optional properties to attach to the event
-        include_system_metadata: bool
-            Whether to include system metadata in the event
+        Args:
+            event_name: Name of the event to capture.
+            properties: Optional properties to attach to the event.
+            include_system_metadata: Whether to include system metadata in
+                the event.
         """
         # Check if telemetry is suppressed in the current context
         if _telemetry_suppressed.get():
@@ -205,10 +200,9 @@ _telemetry_state: dict[str, Telemetry | bool | None] = {
 def get_telemetry() -> Telemetry | None:
     """Get the global PostHog telemetry instance.
 
-    Returns
-    -------
-    Telemetry | None
-        The global PostHog telemetry instance, or None if not initialized
+    Returns:
+        The global PostHog telemetry instance, or `None` if it has not
+        been initialized.
     """
     telemetry = _telemetry_state["telemetry"]
     return telemetry if isinstance(telemetry, Telemetry) else None
@@ -218,8 +212,8 @@ def get_telemetry() -> Telemetry | None:
 def suppress_telemetry() -> Iterator[None]:
     """Context manager to suppress telemetry for nested function calls.
 
-    Use this when a high-level function (like `convert`) calls other functions
-    that also collect telemetry, to avoid duplicate telemetry events.
+    Use this when a high-level function such as `convert` calls other
+    functions that also collect telemetry, to avoid duplicate events.
 
     Example:
         with suppress_telemetry():
@@ -227,9 +221,8 @@ def suppress_telemetry() -> Iterator[None]:
             create_variant(...)  # This won't send telemetry
         # Telemetry is re-enabled after exiting the context
 
-    Yields
-    ------
-    None
+    Yields:
+        None
     """
     token = _telemetry_suppressed.set(True)
     try:
@@ -254,17 +247,13 @@ def initialize_telemetry(
     """Initialize the global PostHog telemetry instance (singleton
     pattern).
 
-    Parameters
-    ----------
-    project_api_key : str | None
-        PostHog project API key. If None, uses the default.
-    host : str | None
-        PostHog host URL. If None, uses the default.
+    Args:
+        project_api_key: PostHog project API key. If `None`, uses the
+            default.
+        host: PostHog host URL. If `None`, uses the default.
 
-    Returns
-    -------
-    Telemetry
-        The initialized PostHog telemetry instance
+    Returns:
+        The initialized PostHog telemetry instance.
     """
     telemetry_instance = get_telemetry()
     if telemetry_instance is None:

@@ -13,6 +13,8 @@ class SubprocessResult(subprocess.CompletedProcess):
     memory usage."""
 
     def __init__(self, *args, peak_memory: int, total_time: float, **kwargs):
+        """Initialize a subprocess result with memory and timing
+        data."""
         super().__init__(*args, **kwargs)
         self.peak_memory = peak_memory
         self.total_time = total_time
@@ -24,9 +26,12 @@ def subprocess_run(
     """Wrapper around subprocess.run that logs, raises on error, and
     tracks peak RAM usage without hanging on stdout/stderr.
 
-    @param cmd: Command to execute. String or list of arguments.
-    @param silent: If True, suppress logs.
-    @return: SubprocessResult with .peak_memory attribute.
+    Args:
+        cmd: Command to execute. String or list of arguments.
+        silent: If True, suppress logs.
+
+    Returns:
+        SubprocessResult with .peak_memory attribute.
     """
     if isinstance(cmd, str):
         args = cmd.split()
