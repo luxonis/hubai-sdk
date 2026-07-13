@@ -8,6 +8,7 @@ from uuid import UUID
 import requests
 from cyclopts import App, Parameter
 from loguru import logger
+from luxonis_ml.telemetry import suppress_telemetry
 from requests import HTTPError
 from rich.progress import Progress
 
@@ -38,6 +39,24 @@ from hubai_sdk.utils.hubai_models import (
 from hubai_sdk.utils.sdk_models import (
     ModelInstanceFileResponse,
     ModelInstanceResponse,
+)
+from hubai_sdk.utils.telemetry import (
+    INSTANCE_CONFIG_RETRIEVED_EVENT,
+    INSTANCE_CREATED_EVENT,
+    INSTANCE_DELETED_EVENT,
+    INSTANCE_DOWNLOAD_COMPLETED_EVENT,
+    INSTANCE_FILE_UPLOADED_EVENT,
+    INSTANCE_FILES_LISTED_EVENT,
+    INSTANCE_RETRIEVED_EVENT,
+    INSTANCES_LISTED_EVENT,
+    OperationTelemetrySpec,
+    build_instance_created_properties,
+    build_instance_downloaded_properties,
+    build_instance_files_listed_properties,
+    build_instance_uploaded_properties,
+    build_instances_listed_properties,
+    build_model_identifier_properties,
+    telemetry_operation,
 )
 from hubai_sdk.utils.types import ModelType
 
@@ -82,6 +101,15 @@ INSTANCE_INFO_KEYS = [
 ]
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instances_list",
+        operation_group="instances",
+        success_event=INSTANCES_LISTED_EVENT,
+        target_resource="instance",
+        success_builder=build_instances_listed_properties,
+    )
+)
 def list_instances(
     *,
     platforms: list[ModelType] | None = None,
@@ -226,6 +254,16 @@ def list_instances_cli(
     _print_instance_list(instances, include_model_name, field)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_get",
+        operation_group="instances",
+        success_event=INSTANCE_RETRIEVED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
     """Returns information about a model instance.
 
@@ -253,6 +291,16 @@ def get_instance_info_cli(identifier: UUID | str) -> None:
     _print_instance_info(run_cli(lambda: get_instance(identifier)))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_download",
+        operation_group="instances",
+        success_event=INSTANCE_DOWNLOAD_COMPLETED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_instance_downloaded_properties,
+    )
+)
 def download_instance(
     identifier: UUID | str,
     output_dir: str | None = None,
@@ -366,6 +414,15 @@ def download_instance_cli(
     run_cli(lambda: download_instance(identifier, output_dir, force))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_create",
+        operation_group="instances",
+        success_event=INSTANCE_CREATED_EVENT,
+        target_resource="instance",
+        success_builder=build_instance_created_properties,
+    )
+)
 def create_instance(
     name: str,
     *,
@@ -442,7 +499,8 @@ def create_instance(
         f"Model instance '{res['name']}' created with ID '{res['id']}'"
     )
 
-    return get_instance(res["id"])
+    with suppress_telemetry():
+        return get_instance(res["id"])
 
 
 @app.command(name="create")
@@ -477,6 +535,16 @@ def create_instance_cli(
     _print_instance_info(instance)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_delete",
+        operation_group="instances",
+        success_event=INSTANCE_DELETED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def delete_instance(identifier: UUID | str) -> None:
     """Deletes a model instance.
 
@@ -503,6 +571,16 @@ def delete_instance_cli(identifier: UUID | str) -> None:
     run_cli(lambda: delete_instance(identifier))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_config_get",
+        operation_group="instances",
+        success_event=INSTANCE_CONFIG_RETRIEVED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
     """Returns the configuration of a model instance.
 
@@ -526,6 +604,16 @@ def get_config_cli(identifier: UUID | str) -> None:
     logger.info(_dump_for_cli(config))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_files_list",
+        operation_group="instances",
+        success_event=INSTANCE_FILES_LISTED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_instance_files_listed_properties,
+    )
+)
 def get_files(
     identifier: UUID | str,
 ) -> list[ModelInstanceFileResponse]:
@@ -551,6 +639,16 @@ def get_files_cli(identifier: UUID | str) -> None:
     logger.info([_dump_for_cli(file) for file in files])
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="instance_upload",
+        operation_group="instances",
+        success_event=INSTANCE_FILE_UPLOADED_EVENT,
+        target_resource="instance",
+        identifier_param="identifier",
+        success_builder=build_instance_uploaded_properties,
+    )
+)
 def upload_file(file_path: str, identifier: UUID | str) -> None:
     """Uploads a file to a model instance using async upload.
 

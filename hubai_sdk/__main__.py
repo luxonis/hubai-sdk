@@ -18,6 +18,7 @@ from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.environ import environ
 from hubai_sdk.utils.hub import run_cli
 from hubai_sdk.utils.plugins import load_cli_plugins
+from hubai_sdk.utils.telemetry import instrument_hubai_cli
 
 # Set a flag to indicate that the call is coming from the CLI
 # we can then detect if we need to log to the console or not
@@ -43,6 +44,8 @@ app.command(convert := convert_cli)
 
 for plugin in load_cli_plugins():
     app.command(plugin)
+
+instrument_hubai_cli(app)
 
 
 def validate_api_key(_: str) -> bool:
@@ -71,13 +74,15 @@ def login(
 
     logger.info("User not logged in. Follow the link to get your API key.")
     try:
-        if not webbrowser.open("https://hub.luxonis.com/team-settings", new=2):
+        if not webbrowser.open(
+            "https://hub.luxonis.com/team-settings/api-keys", new=2
+        ):
             logger.warning(
-                "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings"
+                "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings/api-keys"
             )
     except Exception:
         logger.warning(
-            "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings"
+            "Failed to open the browser. Please open the link manually: https://hub.luxonis.com/team-settings/api-keys"
         )
 
     sleep(0.1)

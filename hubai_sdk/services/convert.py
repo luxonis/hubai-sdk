@@ -1,3 +1,5 @@
+import os
+import time
 from pathlib import Path
 from time import sleep
 from typing import Literal
@@ -5,6 +7,7 @@ from uuid import UUID
 
 from loguru import logger
 from luxonis_ml.nn_archive import is_nn_archive
+from luxonis_ml.telemetry import suppress_telemetry
 from luxonis_ml.typing import Kwargs, PathType
 from requests import HTTPError
 
@@ -51,9 +54,31 @@ from hubai_sdk.utils.sdk_models import (
     JobMessageResponse,
     ModelInstanceResponse,
 )
+from hubai_sdk.utils.telemetry import (
+    OperationTelemetrySpec,
+    build_conversion_result_properties,
+    build_conversion_summary,
+    capture_conversion_configured,
+    capture_conversion_result,
+    config_source_from_path,
+    conversion_failure_reason,
+    get_or_create_conversion_run_id,
+    invocation_surface,
+    model_type_value,
+    quantization_input_type,
+    reset_conversion_run_id,
+    telemetry_operation,
+)
 from hubai_sdk.utils.types import ModelType, PotDevice, Target
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="convert",
+        operation_group="conversion",
+        target_resource="conversion",
+    )
+)
 def convert(
     target: Target,
     opts: list[str] | None = None,
@@ -166,6 +191,15 @@ def convert(
     logger.info(f"Converting model to {target.name} format")
     logger.info(f"Options: {opts}")
 
+    previous_conversion_run_id = os.environ.get("HUBAI_SDK_CONVERSION_RUN_ID")
+    conversion_run_id = get_or_create_conversion_run_id()
+    start = time.monotonic()
+    conversion_start: float | None = None
+    configured_properties: dict[str, object] | None = None
+    emitted_configured_event = False
+    phase = "configuration"
+    response: ConvertResponse | None = None
+
     if isinstance(architecture_id, UUID):
         architecture_id = str(architecture_id)
     if isinstance(model_id, UUID):
@@ -208,81 +242,10 @@ def convert(
     model_type = ModelType.from_suffix(cfg.input_model.suffix)
     variant_name = get_variant_name(cfg, model_type, name)
 
-    if model_id is None and variant_id is None:
-        try:
-            model = create_model(
-                name,
-                license_type=license_type,
-                is_public=is_public,
-                description=description,
-                description_short=description_short,
-                architecture_id=architecture_id,
-                tasks=tasks or [],
-                links=links or [],
-                is_yolo=is_yolo,
-            )
-            model_id = model.id
-        except ResourceConflictError:
-            model_id = resolve_resource_id(
-                name.lower().replace(" ", "-"), "models"
-            )
-
-    if variant_id is None:
-        if model_id is None:
-            raise InputError("`--model-id` is required to create a new model")
-
-        version = variant_version or get_version_number(str(model_id))
-
-        variant = create_variant(
-            variant_name,
-            model_id=model_id,
-            variant_version=version,
-            description=variant_description,
-            repository_url=repository_url,
-            commit_hash=commit_hash,
-            domain=domain,
-            tags=variant_tags or [],
-        )
-        variant_id = variant.id
-
-    else:
-        variant = get_variant(variant_id)
-        if variant_version is not None:
-            if model_id is None:
-                raise InputError(
-                    "`--model-id` is required to create a new variant version."
-                )
-            variant = create_variant(
-                variant.name,
-                model_id=model_id,
-                variant_version=variant_version,
-                description=variant_description,
-                repository_url=repository_url,
-                commit_hash=commit_hash,
-                domain=domain,
-                tags=variant_tags or [],
-            )
-            variant_id = variant.id
-
-    assert variant_id is not None
-    instance_name = f"{variant_name} base instance"
-    instance = create_instance(
-        instance_name,
-        variant_id=variant_id,
-        model_type=model_type,
-        input_shape=input_shape or cfg.inputs[0].shape,
-        is_deployable=is_deployable,
-        tags=instance_tags or [],
+    existing_model_reused = model_id is not None
+    existing_variant_reused = (
+        variant_id is not None and variant_version is None
     )
-    instance_id = instance.id
-
-    # TODO: IR support
-    if path is not None and is_nn_archive(path):
-        logger.info(f"Uploading NN archive: {path}")
-        upload_file(path, instance_id)
-    else:
-        logger.info(f"Uploading input model: {cfg.input_model}")
-        upload_file(str(cfg.input_model), instance_id)
 
     normalized_quantization_input = normalize_quantization_input(
         quantization_data
@@ -294,39 +257,208 @@ def convert(
         quantization_data = (
             None
             if quantization_mode in {"FP16_STANDARD", "FP32_STANDARD"}
-            else "RANDOM"
+            else "GENERAL"
         )
 
-    target_options = get_target_specific_options(target, cfg, tool_version)
-    export_name = f"{variant_name} exported to {target}"
-    export_job = _export(
-        export_name,
-        instance_id,
-        target=target,
-        quantization_mode=quantization_mode or "INT8_STANDARD",
-        quantization_data=quantization_data,
-        max_quantization_images=max_quantization_images,
-        yolo_version=yolo_version,
-        yolo_class_names=yolo_class_names,
-        **target_options,
-    )
+    try:
+        with suppress_telemetry():
+            if model_id is None and variant_id is None:
+                try:
+                    model = create_model(
+                        name,
+                        license_type=license_type,
+                        is_public=is_public,
+                        description=description,
+                        description_short=description_short,
+                        architecture_id=architecture_id,
+                        tasks=tasks or [],
+                        links=links or [],
+                        is_yolo=is_yolo,
+                    )
+                    model_id = model.id
+                except ResourceConflictError:
+                    model_id = resolve_resource_id(
+                        name.lower().replace(" ", "-"), "models"
+                    )
+                    existing_model_reused = True
 
-    if custom_quantization_zip is not None:
-        logger.info(
-            f"Uploading custom quantization zip: {custom_quantization_zip}"
+            if variant_id is None:
+                if model_id is None:
+                    raise InputError(
+                        "`--model-id` is required to create a new model"
+                    )
+
+                version = variant_version or get_version_number(str(model_id))
+
+                variant = create_variant(
+                    variant_name,
+                    model_id=model_id,
+                    variant_version=version,
+                    description=variant_description,
+                    repository_url=repository_url,
+                    commit_hash=commit_hash,
+                    domain=domain,
+                    tags=variant_tags or [],
+                )
+                variant_id = variant.id
+
+            else:
+                variant = get_variant(variant_id)
+                if variant_version is not None:
+                    if model_id is None:
+                        raise InputError(
+                            "`--model-id` is required to create a new variant version."
+                        )
+                    variant = create_variant(
+                        variant.name,
+                        model_id=model_id,
+                        variant_version=variant_version,
+                        description=variant_description,
+                        repository_url=repository_url,
+                        commit_hash=commit_hash,
+                        domain=domain,
+                        tags=variant_tags or [],
+                    )
+                    variant_id = variant.id
+                else:
+                    existing_variant_reused = True
+
+        target_options = get_target_specific_options(target, cfg, tool_version)
+        configured_properties = build_conversion_summary(
+            target=target.value,
+            config_source=config_source_from_path(
+                path,
+                is_archive=is_archive,
+                is_yaml=bool(
+                    config_path
+                    and Path(config_path).suffix in {".yaml", ".yml"}
+                ),
+            ),
+            input_model_type=model_type_value(model_type) or "unknown",
+            invocation_surface=invocation_surface(),
+            existing_model_reused=existing_model_reused,
+            existing_variant_reused=existing_variant_reused,
+            quantization_mode=quantization_mode,
+            quantization_input_type=quantization_input_type(
+                quantization_data,
+                custom_zip=custom_quantization_zip is not None,
+            ),
+            max_quantization_images=max_quantization_images,
+            yolo_version=yolo_version,
+            yolo_class_names=yolo_class_names,
+            yolo_input_shape_provided=yolo_input_shape is not None,
+            tool_version_provided=tool_version is not None,
+            input_shape_provided=input_shape is not None,
+            download_output_dir_provided=output_dir is not None,
+            input_count=len(cfg.inputs),
+            target_options=target_options,
         )
-        upload_quantization_zip(str(custom_quantization_zip), export_job.id)
+        capture_conversion_configured(
+            conversion_run_id,
+            configured_properties,
+        )
+        emitted_configured_event = True
+        conversion_start = time.monotonic()
 
-    export_job = wait_for_job(export_job.id)
-    instance = _resolve_exported_instance(export_job)
+        with suppress_telemetry():
+            assert variant_id is not None
+            instance_name = f"{variant_name} base instance"
+            phase = "resource_setup"
+            instance = create_instance(
+                instance_name,
+                variant_id=variant_id,
+                model_type=model_type,
+                input_shape=input_shape or cfg.inputs[0].shape,
+                is_deployable=is_deployable,
+                tags=instance_tags or [],
+            )
+            instance_id = instance.id
 
-    downloaded_path = download_instance(instance.id, output_dir)
+            phase = "upload"
+            if path is not None and is_nn_archive(path):
+                logger.info(f"Uploading NN archive: {path}")
+                upload_file(path, instance_id)
+            else:
+                logger.info(f"Uploading input model: {cfg.input_model}")
+                upload_file(str(cfg.input_model), instance_id)
 
-    return ConvertResponse(
-        downloaded_path=downloaded_path,
-        job=export_job,
-        instance=instance,
-    )
+            export_name = f"{variant_name} exported to {target}"
+            phase = "export"
+            export_job = _export(
+                export_name,
+                instance_id,
+                target=target,
+                quantization_mode=quantization_mode or "INT8_STANDARD",
+                quantization_data=quantization_data,
+                max_quantization_images=max_quantization_images,
+                yolo_version=yolo_version,
+                yolo_class_names=yolo_class_names,
+                **target_options,
+            )
+
+            if custom_quantization_zip is not None:
+                phase = "upload"
+                logger.info(
+                    f"Uploading custom quantization zip: {custom_quantization_zip}"
+                )
+                upload_quantization_zip(
+                    str(custom_quantization_zip), export_job.id
+                )
+                phase = "export"
+
+            export_job = wait_for_job(export_job.id)
+            instance = _resolve_exported_instance(export_job)
+
+            phase = "download"
+            downloaded_path = download_instance(instance.id, output_dir)
+        response = ConvertResponse(
+            downloaded_path=downloaded_path,
+            job=export_job,
+            instance=instance,
+        )
+    except BaseException as exc:
+        if emitted_configured_event:
+            capture_conversion_result(
+                conversion_run_id,
+                {
+                    **(configured_properties or {"target": target.value}),
+                    **build_conversion_result_properties(
+                        result=(
+                            "interrupted"
+                            if conversion_failure_reason(exc, phase=phase)
+                            == "user_interrupt"
+                            else "failed"
+                        ),
+                        failure_reason=conversion_failure_reason(
+                            exc, phase=phase
+                        ),
+                        duration_ms=int(
+                            (time.monotonic() - (conversion_start or start))
+                            * 1000
+                        ),
+                    ),
+                },
+            )
+        raise
+    else:
+        if emitted_configured_event:
+            capture_conversion_result(
+                conversion_run_id,
+                {
+                    **(configured_properties or {"target": target.value}),
+                    **build_conversion_result_properties(
+                        result="success",
+                        duration_ms=int(
+                            (time.monotonic() - (conversion_start or start))
+                            * 1000
+                        ),
+                    ),
+                },
+            )
+        assert response is not None
+        return response
+    finally:
+        reset_conversion_run_id(previous_conversion_run_id)
 
 
 def _resolve_exported_instance(

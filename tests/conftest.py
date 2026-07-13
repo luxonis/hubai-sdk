@@ -7,6 +7,8 @@ import pytest
 
 from hubai_sdk import HubAIClient
 
+os.environ.setdefault("LUXONIS_TELEMETRY_ENABLED", "false")
+
 
 def pytest_addoption(parser: pytest.Parser):
     """Add command line options for tests."""
