@@ -60,10 +60,12 @@ INSTANCE_FILE_UPLOADED_EVENT = "hubai_sdk_instance_file_uploaded"
 CONVERSION_CONFIGURED_EVENT = "hubai_sdk_conversion_configured"
 CONVERSION_RESULT_EVENT = "hubai_sdk_conversion_result_recorded"
 CONVERSION_FLOW_NAME = "hubai_sdk_conversion_lifecycle"
-CONVERSION_RUN_ID_ENV_VAR = "HUBAI_SDK_CONVERSION_RUN_ID"
 
 _CLI_FAILURE_REASON: ContextVar[str | None] = ContextVar(
     "hubai_sdk_cli_failure_reason", default=None
+)
+_CONVERSION_RUN_ID: ContextVar[str | None] = ContextVar(
+    "hubai_sdk_conversion_run_id", default=None
 )
 
 
@@ -97,20 +99,21 @@ def invocation_surface() -> str:
     return "python_api"
 
 
+def current_conversion_run_id() -> str | None:
+    return _CONVERSION_RUN_ID.get()
+
+
 def get_or_create_conversion_run_id() -> str:
-    conversion_run_id = os.environ.get(CONVERSION_RUN_ID_ENV_VAR)
+    conversion_run_id = current_conversion_run_id()
     if conversion_run_id:
         return conversion_run_id
     conversion_run_id = str(uuid4())
-    os.environ[CONVERSION_RUN_ID_ENV_VAR] = conversion_run_id
+    _CONVERSION_RUN_ID.set(conversion_run_id)
     return conversion_run_id
 
 
 def reset_conversion_run_id(previous_value: str | None) -> None:
-    if previous_value is None:
-        os.environ.pop(CONVERSION_RUN_ID_ENV_VAR, None)
-    else:
-        os.environ[CONVERSION_RUN_ID_ENV_VAR] = previous_value
+    _CONVERSION_RUN_ID.set(previous_value)
 
 
 def record_cli_failure_reason(exc: BaseException) -> None:
@@ -221,7 +224,6 @@ def telemetry_operation(
                     telemetry,
                     spec=spec,
                     bound_arguments=bound,
-                    result=result,
                     exc=caught_exc,
                     duration_ms=int((time.monotonic() - start) * 1000),
                 )
@@ -591,7 +593,6 @@ def _capture_operation_result(
     *,
     spec: OperationTelemetrySpec,
     bound_arguments: dict[str, Any],
-    result: Any,
     exc: BaseException | None,
     duration_ms: int,
 ) -> None:
@@ -902,7 +903,7 @@ def build_model_updated_properties(
                 bucket_zero_count(len(links)) if updates["links"] else None
             ),
             "is_yolo": arguments.get("is_yolo"),
-            "updated_field_count_bucket": bucket_nonzero_count(updated_count),
+            "updated_field_count_bucket": bucket_zero_count(updated_count),
             "updated_license_type": updates["license_type"],
             "updated_visibility": updates["visibility"],
             "updated_description": updates["description"],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextvars
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ import pytest
 import hubai_sdk.services.convert as convert_services
 import hubai_sdk.services.models as model_services
 from hubai_sdk.hubai_client import HubAIClient
+from hubai_sdk.utils import telemetry as telemetry_utils
 from hubai_sdk.utils.types import Target
 
 from .test_cli_resource_return_values import _model_data
@@ -219,3 +221,51 @@ def test_convert_result_duration_is_end_to_end(
         if event == "hubai_sdk_conversion_result_recorded"
     )
     assert conversion_result_props["duration_ms"] == 40_000
+
+
+def test_conversion_run_id_is_context_local() -> None:
+    telemetry_utils.reset_conversion_run_id(None)
+    main_run_id = telemetry_utils.get_or_create_conversion_run_id()
+    isolated_values: dict[str, str | None] = {}
+
+    def isolated() -> None:
+        isolated_values["before"] = telemetry_utils.current_conversion_run_id()
+        isolated_values["created"] = (
+            telemetry_utils.get_or_create_conversion_run_id()
+        )
+
+    contextvars.Context().run(isolated)
+
+    assert isolated_values["before"] is None
+    assert isolated_values["created"] is not None
+    assert isolated_values["created"] != main_run_id
+    assert telemetry_utils.current_conversion_run_id() == main_run_id
+
+    telemetry_utils.reset_conversion_run_id(None)
+
+
+def test_update_model_emits_zero_updated_fields_bucket(
+    monkeypatch: pytest.MonkeyPatch, fake_telemetry: _FakeTelemetry
+) -> None:
+    monkeypatch.setattr(
+        model_services,
+        "resolve_resource_id",
+        lambda identifier, endpoint: "model-id",
+    )
+    monkeypatch.setattr(
+        model_services.Request,
+        "patch",
+        lambda *args, **kwargs: _model_data(),
+    )
+    monkeypatch.setattr(
+        model_services,
+        "get_resource_info",
+        lambda identifier, endpoint: _model_data(),
+    )
+
+    updated = model_services.update_model("demo-model")
+
+    assert updated.id == "aim_model"
+    update_props = fake_telemetry.events[0][1]
+    assert fake_telemetry.events[0][0] == "hubai_sdk_model_updated"
+    assert update_props["updated_field_count_bucket"] == "0"

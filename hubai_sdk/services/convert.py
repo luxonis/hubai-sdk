@@ -1,4 +1,3 @@
-import os
 import time
 from pathlib import Path
 from time import sleep
@@ -62,6 +61,7 @@ from hubai_sdk.utils.telemetry import (
     capture_conversion_result,
     config_source_from_path,
     conversion_failure_reason,
+    current_conversion_run_id,
     get_or_create_conversion_run_id,
     invocation_surface,
     model_type_value,
@@ -191,7 +191,7 @@ def convert(
     logger.info(f"Converting model to {target.name} format")
     logger.info(f"Options: {opts}")
 
-    previous_conversion_run_id = os.environ.get("HUBAI_SDK_CONVERSION_RUN_ID")
+    previous_conversion_run_id = current_conversion_run_id()
     conversion_run_id = get_or_create_conversion_run_id()
     start = time.monotonic()
     configured_properties: dict[str, object] | None = None
