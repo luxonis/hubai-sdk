@@ -16,7 +16,6 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelVersionResponse
-from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
     name="variant",
@@ -74,15 +73,6 @@ def list_variants(
     Returns:
         A list of matching model version resources.
     """
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.list",
-            properties={"model_id": model_id},
-            include_system_metadata=False,
-        )
-
     try:
         data = Request.get(
             service="models",
@@ -157,14 +147,6 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse:
 
     data["model_name"] = get_resource_info(data["model_id"], "models")["name"]
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.get",
-            properties={"variant_id": identifier},
-            include_system_metadata=False,
-        )
-
     return ModelVersionResponse(**data)
 
 
@@ -224,12 +206,6 @@ def create_variant(
             ),
         )
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.create", properties=data, include_system_metadata=False
-        )
-
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
     return get_variant(res["id"])
@@ -281,14 +257,6 @@ def delete_variant(identifier: UUID | str) -> None:
             exc, identifier=identifier, endpoint="modelVersions"
         )
     logger.info(f"Model variant '{variant_id}' deleted")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.delete",
-            properties={"variant_id": identifier},
-            include_system_metadata=False,
-        )
 
 
 @app.command(name="delete")

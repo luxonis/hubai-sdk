@@ -39,7 +39,6 @@ from hubai_sdk.utils.sdk_models import (
     ModelInstanceFileResponse,
     ModelInstanceResponse,
 )
-from hubai_sdk.utils.telemetry import get_telemetry
 from hubai_sdk.utils.types import ModelType
 
 app = App(
@@ -134,11 +133,6 @@ def list_instances(
     Returns:
         A list of matching model instance resources.
     """
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture("instances.list", include_system_metadata=True)
-
     normalized_model_class = (
         model_class.upper() if model_class is not None else None
     )
@@ -250,14 +244,6 @@ def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
         data["model_version_id"], "modelVersions"
     )["name"]
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.get",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
-
     return ModelInstanceResponse(**data)
 
 
@@ -367,14 +353,6 @@ def download_instance(
 
     assert downloaded_path is not None
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.download",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
-
     return downloaded_path
 
 
@@ -464,12 +442,6 @@ def create_instance(
         f"Model instance '{res['name']}' created with ID '{res['id']}'"
     )
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.create", properties=data, include_system_metadata=True
-        )
-
     return get_instance(res["id"])
 
 
@@ -524,14 +496,6 @@ def delete_instance(identifier: UUID | str) -> None:
         )
     logger.info(f"Model instance '{identifier}' deleted")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.delete",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
-
 
 @app.command(name="delete")
 def delete_instance_cli(identifier: UUID | str) -> None:
@@ -551,14 +515,6 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     data = _get_instance_subresource(identifier, "config")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.config",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
 
     return ArchiveConfigurationResponse(**data)  # type: ignore
 
@@ -584,14 +540,6 @@ def get_files(
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     data = _get_instance_subresource(identifier, "files")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.files",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
 
     return [ModelInstanceFileResponse(**file) for file in data]  # type: ignore
 
@@ -680,14 +628,6 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
         f"File '{file_path}' uploaded to model instance '{identifier}'"
     )
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.upload",
-            properties={"instance_id": identifier},
-            include_system_metadata=True,
-        )
-
 
 @app.command(name="upload")
 def upload_file_cli(file_path: str, identifier: UUID | str) -> None:
@@ -744,14 +684,6 @@ def upload_quantization_zip(
     logger.info(
         f"Custom quantization zip '{file_path}' uploaded for job '{job_id}'"
     )
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "instances.upload_quantization_zip",
-            properties={"job_id": job_id},
-            include_system_metadata=True,
-        )
 
 
 def _print_instance_list(

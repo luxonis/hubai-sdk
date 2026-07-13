@@ -11,7 +11,6 @@ from hubai_sdk.utils.environ import environ
 from hubai_sdk.utils.hub import raise_for_hub_error
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.plugins import load_client_plugins
-from hubai_sdk.utils.telemetry import initialize_telemetry
 
 
 class HubAIClient:
@@ -49,10 +48,6 @@ class HubAIClient:
             raise ValueError("Invalid API key")
 
         logger.info("API key verified successfully.")
-
-        # Initialize telemetry
-        self._telemetry = initialize_telemetry()
-        self._telemetry.capture("init.client", include_system_metadata=True)
 
         self.models = hubai_sdk.services.models
         self.variants = hubai_sdk.services.variants

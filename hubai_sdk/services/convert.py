@@ -51,7 +51,6 @@ from hubai_sdk.utils.sdk_models import (
     JobMessageResponse,
     ModelInstanceResponse,
 )
-from hubai_sdk.utils.telemetry import get_telemetry, suppress_telemetry
 from hubai_sdk.utils.types import ModelType, PotDevice, Target
 
 
@@ -209,40 +208,54 @@ def convert(
     model_type = ModelType.from_suffix(cfg.input_model.suffix)
     variant_name = get_variant_name(cfg, model_type, name)
 
-    # Suppress telemetry for nested calls to avoid duplicate events
-    # The convert function will send a single telemetry event at the end
-    with suppress_telemetry():
-        if model_id is None and variant_id is None:
-            try:
-                model = create_model(
-                    name,
-                    license_type=license_type,
-                    is_public=is_public,
-                    description=description,
-                    description_short=description_short,
-                    architecture_id=architecture_id,
-                    tasks=tasks or [],
-                    links=links or [],
-                    is_yolo=is_yolo,
-                )
-                model_id = model.id
-            except ResourceConflictError:
-                model_id = resolve_resource_id(
-                    name.lower().replace(" ", "-"), "models"
-                )
+    if model_id is None and variant_id is None:
+        try:
+            model = create_model(
+                name,
+                license_type=license_type,
+                is_public=is_public,
+                description=description,
+                description_short=description_short,
+                architecture_id=architecture_id,
+                tasks=tasks or [],
+                links=links or [],
+                is_yolo=is_yolo,
+            )
+            model_id = model.id
+        except ResourceConflictError:
+            model_id = resolve_resource_id(
+                name.lower().replace(" ", "-"), "models"
+            )
 
-        if variant_id is None:
+    if variant_id is None:
+        if model_id is None:
+            raise InputError("`--model-id` is required to create a new model")
+
+        version = variant_version or get_version_number(str(model_id))
+
+        variant = create_variant(
+            variant_name,
+            model_id=model_id,
+            variant_version=version,
+            description=variant_description,
+            repository_url=repository_url,
+            commit_hash=commit_hash,
+            domain=domain,
+            tags=variant_tags or [],
+        )
+        variant_id = variant.id
+
+    else:
+        variant = get_variant(variant_id)
+        if variant_version is not None:
             if model_id is None:
                 raise InputError(
-                    "`--model-id` is required to create a new model"
+                    "`--model-id` is required to create a new variant version."
                 )
-
-            version = variant_version or get_version_number(str(model_id))
-
             variant = create_variant(
-                variant_name,
+                variant.name,
                 model_id=model_id,
-                variant_version=version,
+                variant_version=variant_version,
                 description=variant_description,
                 repository_url=repository_url,
                 commit_hash=commit_hash,
@@ -251,44 +264,25 @@ def convert(
             )
             variant_id = variant.id
 
-        else:
-            variant = get_variant(variant_id)
-            if variant_version is not None:
-                if model_id is None:
-                    raise InputError(
-                        "`--model-id` is required to create a new variant version."
-                    )
-                variant = create_variant(
-                    variant.name,
-                    model_id=model_id,
-                    variant_version=variant_version,
-                    description=variant_description,
-                    repository_url=repository_url,
-                    commit_hash=commit_hash,
-                    domain=domain,
-                    tags=variant_tags or [],
-                )
-                variant_id = variant.id
+    assert variant_id is not None
+    instance_name = f"{variant_name} base instance"
+    instance = create_instance(
+        instance_name,
+        variant_id=variant_id,
+        model_type=model_type,
+        input_shape=input_shape or cfg.inputs[0].shape,
+        is_deployable=is_deployable,
+        tags=instance_tags or [],
+    )
+    instance_id = instance.id
 
-        assert variant_id is not None
-        instance_name = f"{variant_name} base instance"
-        instance = create_instance(
-            instance_name,
-            variant_id=variant_id,
-            model_type=model_type,
-            input_shape=input_shape or cfg.inputs[0].shape,
-            is_deployable=is_deployable,
-            tags=instance_tags or [],
-        )
-        instance_id = instance.id
-
-        # TODO: IR support
-        if path is not None and is_nn_archive(path):
-            logger.info(f"Uploading NN archive: {path}")
-            upload_file(path, instance_id)
-        else:
-            logger.info(f"Uploading input model: {cfg.input_model}")
-            upload_file(str(cfg.input_model), instance_id)
+    # TODO: IR support
+    if path is not None and is_nn_archive(path):
+        logger.info(f"Uploading NN archive: {path}")
+        upload_file(path, instance_id)
+    else:
+        logger.info(f"Uploading input model: {cfg.input_model}")
+        upload_file(str(cfg.input_model), instance_id)
 
     normalized_quantization_input = normalize_quantization_input(
         quantization_data
@@ -325,32 +319,6 @@ def convert(
 
     export_job = wait_for_job(export_job.id)
     instance = _resolve_exported_instance(export_job)
-
-    telemetry = get_telemetry()
-    if telemetry:
-        properties = {
-            "target": target.name,
-            "filename": Path(path).name if path else None,
-            "model_id": str(model_id) if model_id else None,
-            "variant_id": str(variant_id) if variant_id else None,
-            "base_instance_id": str(instance_id),
-            "exported_instance_id": str(instance.id),
-            "export_job_id": export_job.id,
-            "quantization_mode": quantization_mode,
-            "quantization_input_type": normalized_quantization_input.input_type,
-            "max_quantization_images": max_quantization_images,
-            "yolo_version": yolo_version,
-            "n_yolo_classes": len(yolo_class_names)
-            if yolo_class_names
-            else None,
-            "yolo_input_shape": yolo_input_shape,
-            "tool_version": tool_version,
-            "input_shape": input_shape,
-            **target_options,
-        }
-        telemetry.capture(
-            "convert", properties=properties, include_system_metadata=True
-        )
 
     downloaded_path = download_instance(instance.id, output_dir)
 

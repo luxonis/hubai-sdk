@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -87,7 +86,6 @@ def test_convert_does_not_swallow_validation_error_from_create_model(
     monkeypatch.setattr(
         convert_service, "cleanup_extracted_path", lambda *args, **kwargs: None
     )
-    monkeypatch.setattr(convert_service, "suppress_telemetry", nullcontext)
     monkeypatch.setattr(
         convert_service,
         "create_model",

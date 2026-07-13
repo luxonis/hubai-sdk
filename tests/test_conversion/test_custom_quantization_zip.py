@@ -23,8 +23,6 @@ def test_upload_quantization_zip_uses_signed_put_url(
     request_calls: list[tuple[str, str]] = []
     put_calls: list[dict[str, object]] = []
 
-    monkeypatch.setattr(instances_service, "get_telemetry", lambda: None)
-
     def fake_post(
         service: str, endpoint: str, **kwargs: object
     ) -> dict[str, str]:
@@ -93,20 +91,6 @@ def test_upload_quantization_zip_maps_missing_job(
 def test_convert_requires_zip_when_quantization_data_is_custom() -> None:
     with pytest.raises(ValueError, match="quantization_data='CUSTOM'"):
         normalize_quantization_input("CUSTOM")
-
-
-def test_normalize_quantization_input_classifies_sources(
-    quantization_zip: Path,
-) -> None:
-    assert normalize_quantization_input("GENERAL").input_type == (
-        "predefined_dataset"
-    )
-    assert normalize_quantization_input("aid_dataset123").input_type == (
-        "dataset_id"
-    )
-    normalized = normalize_quantization_input(str(quantization_zip))
-    assert normalized.input_type == "custom_zip"
-    assert normalized.quantization_data == "CUSTOM"
 
 
 def test_normalize_quantization_input_rejects_remote_gcs_paths() -> None:

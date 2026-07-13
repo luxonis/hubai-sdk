@@ -166,7 +166,6 @@ def _assert_cli_exit(
 def test_list_models_returns_typed_models(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(model_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         model_services.Request, "get", lambda *args, **kwargs: [_model_data()]
     )
@@ -185,7 +184,6 @@ def test_get_model_info_cli_prints_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[object] = []
-    monkeypatch.setattr(model_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         model_services,
         "get_resource_info",
@@ -225,7 +223,6 @@ def test_update_model_uses_resolved_resource_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
-    monkeypatch.setattr(model_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         model_services,
         "resolve_resource_id",
@@ -253,7 +250,6 @@ def test_update_model_uses_resolved_resource_id(
 def test_get_variant_returns_typed_variant(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(variant_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         variant_services,
         "get_resource_info",
@@ -273,7 +269,6 @@ def test_get_variant_returns_typed_variant(
 def test_list_instances_returns_sdk_instance_without_owner_ids(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         instance_services.Request,
         "get",
@@ -293,7 +288,6 @@ def test_list_instances_returns_sdk_instance_without_owner_ids(
 def test_get_files_returns_sdk_files_without_owner_ids(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         instance_services,
         "_get_instance_subresource",
@@ -312,7 +306,6 @@ def test_get_files_returns_sdk_files_without_owner_ids(
 
 def test_get_config_cli_logs_config(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[object] = []
-    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         instance_services, "ArchiveConfigurationResponse", _DummyConfig
     )
@@ -335,7 +328,6 @@ def test_get_config_cli_logs_config(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_download_instance_translates_not_found_http_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(instance_services, "get_telemetry", lambda: None)
     monkeypatch.setattr(
         instance_services,
         "resolve_resource_id",

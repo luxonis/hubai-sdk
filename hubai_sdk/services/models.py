@@ -16,7 +16,6 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
-from hubai_sdk.utils.telemetry import get_telemetry
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
@@ -65,10 +64,6 @@ def list_models(
     Returns:
         A list of matching model resources.
     """
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture("models.list", include_system_metadata=False)
-
     try:
         data = Request.get(
             service="models",
@@ -133,14 +128,6 @@ def get_model(identifier: UUID | str) -> ModelResponse:
         identifier = str(identifier)
     data = get_resource_info(identifier, "models")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.get",
-            properties={"model_id": identifier},
-            include_system_metadata=False,
-        )
-
     return ModelResponse(**data)
 
 
@@ -196,12 +183,6 @@ def create_model(
             exc, conflict_message=f"Model '{name}' already exists"
         )
     logger.info(f"Model '{res['name']}' created with ID '{res['id']}'")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.create", properties=data, include_system_metadata=False
-        )
 
     return get_model(res["id"])
 
@@ -298,13 +279,6 @@ def update_model(
         )
     logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        data["model_id"] = identifier
-        telemetry.capture(
-            "models.update", properties=data, include_system_metadata=False
-        )
-
     return get_model(res["id"])
 
 
@@ -352,14 +326,6 @@ def delete_model(identifier: UUID | str) -> None:
     except requests.HTTPError as exc:
         raise_for_hub_error(exc, identifier=identifier, endpoint="models")
     logger.info(f"Model '{identifier}' deleted")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.delete",
-            properties={"model_id": identifier},
-            include_system_metadata=False,
-        )
 
 
 @app.command(name="delete")
