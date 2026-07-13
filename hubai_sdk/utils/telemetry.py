@@ -203,7 +203,9 @@ def telemetry_operation(
             result: Any = None
 
             try:
-                return func(*args, **kwargs)
+                # Save the return value so the finally block can inspect it.
+                result = func(*args, **kwargs)
+                return result  # noqa: RET504, TRY300
             except BaseException as exc:
                 caught_exc = exc
                 raise

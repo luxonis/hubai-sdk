@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+import hubai_sdk.services.convert as convert_services
 import hubai_sdk.services.models as model_services
 from hubai_sdk.hubai_client import HubAIClient
+from hubai_sdk.utils.types import Target
 
 from .test_cli_resource_return_values import _model_data
 
@@ -125,3 +129,93 @@ def test_hubai_client_initialization_emits_events(
     operation_props = telemetry.events[1][1]
     assert operation_props["operation_name"] == "client_initialize"
     assert operation_props["result"] == "success"
+
+
+def test_convert_result_duration_is_end_to_end(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_telemetry: _FakeTelemetry,
+    tmp_path: Path,
+) -> None:
+    stage_cfg = SimpleNamespace(
+        input_model=Path("model.onnx"),
+        inputs=[SimpleNamespace(shape=[1, 3, 224, 224], layout="NCHW")],
+    )
+    cfg = SimpleNamespace(name="demo-model", stages={"main": stage_cfg})
+    monotonic_values = iter([0.0, 10.0, 50.0, 60.0])
+
+    monkeypatch.setattr(
+        "hubai_sdk.utils.telemetry.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.is_nn_archive", lambda _: False
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.get_configs",
+        lambda config_path, opts: (cfg, None),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.cleanup_extracted_path",
+        lambda path: None,
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.normalize_quantization_input",
+        lambda quantization_data: SimpleNamespace(
+            quantization_data=quantization_data,
+            custom_zip_path=None,
+        ),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.get_target_specific_options",
+        lambda target, cfg, tool_version: {},
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.create_variant",
+        lambda *args, **kwargs: SimpleNamespace(id="variant-id"),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.create_instance",
+        lambda *args, **kwargs: SimpleNamespace(id="instance-id"),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.upload_file",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert._export",
+        lambda *args, **kwargs: SimpleNamespace(id="job-id"),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.wait_for_job",
+        lambda job_id: SimpleNamespace(id=job_id),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert._resolve_exported_instance",
+        lambda job: SimpleNamespace(id="exported-instance-id"),
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.download_instance",
+        lambda identifier, output_dir=None: tmp_path / "artifact.blob",
+    )
+    monkeypatch.setattr(
+        "hubai_sdk.services.convert.ConvertResponse",
+        lambda **kwargs: kwargs,
+    )
+
+    convert_services.convert(
+        Target.RVC4,
+        path="model.onnx",
+        model_id="model-id",
+        variant_version="0.1.0",
+    )
+
+    conversion_result_props = next(
+        properties
+        for event, properties, _ in fake_telemetry.events
+        if event == "hubai_sdk_conversion_result_recorded"
+    )
+    assert conversion_result_props["duration_ms"] == 40_000

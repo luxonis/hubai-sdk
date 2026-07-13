@@ -194,7 +194,6 @@ def convert(
     previous_conversion_run_id = os.environ.get("HUBAI_SDK_CONVERSION_RUN_ID")
     conversion_run_id = get_or_create_conversion_run_id()
     start = time.monotonic()
-    conversion_start: float | None = None
     configured_properties: dict[str, object] | None = None
     emitted_configured_event = False
     phase = "configuration"
@@ -358,7 +357,6 @@ def convert(
             configured_properties,
         )
         emitted_configured_event = True
-        conversion_start = time.monotonic()
 
         with suppress_telemetry():
             assert variant_id is not None
@@ -432,10 +430,7 @@ def convert(
                         failure_reason=conversion_failure_reason(
                             exc, phase=phase
                         ),
-                        duration_ms=int(
-                            (time.monotonic() - (conversion_start or start))
-                            * 1000
-                        ),
+                        duration_ms=int((time.monotonic() - start) * 1000),
                     ),
                 },
             )
@@ -448,10 +443,7 @@ def convert(
                     **(configured_properties or {"target": target.value}),
                     **build_conversion_result_properties(
                         result="success",
-                        duration_ms=int(
-                            (time.monotonic() - (conversion_start or start))
-                            * 1000
-                        ),
+                        duration_ms=int((time.monotonic() - start) * 1000),
                     ),
                 },
             )
