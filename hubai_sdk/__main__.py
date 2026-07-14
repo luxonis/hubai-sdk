@@ -58,7 +58,7 @@ def validate_api_key(_: str) -> bool:
 def login(
     relogin: Annotated[
         bool,
-        Parameter(["--relogin", "-r"], help="Relogin if already logged in"),
+        Parameter(["--relogin", "-r"]),
     ] = False,
 ) -> None:
     """Login to HubAI.
