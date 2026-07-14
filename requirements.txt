@@ -1,5 +1,4 @@
-# luxonis-ml[nn_archive,telemetry]~=0.9.0
-luxonis-ml[nn_archive,telemetry] @ git+https://github.com/luxonis/luxonis-ml.git@main
+luxonis-ml[nn_archive,telemetry]~=0.9.0
 keyring
 requests
 cyclopts
