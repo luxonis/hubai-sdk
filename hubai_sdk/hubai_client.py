@@ -105,6 +105,7 @@ class HubAIClient:
                     ),
                     "duration_ms": int((time.monotonic() - start) * 1000),
                 },
+                include_system_metadata=True,
             )
 
     def _verify_api_key(self) -> bool:
