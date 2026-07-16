@@ -4,6 +4,7 @@ from uuid import UUID
 import requests
 from cyclopts import App, Parameter
 from loguru import logger
+from luxonis_ml.telemetry import suppress_telemetry
 
 from hubai_sdk.typing import Order
 from hubai_sdk.utils.hub import (
@@ -16,7 +17,17 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelVersionResponse
-from hubai_sdk.utils.telemetry import get_telemetry
+from hubai_sdk.utils.telemetry import (
+    VARIANT_CREATED_EVENT,
+    VARIANT_DELETED_EVENT,
+    VARIANT_RETRIEVED_EVENT,
+    VARIANTS_LISTED_EVENT,
+    OperationTelemetrySpec,
+    build_model_identifier_properties,
+    build_variant_created_properties,
+    build_variants_listed_properties,
+    telemetry_operation,
+)
 
 app = App(
     name="variant",
@@ -47,6 +58,15 @@ VARIANT_INFO_KEYS = [
 ]
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="variants_list",
+        operation_group="variants",
+        success_event=VARIANTS_LISTED_EVENT,
+        target_resource="variant",
+        success_builder=build_variants_listed_properties,
+    )
+)
 def list_variants(
     model_id: UUID | str | None = None,
     name: str | None = None,
@@ -74,15 +94,6 @@ def list_variants(
     Returns:
         A list of matching model version resources.
     """
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.list",
-            properties={"model_id": model_id},
-            include_system_metadata=False,
-        )
-
     try:
         data = Request.get(
             service="models",
@@ -142,6 +153,16 @@ def list_variants_cli(
     _print_variant_list(variants, include_model_name, field)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="variant_get",
+        operation_group="variants",
+        success_event=VARIANT_RETRIEVED_EVENT,
+        target_resource="variant",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def get_variant(identifier: UUID | str) -> ModelVersionResponse:
     """Returns information about a model version.
 
@@ -157,14 +178,6 @@ def get_variant(identifier: UUID | str) -> ModelVersionResponse:
 
     data["model_name"] = get_resource_info(data["model_id"], "models")["name"]
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.get",
-            properties={"variant_id": identifier},
-            include_system_metadata=False,
-        )
-
     return ModelVersionResponse(**data)
 
 
@@ -174,6 +187,15 @@ def get_variant_info_cli(identifier: UUID | str) -> None:
     _print_variant_info(run_cli(lambda: get_variant(identifier)))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="variant_create",
+        operation_group="variants",
+        success_event=VARIANT_CREATED_EVENT,
+        target_resource="variant",
+        success_builder=build_variant_created_properties,
+    )
+)
 def create_variant(
     name: str,
     *,
@@ -224,15 +246,10 @@ def create_variant(
             ),
         )
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.create", properties=data, include_system_metadata=False
-        )
-
     logger.info(f"Model variant '{res['name']}' created with ID '{res['id']}'")
 
-    return get_variant(res["id"])
+    with suppress_telemetry():
+        return get_variant(res["id"])
 
 
 @app.command(name="create")
@@ -263,6 +280,16 @@ def create_variant_cli(
     _print_variant_info(variant)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="variant_delete",
+        operation_group="variants",
+        success_event=VARIANT_DELETED_EVENT,
+        target_resource="variant",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def delete_variant(identifier: UUID | str) -> None:
     """Deletes a model variant.
 
@@ -281,14 +308,6 @@ def delete_variant(identifier: UUID | str) -> None:
             exc, identifier=identifier, endpoint="modelVersions"
         )
     logger.info(f"Model variant '{variant_id}' deleted")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "variants.delete",
-            properties={"variant_id": identifier},
-            include_system_metadata=False,
-        )
 
 
 @app.command(name="delete")

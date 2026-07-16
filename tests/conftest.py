@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
-
 from hubai_sdk import HubAIClient
+
+os.environ.setdefault("LUXONIS_TELEMETRY_ENABLED", "false")
 
 
 def pytest_addoption(parser: pytest.Parser):

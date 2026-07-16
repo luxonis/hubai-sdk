@@ -4,6 +4,7 @@ from uuid import UUID
 import requests
 from cyclopts import App, Parameter
 from loguru import logger
+from luxonis_ml.telemetry import suppress_telemetry
 
 from hubai_sdk.typing import License, Order, Task
 from hubai_sdk.utils.hub import (
@@ -16,7 +17,19 @@ from hubai_sdk.utils.hub import (
 )
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.sdk_models import ModelResponse
-from hubai_sdk.utils.telemetry import get_telemetry
+from hubai_sdk.utils.telemetry import (
+    MODEL_CREATED_EVENT,
+    MODEL_DELETED_EVENT,
+    MODEL_RETRIEVED_EVENT,
+    MODEL_UPDATED_EVENT,
+    MODELS_LISTED_EVENT,
+    OperationTelemetrySpec,
+    build_model_created_properties,
+    build_model_identifier_properties,
+    build_model_updated_properties,
+    build_models_listed_properties,
+    telemetry_operation,
+)
 
 app = App(
     name="model", help="Models Interactions", group="Resource Management"
@@ -40,6 +53,15 @@ MODEL_INFO_KEYS = [
 ]
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="models_list",
+        operation_group="models",
+        success_event=MODELS_LISTED_EVENT,
+        target_resource="model",
+        success_builder=build_models_listed_properties,
+    )
+)
 def list_models(
     tasks: list[Task] | None = None,
     license_type: License | None = None,
@@ -65,10 +87,6 @@ def list_models(
     Returns:
         A list of matching model resources.
     """
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture("models.list", include_system_metadata=False)
-
     try:
         data = Request.get(
             service="models",
@@ -120,6 +138,16 @@ def list_models_cli(
     _print_model_list(models, field)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="model_get",
+        operation_group="models",
+        success_event=MODEL_RETRIEVED_EVENT,
+        target_resource="model",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def get_model(identifier: UUID | str) -> ModelResponse:
     """Get the model information from the HubAI.
 
@@ -133,14 +161,6 @@ def get_model(identifier: UUID | str) -> ModelResponse:
         identifier = str(identifier)
     data = get_resource_info(identifier, "models")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.get",
-            properties={"model_id": identifier},
-            include_system_metadata=False,
-        )
-
     return ModelResponse(**data)
 
 
@@ -150,6 +170,15 @@ def get_model_info_cli(identifier: UUID | str) -> None:
     _print_model_info(run_cli(lambda: get_model(identifier)))
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="model_create",
+        operation_group="models",
+        success_event=MODEL_CREATED_EVENT,
+        target_resource="model",
+        success_builder=build_model_created_properties,
+    )
+)
 def create_model(
     name: str,
     *,
@@ -197,13 +226,8 @@ def create_model(
         )
     logger.info(f"Model '{res['name']}' created with ID '{res['id']}'")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.create", properties=data, include_system_metadata=False
-        )
-
-    return get_model(res["id"])
+    with suppress_telemetry():
+        return get_model(res["id"])
 
 
 @app.command(name="create")
@@ -236,6 +260,16 @@ def create_model_cli(
     _print_model_info(model)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="model_update",
+        operation_group="models",
+        success_event=MODEL_UPDATED_EVENT,
+        target_resource="model",
+        identifier_param="identifier",
+        success_builder=build_model_updated_properties,
+    )
+)
 def update_model(
     identifier: UUID | str,
     *,
@@ -298,14 +332,8 @@ def update_model(
         )
     logger.info(f"Model '{res['name']}' updated with ID '{res['id']}'")
 
-    telemetry = get_telemetry()
-    if telemetry:
-        data["model_id"] = identifier
-        telemetry.capture(
-            "models.update", properties=data, include_system_metadata=False
-        )
-
-    return get_model(res["id"])
+    with suppress_telemetry():
+        return get_model(res["id"])
 
 
 @app.command(name="update")
@@ -338,6 +366,16 @@ def update_model_cli(
     _print_model_info(model)
 
 
+@telemetry_operation(
+    OperationTelemetrySpec(
+        operation_name="model_delete",
+        operation_group="models",
+        success_event=MODEL_DELETED_EVENT,
+        target_resource="model",
+        identifier_param="identifier",
+        success_builder=build_model_identifier_properties,
+    )
+)
 def delete_model(identifier: UUID | str) -> None:
     """Deletes a model.
 
@@ -352,14 +390,6 @@ def delete_model(identifier: UUID | str) -> None:
     except requests.HTTPError as exc:
         raise_for_hub_error(exc, identifier=identifier, endpoint="models")
     logger.info(f"Model '{identifier}' deleted")
-
-    telemetry = get_telemetry()
-    if telemetry:
-        telemetry.capture(
-            "models.delete",
-            properties={"model_id": identifier},
-            include_system_metadata=False,
-        )
 
 
 @app.command(name="delete")

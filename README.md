@@ -38,13 +38,13 @@ pip install -e .
 
 - Python 3.10 or higher
 - Valid Luxonis HubAI API key available from
-  [HubAI Team Settings](https://hub.luxonis.com/team-settings)
+  [HubAI Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
 
 ## 🔐 Authentication
 
 ### Get Your API Key
 
-1. Visit [HubAI Team Settings](https://hub.luxonis.com/team-settings)
+1. Visit [HubAI Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
 2. Generate or copy your API key
 
 ### Set API Key

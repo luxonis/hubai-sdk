@@ -426,12 +426,21 @@ def run_cli(action: Callable[[], T]) -> T:
     try:
         return action()
     except HubApiError as exc:
+        from hubai_sdk.utils.telemetry import record_cli_failure_reason
+
+        record_cli_failure_reason(exc)
         typer.echo(str(exc), err=True)
         raise SystemExit(1) from None
     except (InputError, FileNotFoundError) as exc:
+        from hubai_sdk.utils.telemetry import record_cli_failure_reason
+
+        record_cli_failure_reason(exc)
         typer.echo(str(exc), err=True)
         raise SystemExit(1) from None
     except HTTPError as exc:
+        from hubai_sdk.utils.telemetry import record_cli_failure_reason
+
+        record_cli_failure_reason(exc)
         typer.echo(_get_http_error_detail(exc), err=True)
         raise SystemExit(1) from None
 

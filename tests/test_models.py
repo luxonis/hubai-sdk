@@ -1,9 +1,6 @@
-import os
 import uuid
 
 from hubai_sdk import HubAIClient
-
-os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
 def test_list_models(client: HubAIClient):

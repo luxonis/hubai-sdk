@@ -1,12 +1,9 @@
-import os
 import shutil
 import uuid
 from pathlib import Path
 
 from hubai_sdk import HubAIClient
 from hubai_sdk.utils.types import ModelType
-
-os.environ["HUBAI_TELEMETRY_ENABLED"] = "false"
 
 
 def test_list_instances(client: HubAIClient):

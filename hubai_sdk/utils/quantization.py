@@ -3,14 +3,13 @@ from pathlib import Path
 
 from luxonis_ml.typing import PathType
 
-from hubai_sdk.typing import QuantizationData, QuantizationInputType
+from hubai_sdk.typing import QuantizationData
 
 
 @dataclass(frozen=True)
 class NormalizedQuantizationInput:
     quantization_data: str | None
     custom_zip_path: Path | None
-    input_type: QuantizationInputType
 
 
 def is_custom_quantization_zip_path(path: str | Path) -> bool:
@@ -29,7 +28,7 @@ def normalize_quantization_input(
 
     Returns:
         A normalized quantization input record describing the resolved
-        value and input type.
+        value.
 
     Raises:
         ValueError: If the value is unsupported or incomplete.
@@ -62,14 +61,12 @@ def normalize_quantization_input(
         return NormalizedQuantizationInput(
             quantization_data="CUSTOM",
             custom_zip_path=custom_zip_path,
-            input_type="custom_zip",
         )
 
     if quantization_data is None:
         return NormalizedQuantizationInput(
             quantization_data=None,
             custom_zip_path=None,
-            input_type="none",
         )
 
     normalized_quantization_data = quantization_data.upper()
@@ -82,11 +79,9 @@ def normalize_quantization_input(
         return NormalizedQuantizationInput(
             quantization_data=quantization_data,
             custom_zip_path=None,
-            input_type="dataset_id",
         )
 
     return NormalizedQuantizationInput(
         quantization_data=normalized_quantization_data,
         custom_zip_path=None,
-        input_type="predefined_dataset",
     )

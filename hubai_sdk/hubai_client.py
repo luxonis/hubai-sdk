@@ -1,4 +1,5 @@
 import os
+import time
 
 from loguru import logger
 from requests import HTTPError
@@ -11,7 +12,12 @@ from hubai_sdk.utils.environ import environ
 from hubai_sdk.utils.hub import raise_for_hub_error
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.plugins import load_client_plugins
-from hubai_sdk.utils.telemetry import initialize_telemetry
+from hubai_sdk.utils.telemetry import (
+    OperationTelemetrySpec,
+    capture_client_initialized,
+    failure_reason_from_exception,
+    get_component_telemetry,
+)
 
 
 class HubAIClient:
@@ -27,42 +33,80 @@ class HubAIClient:
             ValueError: If no API key is available or the provided key
                 is invalid.
         """
+        operation_spec = OperationTelemetrySpec(
+            operation_name="client_initialize",
+            operation_group="client",
+        )
+        telemetry = get_component_telemetry()
+        start = time.monotonic()
+        api_key_source = "stored_credentials"
+        caught_exc: BaseException | None = None
         # If api_key is not provided, try to get it from environment variable
         if api_key is None:
             api_key = os.getenv("HUBAI_API_KEY")
+            api_key_source = "environment"
+        else:
+            api_key_source = "argument"
 
         # If still not found, try to get from environ (which may have loaded from keyring)
         if api_key is None:
             api_key = environ.HUBAI_API_KEY
+            api_key_source = "stored_credentials"
 
-        # If still not found, raise an error
-        if api_key is None:
-            raise ValueError(
-                "API key not provided. Please provide it as a parameter, "
-                "set the HUBAI_API_KEY environment variable, or use 'hubai login' "
-                "to store it securely."
+        try:
+            # If still not found, raise an error
+            if api_key is None:
+                raise ValueError(
+                    "API key not provided. Please provide it as a parameter, "
+                    "set the HUBAI_API_KEY environment variable, or use 'hubai login' "
+                    "to store it securely."
+                )
+
+            environ.HUBAI_API_KEY = api_key
+
+            if not self._verify_api_key():
+                raise ValueError("Invalid API key")
+
+            logger.info("API key verified successfully.")
+
+            self.models = hubai_sdk.services.models
+            self.variants = hubai_sdk.services.variants
+            self.instances = hubai_sdk.services.instances
+            self.convert = hubai_sdk.services.convert
+
+            for attr_name, plugin in load_client_plugins().items():
+                if hasattr(self, attr_name):
+                    continue
+                setattr(self, attr_name, plugin)
+
+            capture_client_initialized(api_key_source)
+        except BaseException as exc:
+            caught_exc = exc
+            raise
+        finally:
+            telemetry.capture(
+                "hubai_sdk_operation_result_recorded",
+                {
+                    "invocation_surface": "python_api",
+                    "operation_name": operation_spec.operation_name,
+                    "operation_group": operation_spec.operation_group,
+                    "result": (
+                        "success"
+                        if caught_exc is None
+                        else (
+                            "interrupted"
+                            if failure_reason_from_exception(caught_exc)
+                            == "user_interrupt"
+                            else "failed"
+                        )
+                    ),
+                    "failure_reason": failure_reason_from_exception(
+                        caught_exc
+                    ),
+                    "duration_ms": int((time.monotonic() - start) * 1000),
+                },
+                include_system_metadata=True,
             )
-
-        environ.HUBAI_API_KEY = api_key
-
-        if not self._verify_api_key():
-            raise ValueError("Invalid API key")
-
-        logger.info("API key verified successfully.")
-
-        # Initialize telemetry
-        self._telemetry = initialize_telemetry()
-        self._telemetry.capture("init.client", include_system_metadata=True)
-
-        self.models = hubai_sdk.services.models
-        self.variants = hubai_sdk.services.variants
-        self.instances = hubai_sdk.services.instances
-        self.convert = hubai_sdk.services.convert
-
-        for attr_name, plugin in load_client_plugins().items():
-            if hasattr(self, attr_name):
-                continue
-            setattr(self, attr_name, plugin)
 
     def _verify_api_key(self) -> bool:
         """Check whether the configured API key is accepted by HubAI.
