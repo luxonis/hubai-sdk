@@ -177,6 +177,8 @@ def conversion_failure_reason(
         return None
     if failure_reason_from_exception(exc) == "user_interrupt":
         return "user_interrupt"
+    if phase == "resource_setup":
+        return "config_error"
     if phase == "upload":
         return "upload_error"
     if phase == "export":
@@ -613,7 +615,11 @@ def _capture_operation_result(
                 "duration_ms": duration_ms,
             }
         )
-        telemetry.capture(OPERATION_RESULT_EVENT, properties)
+        telemetry.capture(
+            OPERATION_RESULT_EVENT,
+            properties,
+            include_system_metadata=True,
+        )
 
 
 def _wrap_cyclopts(app: cyclopts.App, *, prefix: str) -> None:
