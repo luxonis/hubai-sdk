@@ -54,7 +54,13 @@ from hubai_sdk.utils.sdk_models import (
     ModelInstanceResponse,
 )
 from hubai_sdk.utils.telemetry import (
+    ConversionPhase,
+    FailureReason,
+    OperationName,
     OperationTelemetrySpec,
+    TargetResource,
+    TelemetryGroup,
+    TelemetryResult,
     build_conversion_result_properties,
     build_conversion_summary,
     capture_conversion_configured,
@@ -64,7 +70,6 @@ from hubai_sdk.utils.telemetry import (
     current_conversion_run_id,
     get_or_create_conversion_run_id,
     invocation_surface,
-    model_type_value,
     quantization_input_type,
     reset_conversion_run_id,
     telemetry_operation,
@@ -74,9 +79,9 @@ from hubai_sdk.utils.types import ModelType, PotDevice, Target
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="convert",
-        operation_group="conversion",
-        target_resource="conversion",
+        operation_name=OperationName.CONVERT,
+        operation_group=TelemetryGroup.CONVERSION,
+        target_resource=TargetResource.CONVERSION,
     )
 )
 def convert(
@@ -196,7 +201,7 @@ def convert(
     start = time.monotonic()
     configured_properties: dict[str, object] | None = None
     emitted_configured_event = False
-    phase = "configuration"
+    phase = ConversionPhase.CONFIGURATION
     response: ConvertResponse | None = None
 
     if isinstance(architecture_id, UUID):
@@ -333,7 +338,7 @@ def convert(
                     and Path(config_path).suffix in {".yaml", ".yml"}
                 ),
             ),
-            input_model_type=model_type_value(model_type) or "unknown",
+            input_model_type=model_type,
             invocation_surface=invocation_surface(),
             existing_model_reused=existing_model_reused,
             existing_variant_reused=existing_variant_reused,
@@ -361,7 +366,7 @@ def convert(
         with suppress_telemetry():
             assert variant_id is not None
             instance_name = f"{variant_name} base instance"
-            phase = "resource_setup"
+            phase = ConversionPhase.RESOURCE_SETUP
             instance = create_instance(
                 instance_name,
                 variant_id=variant_id,
@@ -372,7 +377,7 @@ def convert(
             )
             instance_id = instance.id
 
-            phase = "upload"
+            phase = ConversionPhase.UPLOAD
             if path is not None and is_nn_archive(path):
                 logger.info(f"Uploading NN archive: {path}")
                 upload_file(path, instance_id)
@@ -381,7 +386,7 @@ def convert(
                 upload_file(str(cfg.input_model), instance_id)
 
             export_name = f"{variant_name} exported to {target}"
-            phase = "export"
+            phase = ConversionPhase.EXPORT
             export_job = _export(
                 export_name,
                 instance_id,
@@ -395,19 +400,19 @@ def convert(
             )
 
             if custom_quantization_zip is not None:
-                phase = "upload"
+                phase = ConversionPhase.UPLOAD
                 logger.info(
                     f"Uploading custom quantization zip: {custom_quantization_zip}"
                 )
                 upload_quantization_zip(
                     str(custom_quantization_zip), export_job.id
                 )
-                phase = "export"
+                phase = ConversionPhase.EXPORT
 
             export_job = wait_for_job(export_job.id)
             instance = _resolve_exported_instance(export_job)
 
-            phase = "download"
+            phase = ConversionPhase.DOWNLOAD
             downloaded_path = download_instance(instance.id, output_dir)
         response = ConvertResponse(
             downloaded_path=downloaded_path,
@@ -422,10 +427,10 @@ def convert(
                     **(configured_properties or {"target": target.value}),
                     **build_conversion_result_properties(
                         result=(
-                            "interrupted"
+                            TelemetryResult.INTERRUPTED
                             if conversion_failure_reason(exc, phase=phase)
-                            == "user_interrupt"
-                            else "failed"
+                            == FailureReason.USER_INTERRUPT
+                            else TelemetryResult.FAILED
                         ),
                         failure_reason=conversion_failure_reason(
                             exc, phase=phase
@@ -442,7 +447,7 @@ def convert(
                 {
                     **(configured_properties or {"target": target.value}),
                     **build_conversion_result_properties(
-                        result="success",
+                        result=TelemetryResult.SUCCESS,
                         duration_ms=int((time.monotonic() - start) * 1000),
                     ),
                 },

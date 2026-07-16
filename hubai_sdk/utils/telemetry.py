@@ -1,14 +1,15 @@
 import inspect
 import os
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import suppress
 from contextvars import ContextVar
 from dataclasses import dataclass
+from enum import Enum
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import cyclopts
@@ -29,6 +30,7 @@ from hubai_sdk.errors import (
     ResourceNotFoundError,
     ValidationError,
 )
+from hubai_sdk.utils.types import ModelType
 
 HUBAI_SDK_TELEMETRY_DEFAULTS = TelemetryDefaults(
     enabled=True,
@@ -61,7 +63,7 @@ CONVERSION_CONFIGURED_EVENT = "hubai_sdk_conversion_configured"
 CONVERSION_RESULT_EVENT = "hubai_sdk_conversion_result_recorded"
 CONVERSION_FLOW_NAME = "hubai_sdk_conversion_lifecycle"
 
-_CLI_FAILURE_REASON: ContextVar[str | None] = ContextVar(
+_CLI_FAILURE_REASON: ContextVar["FailureReason | None"] = ContextVar(
     "hubai_sdk_cli_failure_reason", default=None
 )
 _CONVERSION_RUN_ID: ContextVar[str | None] = ContextVar(
@@ -69,12 +71,157 @@ _CONVERSION_RUN_ID: ContextVar[str | None] = ContextVar(
 )
 
 
+class TelemetryResult(str, Enum):
+    SUCCESS = "success"
+    INTERRUPTED = "interrupted"
+    FAILED = "failed"
+
+
+class FailureReason(str, Enum):
+    USER_INTERRUPT = "user_interrupt"
+    NOT_FOUND = "not_found"
+    CONFLICT = "conflict"
+    VALIDATION_ERROR = "validation_error"
+    TIMEOUT = "timeout"
+    NETWORK_ERROR = "network_error"
+    AUTH_ERROR = "auth_error"
+    SERVER_ERROR = "server_error"
+    API_ERROR = "api_error"
+    CONFIG_ERROR = "config_error"
+    UPLOAD_ERROR = "upload_error"
+    EXPORT_ERROR = "export_error"
+    DOWNLOAD_ERROR = "download_error"
+    UNKNOWN = "unknown"
+
+
+class InvocationSurface(str, Enum):
+    CLI = "cli"
+    PYTHON_API = "python_api"
+
+
+class ApiKeySource(str, Enum):
+    ARGUMENT = "argument"
+    ENVIRONMENT = "environment"
+    STORED_CREDENTIALS = "stored_credentials"
+
+
+class ConversionPhase(str, Enum):
+    CONFIGURATION = "configuration"
+    RESOURCE_SETUP = "resource_setup"
+    UPLOAD = "upload"
+    EXPORT = "export"
+    DOWNLOAD = "download"
+
+
+class ConversionFlowStep(str, Enum):
+    CONFIGURATION_RESOLVED = "configuration_resolved"
+    RESULT_RECORDED = "result_recorded"
+
+
+class TelemetryGroup(str, Enum):
+    AUTH = "auth"
+    CLIENT = "client"
+    CONVERSION = "conversion"
+    MODELS = "models"
+    VARIANTS = "variants"
+    INSTANCES = "instances"
+
+
+class TargetResource(str, Enum):
+    MODEL = "model"
+    VARIANT = "variant"
+    INSTANCE = "instance"
+    CONVERSION = "conversion"
+
+
+class OperationName(str, Enum):
+    CLIENT_INITIALIZE = "client_initialize"
+    CONVERT = "convert"
+    MODELS_LIST = "models_list"
+    MODEL_GET = "model_get"
+    MODEL_CREATE = "model_create"
+    MODEL_UPDATE = "model_update"
+    MODEL_DELETE = "model_delete"
+    VARIANTS_LIST = "variants_list"
+    VARIANT_GET = "variant_get"
+    VARIANT_CREATE = "variant_create"
+    VARIANT_DELETE = "variant_delete"
+    INSTANCES_LIST = "instances_list"
+    INSTANCE_GET = "instance_get"
+    INSTANCE_DOWNLOAD = "instance_download"
+    INSTANCE_CREATE = "instance_create"
+    INSTANCE_DELETE = "instance_delete"
+    INSTANCE_CONFIG_GET = "instance_config_get"
+    INSTANCE_FILES_LIST = "instance_files_list"
+    INSTANCE_UPLOAD = "instance_upload"
+
+
+class CommandName(str, Enum):
+    LOGIN = "login"
+    LOGOUT = "logout"
+    CONVERT = "convert"
+    MODEL_LIST = "model_ls"
+    MODEL_INFO = "model_info"
+    MODEL_CREATE = "model_create"
+    MODEL_UPDATE = "model_update"
+    MODEL_DELETE = "model_delete"
+    VARIANT_LIST = "variant_ls"
+    VARIANT_INFO = "variant_info"
+    VARIANT_CREATE = "variant_create"
+    VARIANT_DELETE = "variant_delete"
+    INSTANCE_LIST = "instance_ls"
+    INSTANCE_INFO = "instance_info"
+    INSTANCE_DOWNLOAD = "instance_download"
+    INSTANCE_CREATE = "instance_create"
+    INSTANCE_DELETE = "instance_delete"
+    INSTANCE_CONFIG = "instance_config"
+    INSTANCE_FILES = "instance_files"
+    INSTANCE_UPLOAD = "instance_upload"
+
+
+class ConfigSource(str, Enum):
+    NN_ARCHIVE = "nn_archive"
+    YAML_CONFIG = "yaml_config"
+    DIRECT_MODEL_INPUT = "direct_model_input"
+
+
+class IdentifierType(str, Enum):
+    UUID = "uuid"
+    SLUG = "slug"
+    UNKNOWN = "unknown"
+
+
+class VisibilityFilterValue(str, Enum):
+    ALL = "all"
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
+class VisibilityValue(str, Enum):
+    TEAM = "team"
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
+class QuantizationInputType(str, Enum):
+    NONE = "none"
+    CUSTOM_ZIP = "custom_zip"
+    DATASET_ID = "dataset_id"
+    PREDEFINED_DOMAIN = "predefined_domain"
+
+
+@dataclass(frozen=True)
+class CommandMetadata:
+    command_name: CommandName
+    command_group: TelemetryGroup
+
+
 @dataclass(frozen=True)
 class OperationTelemetrySpec:
-    operation_name: str
-    operation_group: str
+    operation_name: OperationName
+    operation_group: TelemetryGroup
     success_event: str | None = None
-    target_resource: str | None = None
+    target_resource: TargetResource | None = None
     identifier_param: str | None = None
     success_builder: Callable[[dict[str, Any], Any], dict[str, Any]] | None = (
         None
@@ -93,10 +240,10 @@ def get_component_telemetry() -> Telemetry:
     )
 
 
-def invocation_surface() -> str:
+def invocation_surface() -> InvocationSurface:
     if os.environ.get("HUBAI_CALL_SOURCE", "").upper() == "CLI":
-        return "cli"
-    return "python_api"
+        return InvocationSurface.CLI
+    return InvocationSurface.PYTHON_API
 
 
 def current_conversion_run_id() -> str | None:
@@ -120,74 +267,79 @@ def record_cli_failure_reason(exc: BaseException) -> None:
     _CLI_FAILURE_REASON.set(failure_reason_from_exception(exc))
 
 
-def pop_cli_failure_reason() -> str | None:
+def pop_cli_failure_reason() -> FailureReason | None:
     reason = _CLI_FAILURE_REASON.get()
     _CLI_FAILURE_REASON.set(None)
     return reason
 
 
-def command_result_from_exception(exc: BaseException | None) -> str:
+def command_result_from_exception(
+    exc: BaseException | None,
+) -> TelemetryResult:
     if exc is None:
-        return "success"
+        return TelemetryResult.SUCCESS
     code = getattr(exc, "code", None)
     if isinstance(exc, SystemExit) and code in {None, 0}:
-        return "success"
+        return TelemetryResult.SUCCESS
     if isinstance(exc, KeyboardInterrupt):
-        return "interrupted"
+        return TelemetryResult.INTERRUPTED
     if isinstance(exc, SystemExit) and code == 130:
-        return "interrupted"
-    return "failed"
+        return TelemetryResult.INTERRUPTED
+    return TelemetryResult.FAILED
 
 
-def failure_reason_from_exception(exc: BaseException | None) -> str | None:
+def failure_reason_from_exception(
+    exc: BaseException | None,
+) -> FailureReason | None:
     if exc is None:
         return None
     code = getattr(exc, "code", None)
     if isinstance(exc, KeyboardInterrupt):
-        return "user_interrupt"
+        return FailureReason.USER_INTERRUPT
     if isinstance(exc, SystemExit) and code == 130:
-        return "user_interrupt"
+        return FailureReason.USER_INTERRUPT
     if isinstance(exc, ResourceNotFoundError):
-        return "not_found"
+        return FailureReason.NOT_FOUND
     if isinstance(exc, ResourceConflictError):
-        return "conflict"
+        return FailureReason.CONFLICT
     if isinstance(exc, (ValidationError, InputError)):
-        return "validation_error"
+        return FailureReason.VALIDATION_ERROR
     if isinstance(exc, requests.Timeout):
-        return "timeout"
+        return FailureReason.TIMEOUT
     if isinstance(exc, requests.ConnectionError):
-        return "network_error"
+        return FailureReason.NETWORK_ERROR
     if isinstance(exc, requests.HTTPError):
         return _failure_reason_from_status_code(
             exc.response.status_code if exc.response is not None else None
         )
     if isinstance(exc, HubApiError):
         if "Invalid API key" in str(exc) or "API key" in str(exc):
-            return "auth_error"
+            return FailureReason.AUTH_ERROR
         return _failure_reason_from_status_code(exc.status_code)
     if isinstance(exc, ValueError) and "API key" in str(exc):
-        return "auth_error"
-    return "unknown"
+        return FailureReason.AUTH_ERROR
+    return FailureReason.UNKNOWN
 
 
 def conversion_failure_reason(
-    exc: BaseException | None, *, phase: str
-) -> str | None:
+    exc: BaseException | None, *, phase: ConversionPhase
+) -> FailureReason | None:
     if exc is None:
         return None
-    if failure_reason_from_exception(exc) == "user_interrupt":
-        return "user_interrupt"
-    if phase == "resource_setup":
-        return "config_error"
-    if phase == "upload":
-        return "upload_error"
-    if phase == "export":
-        return "export_error"
-    if phase == "download":
-        return "download_error"
-    if phase == "configuration":
-        return "config_error"
-    return "unknown"
+    if failure_reason_from_exception(exc) == FailureReason.USER_INTERRUPT:
+        return FailureReason.USER_INTERRUPT
+    if phase in {
+        ConversionPhase.CONFIGURATION,
+        ConversionPhase.RESOURCE_SETUP,
+    }:
+        return FailureReason.CONFIG_ERROR
+    if phase == ConversionPhase.UPLOAD:
+        return FailureReason.UPLOAD_ERROR
+    if phase == ConversionPhase.EXPORT:
+        return FailureReason.EXPORT_ERROR
+    if phase == ConversionPhase.DOWNLOAD:
+        return FailureReason.DOWNLOAD_ERROR
+    return FailureReason.UNKNOWN
 
 
 def telemetry_operation(
@@ -241,38 +393,42 @@ def instrument_hubai_cli(app: cyclopts.App) -> None:
 
 def build_command_properties(
     *,
-    command_name: str,
-    command_group: str,
-    result: str,
+    command_name: CommandName,
+    command_group: TelemetryGroup,
+    result: TelemetryResult,
     duration_ms: int,
-    failure_reason: str | None = None,
+    failure_reason: FailureReason | None = None,
 ) -> dict[str, Any]:
     return _drop_none(
         {
-            "command_name": command_name,
-            "command_group": command_group,
-            "result": result,
-            "failure_reason": failure_reason,
+            "command_name": command_name.value,
+            "command_group": command_group.value,
+            "result": result.value,
+            "failure_reason": (
+                failure_reason.value if failure_reason is not None else None
+            ),
             "duration_ms": duration_ms,
         }
     )
 
 
-def build_client_initialized_properties(api_key_source: str) -> dict[str, Any]:
+def build_client_initialized_properties(
+    api_key_source: ApiKeySource,
+) -> dict[str, Any]:
     return {
-        "api_key_source": api_key_source,
+        "api_key_source": api_key_source.value,
     }
 
 
 def build_conversion_flow_properties(
     conversion_run_id: str,
-    flow_step: str,
+    flow_step: ConversionFlowStep,
     properties: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "flow_name": CONVERSION_FLOW_NAME,
         "conversion_run_id": conversion_run_id,
-        "flow_step": flow_step,
+        "flow_step": flow_step.value,
         **properties,
     }
 
@@ -280,13 +436,13 @@ def build_conversion_flow_properties(
 def build_conversion_summary(
     *,
     target: str,
-    config_source: str,
-    input_model_type: str,
-    invocation_surface: str,
+    config_source: ConfigSource,
+    input_model_type: ModelType,
+    invocation_surface: InvocationSurface,
     existing_model_reused: bool,
     existing_variant_reused: bool,
     quantization_mode: str | None,
-    quantization_input_type: str,
+    quantization_input_type: QuantizationInputType,
     max_quantization_images: int | None,
     yolo_version: str | None,
     yolo_class_names: list[str] | None,
@@ -299,13 +455,13 @@ def build_conversion_summary(
 ) -> dict[str, Any]:
     properties = {
         "target": target,
-        "config_source": config_source,
-        "input_model_type": input_model_type,
-        "invocation_surface": invocation_surface,
+        "config_source": config_source.value,
+        "input_model_type": input_model_type.value.lower(),
+        "invocation_surface": invocation_surface.value,
         "existing_model_reused": existing_model_reused,
         "existing_variant_reused": existing_variant_reused,
         "quantization_mode": quantization_mode,
-        "quantization_input_type": quantization_input_type,
+        "quantization_input_type": quantization_input_type.value,
         "max_quantization_images_bucket": (
             bucket_max_quantization_images(max_quantization_images)
             if max_quantization_images is not None
@@ -364,15 +520,17 @@ def build_conversion_summary(
 
 def build_conversion_result_properties(
     *,
-    result: str,
+    result: TelemetryResult,
     duration_ms: int,
-    failure_reason: str | None = None,
+    failure_reason: FailureReason | None = None,
     downloaded_file_count: int | None = None,
 ) -> dict[str, Any]:
     return _drop_none(
         {
-            "result": result,
-            "failure_reason": failure_reason,
+            "result": result.value,
+            "failure_reason": (
+                failure_reason.value if failure_reason is not None else None
+            ),
             "duration_ms": duration_ms,
             "downloaded_file_count_bucket": (
                 bucket_nonzero_count(downloaded_file_count)
@@ -385,55 +543,54 @@ def build_conversion_result_properties(
 
 def config_source_from_path(
     path: str, *, is_archive: bool, is_yaml: bool
-) -> str:
+) -> ConfigSource:
     if is_archive:
-        return "nn_archive"
+        return ConfigSource.NN_ARCHIVE
     if is_yaml:
-        return "yaml_config"
-    return "direct_model_input"
+        return ConfigSource.YAML_CONFIG
+    return ConfigSource.DIRECT_MODEL_INPUT
 
 
-def identifier_type(identifier: UUID | str | None) -> str | None:
+def identifier_type(identifier: UUID | str | None) -> IdentifierType | None:
     if identifier is None:
         return None
     if isinstance(identifier, UUID):
-        return "uuid"
+        return IdentifierType.UUID
     try:
         UUID(str(identifier))
     except (TypeError, ValueError, AttributeError):
-        return "slug" if str(identifier) else "unknown"
-    return "uuid"
+        return (
+            IdentifierType.SLUG if str(identifier) else IdentifierType.UNKNOWN
+        )
+    return IdentifierType.UUID
 
 
-def visibility_filter(is_public: bool | None) -> str:
+def visibility_filter(is_public: bool | None) -> VisibilityFilterValue:
     if is_public is None:
-        return "all"
-    return "public" if is_public else "private"
+        return VisibilityFilterValue.ALL
+    return (
+        VisibilityFilterValue.PUBLIC
+        if is_public
+        else VisibilityFilterValue.PRIVATE
+    )
 
 
-def visibility_value(is_public: bool | None) -> str:
+def visibility_value(is_public: bool | None) -> VisibilityValue:
     if is_public is None:
-        return "team"
-    return "public" if is_public else "private"
+        return VisibilityValue.TEAM
+    return VisibilityValue.PUBLIC if is_public else VisibilityValue.PRIVATE
 
 
 def quantization_input_type(
     quantization_data: str | None, *, custom_zip: bool = False
-) -> str:
+) -> QuantizationInputType:
     if quantization_data is None:
-        return "none"
+        return QuantizationInputType.NONE
     if custom_zip or quantization_data == "CUSTOM":
-        return "custom_zip"
+        return QuantizationInputType.CUSTOM_ZIP
     if quantization_data.startswith("aid_"):
-        return "dataset_id"
-    return "predefined_domain"
-
-
-def model_type_value(model_type: Any) -> str | None:
-    value = getattr(model_type, "value", model_type)
-    if value is None:
-        return None
-    return str(value).lower()
+        return QuantizationInputType.DATASET_ID
+    return QuantizationInputType.PREDEFINED_DOMAIN
 
 
 def sort_mode(value: str, *, allowed: set[str]) -> str:
@@ -527,7 +684,7 @@ def bucket_file_size(value: int) -> str:
     return "above_1g"
 
 
-def capture_client_initialized(api_key_source: str) -> None:
+def capture_client_initialized(api_key_source: ApiKeySource) -> None:
     get_component_telemetry().capture(
         CLIENT_INITIALIZED_EVENT,
         build_client_initialized_properties(api_key_source),
@@ -542,7 +699,7 @@ def capture_conversion_configured(
         CONVERSION_CONFIGURED_EVENT,
         build_conversion_flow_properties(
             conversion_run_id,
-            "configuration_resolved",
+            ConversionFlowStep.CONFIGURATION_RESOLVED,
             properties,
         ),
         include_system_metadata=True,
@@ -557,11 +714,27 @@ def capture_conversion_result(
         CONVERSION_RESULT_EVENT,
         build_conversion_flow_properties(
             conversion_run_id,
-            "result_recorded",
+            ConversionFlowStep.RESULT_RECORDED,
             properties,
         ),
         include_system_metadata=True,
         distinct_id=conversion_run_id,
+    )
+
+
+def capture_operation_result(
+    *,
+    spec: OperationTelemetrySpec,
+    exc: BaseException | None,
+    duration_ms: int,
+    bound_arguments: dict[str, Any] | None = None,
+) -> None:
+    _capture_operation_result(
+        get_component_telemetry(),
+        spec=spec,
+        bound_arguments=bound_arguments or {},
+        exc=exc,
+        duration_ms=duration_ms,
     )
 
 
@@ -584,7 +757,7 @@ def _capture_success_event(
         return
     with suppress(Exception):
         properties = {
-            "invocation_surface": invocation_surface(),
+            "invocation_surface": invocation_surface().value,
             **spec.success_builder(bound_arguments, result),
         }
         telemetry.capture(spec.success_event, properties)
@@ -599,19 +772,31 @@ def _capture_operation_result(
     duration_ms: int,
 ) -> None:
     with suppress(Exception):
+        identifier = identifier_type(
+            bound_arguments.get(spec.identifier_param)
+            if spec.identifier_param
+            else None
+        )
+        failure_reason = failure_reason_from_exception(exc)
         properties = _drop_none(
             {
-                "invocation_surface": invocation_surface(),
-                "operation_name": spec.operation_name,
-                "operation_group": spec.operation_group,
-                "target_resource": spec.target_resource,
-                "identifier_type": identifier_type(
-                    bound_arguments.get(spec.identifier_param)
-                    if spec.identifier_param
+                "invocation_surface": invocation_surface().value,
+                "operation_name": spec.operation_name.value,
+                "operation_group": spec.operation_group.value,
+                "target_resource": (
+                    spec.target_resource.value
+                    if spec.target_resource is not None
                     else None
                 ),
-                "result": command_result_from_exception(exc),
-                "failure_reason": failure_reason_from_exception(exc),
+                "identifier_type": (
+                    identifier.value if identifier is not None else None
+                ),
+                "result": command_result_from_exception(exc).value,
+                "failure_reason": (
+                    failure_reason.value
+                    if failure_reason is not None
+                    else None
+                ),
                 "duration_ms": duration_ms,
             }
         )
@@ -632,8 +817,8 @@ def _wrap_cyclopts(app: cyclopts.App, *, prefix: str) -> None:
         if metadata is not None:
             app.default_command = _wrap_command_callback(
                 default_command,
-                command_name=metadata[0],
-                command_group=metadata[1],
+                command_name=metadata.command_name,
+                command_group=metadata.command_group,
             )
 
     for subapp in _iter_unique_subapps(app._commands.values()):
@@ -645,7 +830,10 @@ def _wrap_cyclopts(app: cyclopts.App, *, prefix: str) -> None:
 
 
 def _wrap_command_callback(
-    func: Callable[..., Any], *, command_name: str, command_group: str
+    func: Callable[..., Any],
+    *,
+    command_name: CommandName,
+    command_group: TelemetryGroup,
 ) -> Callable[..., Any]:
     if getattr(func, "_hubai_telemetry_wrapped", False):
         return func
@@ -669,7 +857,7 @@ def _wrap_command_callback(
                     duration_ms=int((time.monotonic() - start) * 1000),
                 )
 
-        async_wrapper._hubai_telemetry_wrapped = True
+        cast(Any, async_wrapper)._hubai_telemetry_wrapped = True
         return async_wrapper
 
     @wraps(func)
@@ -689,14 +877,14 @@ def _wrap_command_callback(
                 duration_ms=int((time.monotonic() - start) * 1000),
             )
 
-    wrapper._hubai_telemetry_wrapped = True
+    cast(Any, wrapper)._hubai_telemetry_wrapped = True
     return wrapper
 
 
 def _emit_command_event(
     *,
-    command_name: str,
-    command_group: str,
+    command_name: CommandName,
+    command_group: TelemetryGroup,
     exc: BaseException | None,
     duration_ms: int,
 ) -> None:
@@ -719,37 +907,71 @@ def _emit_command_event(
     )
 
 
-def command_metadata(command_path: str) -> tuple[str, str] | None:
+def command_metadata(command_path: str) -> CommandMetadata | None:
     normalized = " ".join(command_path.split())
     if normalized == "login":
-        return ("login", "auth")
+        return CommandMetadata(CommandName.LOGIN, TelemetryGroup.AUTH)
     if normalized == "logout":
-        return ("logout", "auth")
+        return CommandMetadata(CommandName.LOGOUT, TelemetryGroup.AUTH)
     if normalized == "convert":
-        return ("convert", "conversion")
+        return CommandMetadata(CommandName.CONVERT, TelemetryGroup.CONVERSION)
     mapping = {
-        "model ls": ("model_ls", "models"),
-        "model info": ("model_info", "models"),
-        "model create": ("model_create", "models"),
-        "model update": ("model_update", "models"),
-        "model delete": ("model_delete", "models"),
-        "variant ls": ("variant_ls", "variants"),
-        "variant info": ("variant_info", "variants"),
-        "variant create": ("variant_create", "variants"),
-        "variant delete": ("variant_delete", "variants"),
-        "instance ls": ("instance_ls", "instances"),
-        "instance info": ("instance_info", "instances"),
-        "instance download": ("instance_download", "instances"),
-        "instance create": ("instance_create", "instances"),
-        "instance delete": ("instance_delete", "instances"),
-        "instance config": ("instance_config", "instances"),
-        "instance files": ("instance_files", "instances"),
-        "instance upload": ("instance_upload", "instances"),
+        "model ls": CommandMetadata(
+            CommandName.MODEL_LIST, TelemetryGroup.MODELS
+        ),
+        "model info": CommandMetadata(
+            CommandName.MODEL_INFO, TelemetryGroup.MODELS
+        ),
+        "model create": CommandMetadata(
+            CommandName.MODEL_CREATE, TelemetryGroup.MODELS
+        ),
+        "model update": CommandMetadata(
+            CommandName.MODEL_UPDATE, TelemetryGroup.MODELS
+        ),
+        "model delete": CommandMetadata(
+            CommandName.MODEL_DELETE, TelemetryGroup.MODELS
+        ),
+        "variant ls": CommandMetadata(
+            CommandName.VARIANT_LIST, TelemetryGroup.VARIANTS
+        ),
+        "variant info": CommandMetadata(
+            CommandName.VARIANT_INFO, TelemetryGroup.VARIANTS
+        ),
+        "variant create": CommandMetadata(
+            CommandName.VARIANT_CREATE, TelemetryGroup.VARIANTS
+        ),
+        "variant delete": CommandMetadata(
+            CommandName.VARIANT_DELETE, TelemetryGroup.VARIANTS
+        ),
+        "instance ls": CommandMetadata(
+            CommandName.INSTANCE_LIST, TelemetryGroup.INSTANCES
+        ),
+        "instance info": CommandMetadata(
+            CommandName.INSTANCE_INFO, TelemetryGroup.INSTANCES
+        ),
+        "instance download": CommandMetadata(
+            CommandName.INSTANCE_DOWNLOAD, TelemetryGroup.INSTANCES
+        ),
+        "instance create": CommandMetadata(
+            CommandName.INSTANCE_CREATE, TelemetryGroup.INSTANCES
+        ),
+        "instance delete": CommandMetadata(
+            CommandName.INSTANCE_DELETE, TelemetryGroup.INSTANCES
+        ),
+        "instance config": CommandMetadata(
+            CommandName.INSTANCE_CONFIG, TelemetryGroup.INSTANCES
+        ),
+        "instance files": CommandMetadata(
+            CommandName.INSTANCE_FILES, TelemetryGroup.INSTANCES
+        ),
+        "instance upload": CommandMetadata(
+            CommandName.INSTANCE_UPLOAD, TelemetryGroup.INSTANCES
+        ),
     }
     return mapping.get(normalized)
 
 
-def _iter_unique_subapps(subapps: list[object]) -> list[cyclopts.App]:
+def _iter_unique_subapps(subapps: Iterable[object]) -> list[cyclopts.App]:
     unique: list[cyclopts.App] = []
     seen: set[int] = set()
     for subapp in subapps:
@@ -777,22 +999,24 @@ def _is_builtin_cyclopts_command(
     return default_command in {app.help_print, app.version_print}
 
 
-def _failure_reason_from_status_code(status_code: int | None) -> str:
+def _failure_reason_from_status_code(
+    status_code: int | None,
+) -> FailureReason:
     if status_code in {401, 403}:
-        return "auth_error"
+        return FailureReason.AUTH_ERROR
     if status_code == 404:
-        return "not_found"
+        return FailureReason.NOT_FOUND
     if status_code == 409:
-        return "conflict"
+        return FailureReason.CONFLICT
     if status_code in {400, 422}:
-        return "validation_error"
+        return FailureReason.VALIDATION_ERROR
     if status_code in {408, 504}:
-        return "timeout"
+        return FailureReason.TIMEOUT
     if status_code is not None and status_code >= 500:
-        return "server_error"
+        return FailureReason.SERVER_ERROR
     if status_code is not None:
-        return "api_error"
-    return "unknown"
+        return FailureReason.API_ERROR
+    return FailureReason.UNKNOWN
 
 
 def _drop_none(properties: dict[str, Any]) -> dict[str, Any]:
@@ -820,7 +1044,9 @@ def build_models_listed_properties(
             bucket_nonzero_count(len(tasks)) if tasks else None
         ),
         "license_type_filter": arguments.get("license_type"),
-        "visibility_filter": visibility_filter(arguments.get("is_public")),
+        "visibility_filter": visibility_filter(
+            arguments.get("is_public")
+        ).value,
         "has_project_filter": arguments.get("project_id") is not None,
         "luxonis_only": bool(arguments.get("luxonis_only")),
         "limit_bucket": bucket_limit(int(arguments["limit"])),
@@ -836,8 +1062,11 @@ def build_models_listed_properties(
 def build_model_identifier_properties(
     arguments: dict[str, Any], _result: Any
 ) -> dict[str, Any]:
+    identifier = identifier_type(arguments.get("identifier"))
     return {
-        "identifier_type": identifier_type(arguments.get("identifier")),
+        "identifier_type": identifier.value
+        if identifier is not None
+        else None,
     }
 
 
@@ -849,7 +1078,7 @@ def build_model_created_properties(
     description_short = arguments.get("description_short")
     return {
         "license_type": arguments.get("license_type"),
-        "visibility": visibility_value(arguments.get("is_public")),
+        "visibility": visibility_value(arguments.get("is_public")).value,
         "has_description": bool(arguments.get("description")),
         "has_description_short": bool(
             description_short and description_short != "<empty>"
@@ -878,11 +1107,14 @@ def build_model_updated_properties(
     tasks = arguments.get("tasks") or []
     links = arguments.get("links") or []
     description_short = arguments.get("description_short")
+    identifier = identifier_type(arguments.get("identifier"))
     return _drop_none(
         {
-            "identifier_type": identifier_type(arguments.get("identifier")),
+            "identifier_type": identifier.value
+            if identifier is not None
+            else None,
             "visibility": (
-                visibility_value(arguments.get("is_public"))
+                visibility_value(arguments.get("is_public")).value
                 if updates["visibility"]
                 else None
             ),
@@ -925,13 +1157,18 @@ def build_model_updated_properties(
 def build_variants_listed_properties(
     arguments: dict[str, Any], result: list[Any]
 ) -> dict[str, Any]:
+    model_identifier = identifier_type(arguments.get("model_id"))
     return {
         "has_model_filter": arguments.get("model_id") is not None,
-        "model_identifier_type": identifier_type(arguments.get("model_id")),
+        "model_identifier_type": (
+            model_identifier.value if model_identifier is not None else None
+        ),
         "has_name_filter": arguments.get("name") is not None,
         "has_variant_slug_filter": arguments.get("variant_slug") is not None,
         "has_version_filter": arguments.get("variant_version") is not None,
-        "visibility_filter": visibility_filter(arguments.get("is_public")),
+        "visibility_filter": visibility_filter(
+            arguments.get("is_public")
+        ).value,
         "include_model_name": bool(arguments.get("include_model_name")),
         "limit_bucket": bucket_limit(int(arguments["limit"])),
         "sort_mode": sort_mode(
@@ -947,8 +1184,11 @@ def build_variant_created_properties(
     arguments: dict[str, Any], _result: Any
 ) -> dict[str, Any]:
     tags = arguments.get("tags") or []
+    model_identifier = identifier_type(arguments.get("model_id"))
     return {
-        "model_identifier_type": identifier_type(arguments.get("model_id")),
+        "model_identifier_type": (
+            model_identifier.value if model_identifier is not None else None
+        ),
         "has_description": bool(arguments.get("description")),
         "has_repository_url": bool(arguments.get("repository_url")),
         "has_commit_hash": bool(arguments.get("commit_hash")),
@@ -961,6 +1201,10 @@ def build_instances_listed_properties(
     arguments: dict[str, Any], result: list[Any]
 ) -> dict[str, Any]:
     platforms = arguments.get("platforms") or []
+    model_identifier = identifier_type(arguments.get("model_id"))
+    variant_identifier = identifier_type(arguments.get("variant_id"))
+    parent_identifier = identifier_type(arguments.get("parent_id"))
+    model_type = arguments.get("model_type")
     return _drop_none(
         {
             "platform_filter_count_bucket": (
@@ -968,17 +1212,25 @@ def build_instances_listed_properties(
             ),
             "has_search_filter": arguments.get("search") is not None,
             "has_model_filter": arguments.get("model_id") is not None,
-            "model_identifier_type": identifier_type(
-                arguments.get("model_id")
+            "model_identifier_type": (
+                model_identifier.value
+                if model_identifier is not None
+                else None
             ),
             "has_variant_filter": arguments.get("variant_id") is not None,
-            "variant_identifier_type": identifier_type(
-                arguments.get("variant_id")
+            "variant_identifier_type": (
+                variant_identifier.value
+                if variant_identifier is not None
+                else None
             ),
-            "model_type": model_type_value(arguments.get("model_type")),
+            "model_type": (
+                model_type.value.lower() if model_type is not None else None
+            ),
             "has_parent_filter": arguments.get("parent_id") is not None,
-            "parent_identifier_type": identifier_type(
-                arguments.get("parent_id")
+            "parent_identifier_type": (
+                parent_identifier.value
+                if parent_identifier is not None
+                else None
             ),
             "model_class": arguments.get("model_class"),
             "has_name_filter": arguments.get("name") is not None,
@@ -986,7 +1238,9 @@ def build_instances_listed_properties(
             "status": arguments.get("status"),
             "compression_level": arguments.get("compression_level"),
             "optimization_level": arguments.get("optimization_level"),
-            "visibility_filter": visibility_filter(arguments.get("is_public")),
+            "visibility_filter": visibility_filter(
+                arguments.get("is_public")
+            ).value,
             "include_model_name": bool(arguments.get("include_model_name")),
             "limit_bucket": bucket_limit(int(arguments["limit"])),
             "sort_mode": sort_mode(
@@ -1004,20 +1258,29 @@ def build_instance_created_properties(
 ) -> dict[str, Any]:
     tags = arguments.get("tags") or []
     quantization_data = arguments.get("quantization_data")
+    model_type = arguments.get("model_type")
+    variant_identifier = identifier_type(arguments.get("variant_id"))
+    parent_identifier = identifier_type(arguments.get("parent_id"))
     return _drop_none(
         {
-            "variant_identifier_type": identifier_type(
-                arguments.get("variant_id")
+            "variant_identifier_type": (
+                variant_identifier.value
+                if variant_identifier is not None
+                else None
             ),
             "has_parent_instance": arguments.get("parent_id") is not None,
-            "parent_identifier_type": identifier_type(
-                arguments.get("parent_id")
+            "parent_identifier_type": (
+                parent_identifier.value
+                if parent_identifier is not None
+                else None
             ),
-            "model_type": model_type_value(arguments.get("model_type")),
+            "model_type": (
+                model_type.value.lower() if model_type is not None else None
+            ),
             "quantization_mode": arguments.get("quantization_mode"),
             "quantization_input_type": quantization_input_type(
                 quantization_data
-            ),
+            ).value,
             "tag_count_bucket": bucket_zero_count(len(tags)),
             "input_shape_provided": arguments.get("input_shape") is not None,
             "is_deployable": arguments.get("is_deployable"),
@@ -1029,8 +1292,11 @@ def build_instance_created_properties(
 def build_instance_files_listed_properties(
     arguments: dict[str, Any], result: list[Any]
 ) -> dict[str, Any]:
+    identifier = identifier_type(arguments.get("identifier"))
     return {
-        "identifier_type": identifier_type(arguments.get("identifier")),
+        "identifier_type": identifier.value
+        if identifier is not None
+        else None,
         "result_count_bucket": bucket_zero_count(len(result)),
     }
 
@@ -1039,8 +1305,11 @@ def build_instance_downloaded_properties(
     arguments: dict[str, Any], result: Path
 ) -> dict[str, Any]:
     downloaded_count = 1 if result.exists() else 0
+    identifier = identifier_type(arguments.get("identifier"))
     return {
-        "identifier_type": identifier_type(arguments.get("identifier")),
+        "identifier_type": identifier.value
+        if identifier is not None
+        else None,
         "output_dir_provided": arguments.get("output_dir") is not None,
         "force": bool(arguments.get("force")),
         "downloaded_file_count_bucket": bucket_nonzero_count(downloaded_count),
@@ -1051,8 +1320,11 @@ def build_instance_uploaded_properties(
     arguments: dict[str, Any], _result: Any
 ) -> dict[str, Any]:
     path = Path(arguments["file_path"])
+    identifier = identifier_type(arguments.get("identifier"))
     return {
-        "identifier_type": identifier_type(arguments.get("identifier")),
+        "identifier_type": identifier.value
+        if identifier is not None
+        else None,
         "file_extension": file_extension(path),
         "file_size_bucket": bucket_file_size(path.stat().st_size),
     }
