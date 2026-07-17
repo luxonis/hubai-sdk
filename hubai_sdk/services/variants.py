@@ -22,7 +22,10 @@ from hubai_sdk.utils.telemetry import (
     VARIANT_DELETED_EVENT,
     VARIANT_RETRIEVED_EVENT,
     VARIANTS_LISTED_EVENT,
+    OperationName,
     OperationTelemetrySpec,
+    TargetResource,
+    TelemetryGroup,
     build_model_identifier_properties,
     build_variant_created_properties,
     build_variants_listed_properties,
@@ -60,10 +63,10 @@ VARIANT_INFO_KEYS = [
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="variants_list",
-        operation_group="variants",
+        operation_name=OperationName.VARIANTS_LIST,
+        operation_group=TelemetryGroup.VARIANTS,
         success_event=VARIANTS_LISTED_EVENT,
-        target_resource="variant",
+        target_resource=TargetResource.VARIANT,
         success_builder=build_variants_listed_properties,
     )
 )
@@ -155,10 +158,10 @@ def list_variants_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="variant_get",
-        operation_group="variants",
+        operation_name=OperationName.VARIANT_GET,
+        operation_group=TelemetryGroup.VARIANTS,
         success_event=VARIANT_RETRIEVED_EVENT,
-        target_resource="variant",
+        target_resource=TargetResource.VARIANT,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
@@ -189,10 +192,10 @@ def get_variant_info_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="variant_create",
-        operation_group="variants",
+        operation_name=OperationName.VARIANT_CREATE,
+        operation_group=TelemetryGroup.VARIANTS,
         success_event=VARIANT_CREATED_EVENT,
-        target_resource="variant",
+        target_resource=TargetResource.VARIANT,
         success_builder=build_variant_created_properties,
     )
 )
@@ -282,10 +285,10 @@ def create_variant_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="variant_delete",
-        operation_group="variants",
+        operation_name=OperationName.VARIANT_DELETE,
+        operation_group=TelemetryGroup.VARIANTS,
         success_event=VARIANT_DELETED_EVENT,
-        target_resource="variant",
+        target_resource=TargetResource.VARIANT,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )

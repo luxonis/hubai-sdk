@@ -49,7 +49,10 @@ from hubai_sdk.utils.telemetry import (
     INSTANCE_FILES_LISTED_EVENT,
     INSTANCE_RETRIEVED_EVENT,
     INSTANCES_LISTED_EVENT,
+    OperationName,
     OperationTelemetrySpec,
+    TargetResource,
+    TelemetryGroup,
     build_instance_created_properties,
     build_instance_downloaded_properties,
     build_instance_files_listed_properties,
@@ -103,10 +106,10 @@ INSTANCE_INFO_KEYS = [
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instances_list",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCES_LIST,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCES_LISTED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         success_builder=build_instances_listed_properties,
     )
 )
@@ -256,10 +259,10 @@ def list_instances_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_get",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_GET,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_RETRIEVED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
@@ -293,10 +296,10 @@ def get_instance_info_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_download",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_DOWNLOAD,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_DOWNLOAD_COMPLETED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_instance_downloaded_properties,
     )
@@ -416,10 +419,10 @@ def download_instance_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_create",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_CREATE,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_CREATED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         success_builder=build_instance_created_properties,
     )
 )
@@ -537,10 +540,10 @@ def create_instance_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_delete",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_DELETE,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_DELETED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
@@ -573,10 +576,10 @@ def delete_instance_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_config_get",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_CONFIG_GET,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_CONFIG_RETRIEVED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
@@ -606,10 +609,10 @@ def get_config_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_files_list",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_FILES_LIST,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_FILES_LISTED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_instance_files_listed_properties,
     )
@@ -641,10 +644,10 @@ def get_files_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="instance_upload",
-        operation_group="instances",
+        operation_name=OperationName.INSTANCE_UPLOAD,
+        operation_group=TelemetryGroup.INSTANCES,
         success_event=INSTANCE_FILE_UPLOADED_EVENT,
-        target_resource="instance",
+        target_resource=TargetResource.INSTANCE,
         identifier_param="identifier",
         success_builder=build_instance_uploaded_properties,
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextvars
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -105,16 +106,8 @@ def test_hubai_client_initialization_emits_events(
 ) -> None:
     telemetry = _FakeTelemetry()
     monkeypatch.setattr(
-        "hubai_sdk.hubai_client.get_component_telemetry",
+        "hubai_sdk.utils.telemetry.get_component_telemetry",
         lambda: telemetry,
-    )
-    monkeypatch.setattr(
-        "hubai_sdk.hubai_client.capture_client_initialized",
-        lambda api_key_source: telemetry.capture(
-            "hubai_sdk_client_initialized",
-            {"api_key_source": api_key_source},
-            include_system_metadata=True,
-        ),
     )
     monkeypatch.setattr(HubAIClient, "_verify_api_key", lambda self: True)
     monkeypatch.setattr("hubai_sdk.hubai_client.load_client_plugins", dict)
@@ -131,6 +124,21 @@ def test_hubai_client_initialization_emits_events(
     operation_props = telemetry.events[1][1]
     assert operation_props["operation_name"] == "client_initialize"
     assert operation_props["result"] == "success"
+
+
+def test_telemetry_payloads_do_not_contain_enum_instances(
+    monkeypatch: pytest.MonkeyPatch, fake_telemetry: _FakeTelemetry
+) -> None:
+    monkeypatch.setattr(
+        model_services.Request, "get", lambda *args, **kwargs: [_model_data()]
+    )
+
+    model_services.list_models(is_public=False, limit=25, sort="updated")
+
+    for _event, properties, _kwargs in fake_telemetry.events:
+        assert all(
+            not isinstance(value, Enum) for value in properties.values()
+        )
 
 
 def test_convert_result_duration_is_end_to_end(

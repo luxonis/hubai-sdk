@@ -13,10 +13,12 @@ from hubai_sdk.utils.hub import raise_for_hub_error
 from hubai_sdk.utils.hub_requests import Request
 from hubai_sdk.utils.plugins import load_client_plugins
 from hubai_sdk.utils.telemetry import (
+    ApiKeySource,
+    OperationName,
     OperationTelemetrySpec,
+    TelemetryGroup,
     capture_client_initialized,
-    failure_reason_from_exception,
-    get_component_telemetry,
+    capture_operation_result,
 )
 
 
@@ -34,24 +36,23 @@ class HubAIClient:
                 is invalid.
         """
         operation_spec = OperationTelemetrySpec(
-            operation_name="client_initialize",
-            operation_group="client",
+            operation_name=OperationName.CLIENT_INITIALIZE,
+            operation_group=TelemetryGroup.CLIENT,
         )
-        telemetry = get_component_telemetry()
         start = time.monotonic()
-        api_key_source = "stored_credentials"
+        api_key_source = ApiKeySource.STORED_CREDENTIALS
         caught_exc: BaseException | None = None
         # If api_key is not provided, try to get it from environment variable
         if api_key is None:
             api_key = os.getenv("HUBAI_API_KEY")
-            api_key_source = "environment"
+            api_key_source = ApiKeySource.ENVIRONMENT
         else:
-            api_key_source = "argument"
+            api_key_source = ApiKeySource.ARGUMENT
 
         # If still not found, try to get from environ (which may have loaded from keyring)
         if api_key is None:
             api_key = environ.HUBAI_API_KEY
-            api_key_source = "stored_credentials"
+            api_key_source = ApiKeySource.STORED_CREDENTIALS
 
         try:
             # If still not found, raise an error
@@ -84,28 +85,10 @@ class HubAIClient:
             caught_exc = exc
             raise
         finally:
-            telemetry.capture(
-                "hubai_sdk_operation_result_recorded",
-                {
-                    "invocation_surface": "python_api",
-                    "operation_name": operation_spec.operation_name,
-                    "operation_group": operation_spec.operation_group,
-                    "result": (
-                        "success"
-                        if caught_exc is None
-                        else (
-                            "interrupted"
-                            if failure_reason_from_exception(caught_exc)
-                            == "user_interrupt"
-                            else "failed"
-                        )
-                    ),
-                    "failure_reason": failure_reason_from_exception(
-                        caught_exc
-                    ),
-                    "duration_ms": int((time.monotonic() - start) * 1000),
-                },
-                include_system_metadata=True,
+            capture_operation_result(
+                spec=operation_spec,
+                exc=caught_exc,
+                duration_ms=int((time.monotonic() - start) * 1000),
             )
 
     def _verify_api_key(self) -> bool:

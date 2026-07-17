@@ -23,7 +23,10 @@ from hubai_sdk.utils.telemetry import (
     MODEL_RETRIEVED_EVENT,
     MODEL_UPDATED_EVENT,
     MODELS_LISTED_EVENT,
+    OperationName,
     OperationTelemetrySpec,
+    TargetResource,
+    TelemetryGroup,
     build_model_created_properties,
     build_model_identifier_properties,
     build_model_updated_properties,
@@ -55,10 +58,10 @@ MODEL_INFO_KEYS = [
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="models_list",
-        operation_group="models",
+        operation_name=OperationName.MODELS_LIST,
+        operation_group=TelemetryGroup.MODELS,
         success_event=MODELS_LISTED_EVENT,
-        target_resource="model",
+        target_resource=TargetResource.MODEL,
         success_builder=build_models_listed_properties,
     )
 )
@@ -140,10 +143,10 @@ def list_models_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="model_get",
-        operation_group="models",
+        operation_name=OperationName.MODEL_GET,
+        operation_group=TelemetryGroup.MODELS,
         success_event=MODEL_RETRIEVED_EVENT,
-        target_resource="model",
+        target_resource=TargetResource.MODEL,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
@@ -172,10 +175,10 @@ def get_model_info_cli(identifier: UUID | str) -> None:
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="model_create",
-        operation_group="models",
+        operation_name=OperationName.MODEL_CREATE,
+        operation_group=TelemetryGroup.MODELS,
         success_event=MODEL_CREATED_EVENT,
-        target_resource="model",
+        target_resource=TargetResource.MODEL,
         success_builder=build_model_created_properties,
     )
 )
@@ -262,10 +265,10 @@ def create_model_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="model_update",
-        operation_group="models",
+        operation_name=OperationName.MODEL_UPDATE,
+        operation_group=TelemetryGroup.MODELS,
         success_event=MODEL_UPDATED_EVENT,
-        target_resource="model",
+        target_resource=TargetResource.MODEL,
         identifier_param="identifier",
         success_builder=build_model_updated_properties,
     )
@@ -368,10 +371,10 @@ def update_model_cli(
 
 @telemetry_operation(
     OperationTelemetrySpec(
-        operation_name="model_delete",
-        operation_group="models",
+        operation_name=OperationName.MODEL_DELETE,
+        operation_group=TelemetryGroup.MODELS,
         success_event=MODEL_DELETED_EVENT,
-        target_resource="model",
+        target_resource=TargetResource.MODEL,
         identifier_param="identifier",
         success_builder=build_model_identifier_properties,
     )
