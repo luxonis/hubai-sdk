@@ -1,4 +1,5 @@
 import shutil
+import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,7 +7,6 @@ from time import sleep
 from typing import Any, Literal, NoReturn, TypeVar
 from uuid import UUID
 
-import typer
 from loguru import logger
 from luxonis_ml.nn_archive import is_nn_archive
 from luxonis_ml.nn_archive.config import Config as NNArchiveConfig
@@ -429,19 +429,19 @@ def run_cli(action: Callable[[], T]) -> T:
         from hubai_sdk.utils.telemetry import record_cli_failure_reason
 
         record_cli_failure_reason(exc)
-        typer.echo(str(exc), err=True)
+        print(str(exc), file=sys.stderr)
         raise SystemExit(1) from None
     except (InputError, FileNotFoundError) as exc:
         from hubai_sdk.utils.telemetry import record_cli_failure_reason
 
         record_cli_failure_reason(exc)
-        typer.echo(str(exc), err=True)
+        print(str(exc), file=sys.stderr)
         raise SystemExit(1) from None
     except HTTPError as exc:
         from hubai_sdk.utils.telemetry import record_cli_failure_reason
 
         record_cli_failure_reason(exc)
-        typer.echo(_get_http_error_detail(exc), err=True)
+        print(_get_http_error_detail(exc), file=sys.stderr)
         raise SystemExit(1) from None
 
 

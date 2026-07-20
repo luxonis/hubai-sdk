@@ -144,23 +144,15 @@ def _http_error(status_code: int) -> requests.HTTPError:
 
 
 def _assert_cli_exit(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     action: Callable[[], object],
     expected_message: str,
 ) -> None:
-    calls: list[tuple[str, bool]] = []
-    monkeypatch.setattr(
-        "hubai_sdk.utils.hub.typer.echo",
-        lambda message, **kwargs: calls.append(
-            (message, bool(kwargs.get("err")))
-        ),
-    )
-
     with pytest.raises(SystemExit) as exc_info:
         action()
 
     assert exc_info.value.code == 1
-    assert calls == [(expected_message, True)]
+    assert capsys.readouterr().err == f"{expected_message}\n"
 
 
 def test_list_models_returns_typed_models(
@@ -202,6 +194,7 @@ def test_get_model_info_cli_prints_model(
 
 def test_get_model_info_cli_exits_cleanly_on_missing_model(
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
         model_services,
@@ -212,7 +205,7 @@ def test_get_model_info_cli_exits_cleanly_on_missing_model(
     )
 
     _assert_cli_exit(
-        monkeypatch,
+        capsys,
         lambda: model_services.get_model_info_cli("missing-model"),
         "Resource for endpoint 'models' with identifier "
         "'missing-model' not found in HubAI.",
