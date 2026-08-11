@@ -79,8 +79,8 @@ def get_configs(
         opts: Optional CLI overrides for the config file.
 
     Returns:
-        Tuple of the parsed modelconverter `Config`, optional
-        `NNArchiveConfig`, and the main stage key.
+        The parsed modelconverter configuration, optional NN Archive
+        configuration, and main stage key.
     """
 
     opts = opts or []
@@ -384,8 +384,7 @@ def raise_for_hub_error(
     endpoint: ResourceEndpoint | Literal["jobs"] | None = None,
     conflict_message: str | None = None,
 ) -> NoReturn:
-    """Translate a requests `HTTPError` into an SDK-specific
-    exception."""
+    """Translate a requests HTTP error into an SDK-specific exception."""
     status_code = (
         exc.response.status_code if exc.response is not None else None
     )

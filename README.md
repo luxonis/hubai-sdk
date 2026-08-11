@@ -5,6 +5,8 @@ managing, converting, and deploying machine learning models for
 Luxonis OAK devices. If you want to convert models locally, check out
 [modelconverter](https://github.com/luxonis/modelconverter) instead.
 
+API documentation is available at <https://luxonis.github.io/hubai-sdk/>.
+
 ## ✨ Features
 
 - **Model Management**: Create, list, update, and delete HubAI models

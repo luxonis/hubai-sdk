@@ -2,3 +2,4 @@ openapi-python-client
 pytest
 pre-commit
 datamodel-code-generator
+pydoctor~=25.10
