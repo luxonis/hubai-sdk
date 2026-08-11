@@ -1,14 +1,25 @@
-def make_default_layout(shape: list[int]) -> str:
-    """Creates a default layout for the given shape.
+"""Infer conventional dimension labels for model tensor shapes."""
 
-    Tries to guess most common layouts for the given shape pattern.
-    Otherwise, uses the first free letter of the alphabet for each dimension.
+__all__ = ["make_default_layout"]
+
+
+def make_default_layout(shape: list[int]) -> str:
+    """Create a likely tensor layout for a shape.
+
+    The function recognizes common channel-first and channel-last image shapes.
+    Unrecognized dimensions receive unused letters in alphabetical order.
 
     Example:
         >>> make_default_layout([1, 3, 256, 256])
-        >>> "NCHW"
+        'NCHW'
         >>> make_default_layout([1, 19, 7, 8])
-        >>> "NABC"
+        'NABC'
+
+    Args:
+        shape: Tensor dimensions.
+
+    Returns:
+        Inferred layout with one letter per dimension.
     """
     layout = []
     i = 0

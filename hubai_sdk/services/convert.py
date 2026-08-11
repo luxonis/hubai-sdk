@@ -1,3 +1,46 @@
+"""Run hosted model conversion and download deployable artifacts.
+
+The target-specific helpers `RVC2`, `RVC3`, `RVC4`, and `Hailo` are the
+recommended conversion API. Each helper prepares target options and delegates
+to `convert`, which coordinates the complete HubAI workflow:
+
+    1. Read model metadata from a model file, YAML config, or NN Archive.
+    2. Create or reuse model and variant resources.
+    3. Upload the source model as an instance.
+    4. Start an export job and wait for it to finish.
+    5. Download the exported instance.
+
+Example:
+    Convert an ONNX model for RVC4 with HubAI's general calibration data.
+
+    .. python::
+
+        result = client.convert.RVC4(
+            path="detector.onnx",
+            name="detector",
+            quantization_mode="INT8_STANDARD",
+            quantization_data="GENERAL",
+        )
+        print(result.downloaded_path)
+
+Input configuration:
+    ``path`` may point to a model file, an NN Archive, or a YAML configuration.
+    Additional ``opts`` override values loaded from that configuration. A
+    dictionary is usually easiest in Python; the flat list form exists for the
+    command-line interface.
+
+Resource reuse:
+    Pass ``model_id`` or ``variant_id`` to attach the conversion to existing
+    resources. Without them, `convert` creates resources and reuses a model
+    with the same slug if one already exists.
+
+Quantization:
+    RVC4 and Hailo accept a built-in calibration domain, a dataset ID beginning
+    with ``aid_``, or a local ZIP file. Passing a ZIP path uploads it for the
+    export job. RVC2 and RVC3 ignore quantization inputs because those helpers
+    expose their platform-specific precision controls instead.
+"""
+
 import time
 from pathlib import Path
 from time import sleep
@@ -127,8 +170,8 @@ def convert(
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
         license_type: License type.
-        is_public: Whether the model is public (`True`), private
-            (`False`), or team-scoped (`None`).
+        is_public: Whether the model is public (``True``), private
+            (``False``), or team-scoped (``None``).
         description_short: Short description of the model.
         description: Full description of the model.
         architecture_id: Architecture ID.
@@ -139,25 +182,25 @@ def convert(
             model is used instead of creating a new one.
         variant_version: Model version. If not specified, the version is
             auto-incremented from the latest version of the model. If no
-            versions exist, the version is `"0.1.0"`.
+            versions exist, the version is ``"0.1.0"``.
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
         quantization_mode: Quantization mode to use during conversion.
-            Must be one of `INT8_STANDARD`,
-            `INT8_ACCURACY_FOCUSED`, `INT8_INT16_MIXED`,
-            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
-            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            Must be one of ``INT8_STANDARD``,
+            ``INT8_ACCURACY_FOCUSED``, ``INT8_INT16_MIXED``,
+            ``INT8_INT16_MIXED_ACCURACY_FOCUSED``, or
+            ``FP16_STANDARD``. ``INT8_STANDARD`` is standard INT8
             quantization with calibration for optimal performance and
-            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            model size. ``INT8_ACCURACY_FOCUSED`` is INT8 quantization
             with calibration that may improve accuracy without reducing
             performance or increasing model size, depending on the
-            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            model. ``INT8_INT16_MIXED`` uses 8-bit weights and 16-bit
             activations across all layers for improved numeric
             stability and accuracy at the cost of performance and model
-            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            size. ``INT8_INT16_MIXED_ACCURACY_FOCUSED`` is a mixed INT8
             and INT16 calibration-based mode that prioritizes accuracy
-            over throughput. `FP16_STANDARD` is FP16 quantization
+            over throughput. ``FP16_STANDARD`` is FP16 quantization
             without calibration for models that require higher accuracy
             and numeric stability at the cost of performance and model
             size.
@@ -167,10 +210,10 @@ def convert(
             specified, that version is used instead of creating a new
             one.
         quantization_data: Data used to quantize this model. This can be
-            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
-            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
-            dataset ID, or a path to a local quantization `.zip` file.
-            Pass the `.zip` path itself instead of `CUSTOM`; the SDK
+            a predefined domain (``DRIVING``, ``FOOD``, ``GENERAL``,
+            ``INDOORS``, ``RANDOM``, ``WAREHOUSE``, ``CLIP``, ``UNKNOWN``), a
+            dataset ID, or a path to a local quantization ``.zip`` file.
+            Pass the ``.zip`` path itself instead of ``CUSTOM``; the SDK
             normalizes local zip inputs automatically.
         max_quantization_images: Maximum number of quantization images.
         instance_tags: Tags for the model instance.
@@ -192,7 +235,6 @@ def convert(
         Conversion result containing the downloaded output path, export
         job, and exported model instance.
     """
-
     logger.info(f"Converting model to {target.name} format")
     logger.info(f"Options: {opts}")
 
@@ -473,10 +515,10 @@ def _resolve_exported_instance(
 
 
 def _get_instance_response(instance_id: str) -> ModelInstanceResponse | None:
-    """Fetch a model instance response, returning `None` if missing.
+    """Fetch a model instance response, returning ``None`` if missing.
 
     Returns:
-        The model instance response, or `None` if the instance does not
+        The model instance response, or ``None`` if the instance does not
         exist yet.
     """
     try:
@@ -631,8 +673,8 @@ def RVC2(
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
         license_type: License type.
-        is_public: Whether the model is public (`True`), private
-            (`False`), or team-scoped (`None`).
+        is_public: Whether the model is public (``True``), private
+            (``False``), or team-scoped (``None``).
         description_short: Short description of the model.
         description: Full description of the model.
         architecture_id: Architecture ID.
@@ -643,7 +685,7 @@ def RVC2(
             model is used instead of creating a new one.
         variant_version: Model version. If not specified, the version is
             auto-incremented from the latest version of the model. If no
-            versions exist, the version is `"0.1.0"`.
+            versions exist, the version is ``"0.1.0"``.
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
@@ -669,7 +711,6 @@ def RVC2(
         Conversion result containing the downloaded output path, export
         job, and exported model instance.
     """
-
     if hub_kwargs.get("quantization_mode") is not None:
         logger.warning(
             "`quantization_mode` is not supported for RVC2. It will be ignored."
@@ -732,8 +773,8 @@ def RVC3(
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
         license_type: License type.
-        is_public: Whether the model is public (`True`), private
-            (`False`), or team-scoped (`None`).
+        is_public: Whether the model is public (``True``), private
+            (``False``), or team-scoped (``None``).
         description_short: Short description of the model.
         description: Full description of the model.
         architecture_id: Architecture ID.
@@ -744,7 +785,7 @@ def RVC3(
             model is used instead of creating a new one.
         variant_version: Model version. If not specified, the version is
             auto-incremented from the latest version of the model. If no
-            versions exist, the version is `"0.1.0"`.
+            versions exist, the version is ``"0.1.0"``.
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
@@ -843,8 +884,8 @@ def RVC4(
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
         license_type: License type.
-        is_public: Whether the model is public (`True`), private
-            (`False`), or team-scoped (`None`).
+        is_public: Whether the model is public (``True``), private
+            (``False``), or team-scoped (``None``).
         description_short: Short description of the model.
         description: Full description of the model.
         architecture_id: Architecture ID.
@@ -855,25 +896,25 @@ def RVC4(
             model is used instead of creating a new one.
         variant_version: Model version. If not specified, the version is
             auto-incremented from the latest version of the model. If no
-            versions exist, the version is `"0.1.0"`.
+            versions exist, the version is ``"0.1.0"``.
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
         quantization_mode: Quantization mode to use during conversion.
-            Must be one of `INT8_STANDARD`,
-            `INT8_ACCURACY_FOCUSED`, `INT8_INT16_MIXED`,
-            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
-            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            Must be one of ``INT8_STANDARD``,
+            ``INT8_ACCURACY_FOCUSED``, ``INT8_INT16_MIXED``,
+            ``INT8_INT16_MIXED_ACCURACY_FOCUSED``, or
+            ``FP16_STANDARD``. ``INT8_STANDARD`` is standard INT8
             quantization with calibration for optimal performance and
-            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            model size. ``INT8_ACCURACY_FOCUSED`` is INT8 quantization
             with calibration that may improve accuracy without reducing
             performance or increasing model size, depending on the
-            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            model. ``INT8_INT16_MIXED`` uses 8-bit weights and 16-bit
             activations across all layers for improved numeric
             stability and accuracy at the cost of performance and model
-            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            size. ``INT8_INT16_MIXED_ACCURACY_FOCUSED`` is a mixed INT8
             and INT16 calibration-based mode that prioritizes accuracy
-            over throughput. `FP16_STANDARD` is FP16 quantization
+            over throughput. ``FP16_STANDARD`` is FP16 quantization
             without calibration for models that require higher accuracy
             and numeric stability at the cost of performance and model
             size.
@@ -883,10 +924,10 @@ def RVC4(
             specified, that version is used instead of creating a new
             one.
         quantization_data: Data used to quantize this model. This can be
-            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
-            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
-            dataset ID, or a path to a local quantization `.zip` file.
-            Pass the `.zip` path itself instead of `CUSTOM`; the SDK
+            a predefined domain (``DRIVING``, ``FOOD``, ``GENERAL``,
+            ``INDOORS``, ``RANDOM``, ``WAREHOUSE``, ``CLIP``, ``UNKNOWN``), a
+            dataset ID, or a path to a local quantization ``.zip`` file.
+            Pass the ``.zip`` path itself instead of ``CUSTOM``; the SDK
             normalizes local zip inputs automatically.
         max_quantization_images: Maximum number of quantization images.
         input_shape: Input shape for the model instance.
@@ -943,7 +984,7 @@ def Hailo(
         optimization_level: Optimization level for the conversion.
         compression_level: Compression level for the conversion.
         batch_size: Batch size for the conversion.
-        alls: `alls` parameters for the conversion.
+        alls: Hailo ALLS commands applied during conversion.
         opts: Additional conversion options. These can override config
             values.
         **hub_kwargs: Additional keyword arguments passed to `convert`.
@@ -952,8 +993,8 @@ def Hailo(
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
         license_type: License type.
-        is_public: Whether the model is public (`True`), private
-            (`False`), or team-scoped (`None`).
+        is_public: Whether the model is public (``True``), private
+            (``False``), or team-scoped (``None``).
         description_short: Short description of the model.
         description: Full description of the model.
         architecture_id: Architecture ID.
@@ -964,15 +1005,15 @@ def Hailo(
             model is used instead of creating a new one.
         variant_version: Model version. If not specified, the version is
             auto-incremented from the latest version of the model. If no
-            versions exist, the version is `"0.1.0"`.
+            versions exist, the version is ``"0.1.0"``.
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
         quantization_mode: Quantization mode.
         quantization_data: Data used to quantize this model. This can be
-            a predefined domain (`DRIVING`, `FOOD`, `GENERAL`,
-            `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`, `UNKNOWN`), a
-            dataset ID, or a path to a local quantization `.zip` file.
+            a predefined domain (``DRIVING``, ``FOOD``, ``GENERAL``,
+            ``INDOORS``, ``RANDOM``, ``WAREHOUSE``, ``CLIP``, ``UNKNOWN``), a
+            dataset ID, or a path to a local quantization ``.zip`` file.
         max_quantization_images: Maximum number of quantization images.
         domain: Domain of the model.
         variant_tags: Tags for the model variant.

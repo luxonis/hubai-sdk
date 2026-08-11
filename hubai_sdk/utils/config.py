@@ -1,3 +1,34 @@
+"""Parse and validate model conversion configuration.
+
+`Config` is the root configuration object used by hosted conversion. It accepts
+either a compact single-stage mapping or an explicit ``stages`` mapping. For
+model formats with embedded metadata, missing tensor shapes and data types are
+inferred from the source file.
+
+Example:
+    A compact YAML configuration can define preprocessing and target options.
+
+    .. code-block:: yaml
+
+        name: detector
+        input_model: detector.onnx
+        inputs:
+          - name: images
+            shape: [1, 3, 640, 640]
+            layout: NCHW
+            encoding:
+              from: RGB
+              to: BGR
+            mean_values: imagenet
+        rvc2:
+          number_of_shaves: 8
+          superblob: true
+
+Top-level tensor shortcuts such as ``shape``, ``layout``, ``mean_values``, and
+``scale_values`` are propagated to inputs that do not override them. Unknown
+fields are rejected to catch misspelled options early.
+"""
+
 from itertools import chain
 from pathlib import Path
 from typing import Annotated, Any, Literal, cast
@@ -37,10 +68,23 @@ NAMED_VALUES = {
 
 
 class CustomBaseModel(BaseModel):
+    """Base for strict configuration models that reject unknown
+    fields."""
+
     model_config = ConfigDict(extra="forbid")
 
 
 class OutputConfig(CustomBaseModel):
+    """Shape, layout, and data type of one model output.
+
+    Attributes:
+        name: Tensor name in the source model.
+        shape: Tensor dimensions. May be omitted when they can be inferred.
+        layout: Dimension labels such as ``"NCHW"``. A default is inferred
+            from ``shape`` when omitted.
+        data_type: Tensor element type.
+    """
+
     name: str
     shape: list[int] | None = None
     layout: str | None = None
@@ -74,13 +118,36 @@ class OutputConfig(CustomBaseModel):
 
 
 class EncodingConfig(CustomBaseModel):
-    from_: Annotated[
-        Encoding, Field(alias="from", serialization_alias="from")
-    ] = Encoding.RGB
+    """Input channel conversion performed before inference.
+
+    ``from_`` is the encoding supplied by the application and ``to`` is
+    the encoding expected by the model. The input field and serialized
+    field name for ``from_`` is ``"from"``.
+    """
+
+    from_: Encoding = Field(
+        default=Encoding.RGB,
+        alias="from",
+        serialization_alias="from",
+    )
     to: Encoding = Encoding.BGR
 
 
 class InputConfig(OutputConfig):
+    """Tensor metadata and preprocessing for one model input.
+
+    Scalar mean and scale values are expanded to three channels. The named
+    value ``"imagenet"`` expands to the standard ImageNet preprocessing
+    vectors. One-channel inputs are normalized to grayscale encoding.
+
+    Attributes:
+        scale_values: Per-channel divisor applied during preprocessing.
+        mean_values: Per-channel value subtracted during preprocessing.
+        frozen_value: Constant value for an input that is not supplied at run
+            time.
+        encoding: Source and destination channel ordering.
+    """
+
     scale_values: Annotated[list[float], Field(min_length=1)] | None = None
     mean_values: Annotated[list[float], Field(min_length=1)] | None = None
     frozen_value: Any | None = None
@@ -164,10 +231,14 @@ class InputConfig(OutputConfig):
 
 
 class TargetConfig(CustomBaseModel):
+    """Options shared by every conversion target."""
+
     disable_calibration: bool = False
 
 
 class HailoConfig(TargetConfig):
+    """Hailo Dataflow Compiler and hardware options."""
+
     optimization_level: Literal[-100, 0, 1, 2, 3, 4] = 2
     compression_level: Literal[0, 1, 2, 3, 4, 5] = 2
     batch_size: int = 8
@@ -179,12 +250,20 @@ class HailoConfig(TargetConfig):
 
 
 class BlobBaseConfig(TargetConfig):
+    """Shared OpenVINO Model Optimizer and blob compiler options."""
+
     mo_args: list[str] = []
     compile_tool_args: list[str] = []
     compress_to_fp16: bool = True
 
 
 class RVC2Config(BlobBaseConfig):
+    """RVC2 compilation options.
+
+    A superblob always uses eight SHAVE cores; validation changes
+    ``number_of_shaves`` to ``8`` when necessary.
+    """
+
     number_of_shaves: int = 8
     superblob: bool = True
     n_workers: PositiveInt | None = None
@@ -199,10 +278,14 @@ class RVC2Config(BlobBaseConfig):
 
 
 class RVC3Config(BlobBaseConfig):
+    """RVC3 compilation and POT target options."""
+
     pot_target_device: PotDevice = PotDevice.VPU
 
 
 class RVC4Config(TargetConfig):
+    """Qualcomm SNPE conversion, quantization, and graph options."""
+
     compress_to_fp16: bool = False
     snpe_onnx_to_dlc_args: list[str] = []
     snpe_dlc_quant_args: list[str] = []
@@ -226,6 +309,23 @@ class RVC4Config(TargetConfig):
 
 
 class SingleStageConfig(CustomBaseModel):
+    """Configuration for one model in a conversion pipeline.
+
+    Inputs and outputs are inferred from ONNX, OpenVINO IR, and TFLite models
+    when omitted. PyTorch inputs are supported for YOLO models and use the
+    configured ``yolo_input_shape``.
+
+    Attributes:
+        input_model: Local or remote path to the source model.
+        input_bin: Weights file paired with an OpenVINO XML graph.
+        inputs: Input tensor definitions and preprocessing.
+        outputs: Output tensor definitions.
+        hailo: Hailo-specific settings.
+        rvc2: RVC2-specific settings.
+        rvc3: RVC3-specific settings.
+        rvc4: RVC4-specific settings.
+    """
+
     input_model: Path
     input_bin: Path | None = None
     input_file_type: InputFileType
@@ -427,6 +527,18 @@ class SingleStageConfig(CustomBaseModel):
 
 # TODO: Output remote url
 class Config(LuxonisConfig):
+    """Root configuration for a single- or multi-stage model.
+
+    A mapping without ``stages`` is wrapped as a single stage automatically.
+    Shared keys placed beside ``stages`` are copied into each stage unless the
+    stage supplies its own value.
+
+    Attributes:
+        stages: Stage configurations keyed by stage name.
+        name: Pipeline name. Derived from stage names when omitted.
+        rich_logging: Whether conversion tools should use rich terminal logs.
+    """
+
     stages: Annotated[dict[str, SingleStageConfig], Field(min_length=1)]
     name: str
     rich_logging: bool = True
@@ -487,9 +599,8 @@ def _extract_bin_xml_from_ir(
     """Extracts the corresponding second path from a single IR path.
 
     We assume that the base filename matches between the .bin and .xml
-    file unless an explicit `input_bin_path` is provided.
+    file unless an explicit ``input_bin_path`` is provided.
     """
-
     if not isinstance(ir_path, str) and not isinstance(ir_path, Path):
         raise TypeError("`input_path` must be str or Path.")
     ir_path = Path(ir_path)

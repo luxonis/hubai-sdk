@@ -1,3 +1,5 @@
+"""Read tensor shapes and element types from supported model files."""
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,6 +10,15 @@ from hubai_sdk.utils.types import DataType
 
 @dataclass
 class Metadata:
+    """Input and output tensor metadata extracted from a model.
+
+    Attributes:
+        input_shapes: Input shapes keyed by tensor name.
+        input_dtypes: Input element types keyed by tensor name.
+        output_shapes: Output shapes keyed by tensor name.
+        output_dtypes: Output element types keyed by tensor name.
+    """
+
     input_shapes: dict[str, list[int]]
     input_dtypes: dict[str, DataType]
     output_shapes: dict[str, list[int]]

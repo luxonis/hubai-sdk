@@ -1,3 +1,23 @@
+"""Public literal types accepted by HubAI service functions.
+
+These aliases enumerate values sent to the HubAI API. They are useful when
+building typed wrappers or configuration models; ordinary callers may pass the
+corresponding strings directly.
+
+Important aliases:
+    - `Task` describes the problem solved by a model.
+    - `License` contains license names accepted for model metadata.
+    - `QuantizationMode` selects the precision and calibration strategy.
+    - `QuantizationData` accepts a built-in domain or an ``aid_`` dataset ID.
+    - `YoloVersion` selects the YOLO output decoder contract.
+
+`Visibility` represents the API's three string labels: ``"public"``,
+``"private"``, and ``"team"``. Public resource functions currently expose an
+``is_public`` flag instead, and the meaning of ``None`` depends on the
+operation: it creates a team-visible model, disables visibility filtering in
+list operations, and leaves visibility unchanged in `update_model`.
+"""
+
 from typing import Annotated, Literal, TypeAlias
 
 from pydantic import Field

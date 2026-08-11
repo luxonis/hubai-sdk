@@ -1,3 +1,35 @@
+"""Manage concrete model artifacts and their files.
+
+An instance belongs to one model variant and represents a specific artifact
+format, for example ONNX input or an RVC4 export. The service supports listing
+and creating instances, uploading source files, reading NN Archive
+configuration, and downloading output files.
+
+Download behavior:
+    `download_instance` writes all files associated with an instance. If
+    ``output_dir`` is omitted it creates a directory named after the instance
+    slug in the current working directory. Existing destination files are
+    reused unless ``force=True``.
+
+Example:
+    .. python::
+
+        from hubai_sdk.utils.types import ModelType
+
+        instance = client.instances.create_instance(
+            "network",
+            variant_id=variant.id,
+            model_type=ModelType.ONNX,
+            input_shape=[1, 3, 640, 640],
+        )
+        client.instances.upload_file("network.onnx", instance.id)
+
+Note:
+    Most users do not need to create and upload instances manually. The
+    functions in `hubai_sdk.services.convert` coordinate these steps for a
+    complete hosted conversion.
+"""
+
 import signal
 from pathlib import Path
 from types import FrameType
@@ -133,7 +165,7 @@ def list_instances(
     sort: str = "updated",
     order: Order = "desc",
 ) -> list[ModelInstanceResponse]:
-    """List the model instances in the HubAI.
+    """List model instances visible to the authenticated team.
 
     Args:
         platforms: Filter the listed model instances by platform.
@@ -151,15 +183,16 @@ def list_instances(
             compression level. Only relevant for Hailo models.
         optimization_level: Filter the listed model instances by
             optimization level. Only relevant for Hailo models.
-        include_model_name: If `True`, include the model name and model
+        include_model_name: If ``True``, include the model name and model
             variant name in the response. Otherwise,
             `ModelInstanceResponse.model_name` and
-            `ModelInstanceResponse.model_variant_name` are `None`.
+            `ModelInstanceResponse.model_variant_name` are ``None``. Enabling
+            this performs two additional API requests per result.
         limit: Maximum number of model instances to return.
         sort: Field to sort the model instances by. It should be a field
-            name from `ModelInstanceResponse`, such as `"name"`, `"id"`,
-            or `"updated"`.
-        order: Sort order. Must be `"asc"` or `"desc"`.
+            name from `ModelInstanceResponse`, such as ``"name"``, ``"id"``,
+            or ``"updated"``.
+        order: Sort order. Must be ``"asc"`` or ``"desc"``.
 
     Returns:
         A list of matching model instance resources.
@@ -268,7 +301,7 @@ def list_instances_cli(
     )
 )
 def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
-    """Returns information about a model instance.
+    """Get one model instance by UUID or slug.
 
     Args:
         identifier: The model instance ID or slug.
@@ -309,7 +342,7 @@ def download_instance(
     output_dir: str | None = None,
     force: bool = False,
 ) -> Path:
-    """Downloads files from a model instance.
+    """Download every file attached to a model instance.
 
     Args:
         identifier: The model instance ID or slug.
@@ -320,8 +353,12 @@ def download_instance(
             exist.
 
     Returns:
-        Path to the downloaded file or last downloaded file when the
-        instance contains multiple files.
+        Path to the downloaded file. When the instance has multiple files,
+        this is the last file processed.
+
+    Raises:
+        ResourceNotFoundError: If ``identifier`` cannot be resolved.
+        HubApiError: If the instance has no files or a download fails.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -439,37 +476,37 @@ def create_instance(
     is_deployable: bool | None = None,
     yolo_version: YoloVersion | None = None,
 ) -> ModelInstanceResponse:
-    """Creates a new model instance.
+    """Create a model artifact beneath a variant.
 
     Args:
-        name: The name of the model instance.
-        variant_id: The ID of the model variant to create an instance for.
-        model_type: The type of the model.
-        parent_id: The ID of the parent model instance.
+        name: Human-readable instance name.
+        variant_id: UUID of the model variant that owns this instance.
+        model_type: Source or exported artifact type.
+        parent_id: Source instance UUID when this instance is an export.
         quantization_mode: Quantization mode for the model. Must be one
-            of `INT8_STANDARD`, `INT8_ACCURACY_FOCUSED`,
-            `INT8_INT16_MIXED`,
-            `INT8_INT16_MIXED_ACCURACY_FOCUSED`, or
-            `FP16_STANDARD`. `INT8_STANDARD` is standard INT8
+            of ``INT8_STANDARD``, ``INT8_ACCURACY_FOCUSED``,
+            ``INT8_INT16_MIXED``,
+            ``INT8_INT16_MIXED_ACCURACY_FOCUSED``, or
+            ``FP16_STANDARD``. ``INT8_STANDARD`` is standard INT8
             quantization with calibration for optimal performance and
-            model size. `INT8_ACCURACY_FOCUSED` is INT8 quantization
+            model size. ``INT8_ACCURACY_FOCUSED`` is INT8 quantization
             with calibration that may improve accuracy without reducing
             performance or increasing model size, depending on the
-            model. `INT8_INT16_MIXED` uses 8-bit weights and 16-bit
+            model. ``INT8_INT16_MIXED`` uses 8-bit weights and 16-bit
             activations across all layers for improved numeric
             stability and accuracy at the cost of performance and model
-            size. `INT8_INT16_MIXED_ACCURACY_FOCUSED` is a mixed INT8
+            size. ``INT8_INT16_MIXED_ACCURACY_FOCUSED`` is a mixed INT8
             and INT16 calibration-based mode that prioritizes accuracy
-            over throughput. `FP16_STANDARD` is FP16 quantization
+            over throughput. ``FP16_STANDARD`` is FP16 quantization
             without calibration for models that require higher accuracy
             and numeric stability at the cost of performance and model
             size.
         quantization_data: Quantization data for the model. This can be
-            one of the predefined domains `DRIVING`, `FOOD`,
-            `GENERAL`, `INDOORS`, `RANDOM`, `WAREHOUSE`, `CLIP`,
-            `CUSTOM`, or `UNKNOWN`, or a dataset ID. For conversion
-            helpers, pass the local `.zip` path itself instead of
-            `CUSTOM`; the SDK normalizes that input before instance
+            one of the predefined domains ``DRIVING``, ``FOOD``,
+            ``GENERAL``, ``INDOORS``, ``RANDOM``, ``WAREHOUSE``, ``CLIP``,
+            ``CUSTOM``, or ``UNKNOWN``, or a dataset ID. For conversion
+            helpers, pass the local ``.zip`` path itself instead of
+            ``CUSTOM``; the SDK normalizes that input before instance
             creation.
         tags: Tags for the model instance.
         input_shape: Input shape for the model instance.
@@ -549,7 +586,7 @@ def create_instance_cli(
     )
 )
 def delete_instance(identifier: UUID | str) -> None:
-    """Deletes a model instance.
+    """Delete a model instance from HubAI.
 
     Args:
         identifier: The model instance ID or slug.
@@ -585,7 +622,7 @@ def delete_instance_cli(identifier: UUID | str) -> None:
     )
 )
 def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
-    """Returns the configuration of a model instance.
+    """Return the NN Archive configuration of a model instance.
 
     Args:
         identifier: The model instance ID or slug.
@@ -620,7 +657,7 @@ def get_config_cli(identifier: UUID | str) -> None:
 def get_files(
     identifier: UUID | str,
 ) -> list[ModelInstanceFileResponse]:
-    """Returns the files of a model instance.
+    """Return metadata for files attached to a model instance.
 
     Args:
         identifier: The model instance ID or slug.
@@ -653,7 +690,7 @@ def get_files_cli(identifier: UUID | str) -> None:
     )
 )
 def upload_file(file_path: str, identifier: UUID | str) -> None:
-    """Uploads a file to a model instance using async upload.
+    """Upload a file directly to storage for a model instance.
 
     This function initiates an async upload by first obtaining a signed
     upload policy from the server, then uploading the file directly to
@@ -662,6 +699,11 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
     Args:
         file_path: Path to the file to upload.
         identifier: The model instance ID or slug.
+
+    Raises:
+        FileNotFoundError: If ``file_path`` does not exist.
+        ResourceNotFoundError: If ``identifier`` cannot be resolved.
+        HubApiError: If the signed upload or its asynchronous job fails.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -740,7 +782,17 @@ def upload_quantization_zip(
     file_path: str,
     job_id: UUID | str,
 ) -> None:
-    """Uploads a custom quantization zip for an export job."""
+    """Upload a custom calibration archive for an export job.
+
+    Args:
+        file_path: Path to a local ZIP archive containing calibration inputs.
+        job_id: Export job UUID returned by HubAI.
+
+    Raises:
+        FileNotFoundError: If ``file_path`` does not exist.
+        InputError: If the file does not have a ``.zip`` extension.
+        HubApiError: If HubAI cannot issue or complete the upload.
+    """
     if isinstance(job_id, UUID):
         job_id = str(job_id)
 

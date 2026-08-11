@@ -1,3 +1,25 @@
+"""Manage named and versioned variants of HubAI models.
+
+A variant groups related model instances under a semantic version. For
+example, a model can have separate variants for different input resolutions or
+training datasets, and each variant can have versions such as ``"1.0.0"`` and
+``"1.1.0"``.
+
+Example:
+    .. python::
+
+        variant = client.variants.create_variant(
+            "coco-640x640",
+            model_id=model.id,
+            variant_version="1.0.0",
+            tags=["coco"],
+        )
+        instances = client.instances.list_instances(variant_id=variant.id)
+
+Functions accepting an ``identifier`` resolve UUIDs and HubAI slugs. Deleting
+a variant removes the resource remotely and cannot be undone through the SDK.
+"""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -81,18 +103,19 @@ def list_variants(
     sort: str = "updated",
     order: Order = "desc",
 ) -> list[ModelVersionResponse]:
-    """List the model versions in the HubAI.
+    """List model variants visible to the authenticated team.
 
     Args:
-        model_id: UUID | str | None. Filter the listed model versions by model ID.
-        name: str | None. Filter the listed model versions by name.
-        variant_slug: str | None. Filter the listed model versions by variant slug.
-        variant_version: str | None. Filter the listed model versions by version.
-        is_public: bool | None. Filter the listed model versions by visibility.
-        include_model_name: bool. Whether to include the model name in the response. By default, it is False and the ModelVersionResponse will have "model_name" field as None. If True, the ModelVersionResponse will have "model_name" field as the name of the model.
-        limit: int. Limit the number of model versions to show.
-        sort: str. Sort the model versions by this field. It should be the field name from the ModelVersionResponse. For example, "name", "id", "updated", etc.
-        order: Literal["asc", "desc"]. Order to sort the model versions by. It should be "asc" or "desc".
+        model_id: Keep variants belonging to this model UUID.
+        name: Keep variants with this name.
+        variant_slug: Keep variants with this slug.
+        variant_version: Keep variants with this version string.
+        is_public: Filter by visibility, or leave as ``None`` for no filter.
+        include_model_name: Resolve and populate the parent ``model_name``.
+            This performs an additional request for each returned variant.
+        limit: Maximum number of variants to return.
+        sort: `ModelVersionResponse` field used for sorting.
+        order: Sort in ascending or descending order.
 
     Returns:
         A list of matching model version resources.
@@ -167,10 +190,10 @@ def list_variants_cli(
     )
 )
 def get_variant(identifier: UUID | str) -> ModelVersionResponse:
-    """Returns information about a model version.
+    """Get one model variant by UUID or slug.
 
     Args:
-        identifier: UUID | str. The model version ID or slug.
+        identifier: Variant UUID, slug, or full HubAI slug.
 
     Returns:
         The resolved model version resource.
@@ -210,22 +233,25 @@ def create_variant(
     domain: str | None = None,
     tags: list[str] | None = None,
 ) -> ModelVersionResponse:
-    """Creates a new variant of a model.
+    """Create a versioned variant beneath a model.
 
     Args:
-        name: str. The name of the model variant.
-        model_id: UUID | str. The ID of the model to create a variant for.
-        variant_version: str. The version of the model variant.
-        description: str | None. Full description of the model variant.
-        repository_url: str | None. URL of the related repository.
-        commit_hash: str | None. Commit hash.
-        domain: str | None. Domain of the model variant.
-        tags: list[str] | None. List of tags for the model variant.
+        name: Human-readable variant name.
+        model_id: UUID of the parent model.
+        variant_version: Version string for this variant.
+        description: Full description of the variant.
+        repository_url: Source repository URL.
+        commit_hash: Source revision used to produce the variant.
+        domain: Application or dataset domain.
+        tags: Searchable labels for the variant.
 
     Returns:
         The created model version resource.
-    """
 
+    Raises:
+        ResourceConflictError: If the variant already exists for the model.
+        HubApiError: If HubAI rejects the request for another reason.
+    """
     data = {
         "model_id": str(model_id) if model_id else None,
         "name": name,
@@ -294,10 +320,10 @@ def create_variant_cli(
     )
 )
 def delete_variant(identifier: UUID | str) -> None:
-    """Deletes a model variant.
+    """Delete a model variant from HubAI.
 
     Args:
-        identifier: UUID | str. The model variant ID or slug.
+        identifier: Variant UUID, slug, or full HubAI slug.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

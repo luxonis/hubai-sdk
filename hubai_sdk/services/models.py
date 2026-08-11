@@ -1,3 +1,32 @@
+"""Create and manage top-level model resources.
+
+A model contains shared metadata such as its display name, supported tasks,
+license, and visibility. Actual files belong to model instances beneath a
+versioned variant; see `hubai_sdk.services.variants` and
+`hubai_sdk.services.instances`.
+
+Identifiers:
+    Functions that accept an ``identifier`` support a UUID, a model slug, or a
+    full HubAI slug copied from the web application. This makes slugs suitable
+    for configuration files while UUIDs remain useful for programmatic flows.
+
+Visibility:
+    During creation, ``is_public=True`` makes a model public, ``False`` makes
+    it private, and ``None`` selects team visibility. For list operations,
+    ``None`` means no visibility filter. For updates, ``None`` leaves the
+    existing visibility unchanged.
+
+Example:
+    .. python::
+
+        models = client.models.list_models(
+            tasks=["OBJECT_DETECTION"],
+            is_public=True,
+            limit=10,
+        )
+        model = client.models.get_model(models[0].id)
+"""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -75,17 +104,19 @@ def list_models(
     sort: str = "updated",
     order: Order = "desc",
 ) -> list[ModelResponse]:
-    """List the models in the HubAI.
+    """List models visible to the authenticated HubAI team.
 
     Args:
-        tasks: list[Task] | None. Filter the listed models by tasks.
-        license_type: License | None. Filter the listed models by license type.
-        is_public: bool | None. Filter the listed models by public status.
-        project_id: str | None. Filter the listed models by project ID.
-        luxonis_only: bool. Filter the listed models by Luxonis only.
-        limit: int. Maximum number of models to return.
-        sort: str. Field to sort the models by. It should be the field name from the ModelResponse. For example, "name", "id", "updated", etc.
-        order: Order. Order to sort the models by. It should be "asc" or "desc".
+        tasks: Filter models by supported tasks.
+        license_type: Keep models with this license.
+        is_public: Filter by public status. Leave as ``None`` to include every
+            visibility available to the API key.
+        project_id: Keep models belonging to this project.
+        luxonis_only: Whether to return only Luxonis-maintained models.
+        limit: Maximum number of models to return.
+        sort: `ModelResponse` field used for sorting, such as ``"name"``,
+            ``"id"``, or ``"updated"``.
+        order: Sort in ascending or descending order.
 
     Returns:
         A list of matching model resources.
@@ -152,10 +183,10 @@ def list_models_cli(
     )
 )
 def get_model(identifier: UUID | str) -> ModelResponse:
-    """Get the model information from the HubAI.
+    """Get one model by UUID or slug.
 
     Args:
-        identifier: UUID | str. The model ID or slug.
+        identifier: Model UUID, slug, or full HubAI slug.
 
     Returns:
         The resolved model resource.
@@ -194,21 +225,27 @@ def create_model(
     links: list[str] | None = None,
     is_yolo: bool = False,
 ) -> ModelResponse:
-    """Creates a new model resource.
+    """Create a model resource.
 
     Args:
-        name: str. The name of the model.
-        license_type: License. The type of the license.
-        is_public: bool | None. Whether the model is public (True), private (False), or team (None).
-        description: str | None. Full description of the model.
-        description_short: str. Short description of the model.
-        architecture_id: UUID | str | None. The architecture ID.
-        tasks: list[Task] | None. List of tasks this model supports.
-        links: list[str] | None. List of links to related resources.
-        is_yolo: bool. Whether the model is a YOLO model.
+        name: Human-readable model name. HubAI derives the slug from it.
+        license_type: License attached to the model metadata.
+        is_public: ``True`` for public, ``False`` for private, or ``None`` for
+            team visibility.
+        description: Full model description.
+        description_short: Short summary shown in model listings.
+        architecture_id: Related architecture UUID, if known.
+        tasks: Tasks supported by the model.
+        links: URLs for source code, papers, or other related resources.
+        is_yolo: Whether the model uses a supported YOLO output contract.
 
     Returns:
         The created model resource.
+
+    Raises:
+        ResourceConflictError: If a model with the derived slug already
+            exists.
+        HubApiError: If HubAI rejects the request for another reason.
     """
     data = {
         "name": name,
@@ -285,18 +322,21 @@ def update_model(
     links: list[str] | None = None,
     is_yolo: bool | None = None,
 ) -> ModelResponse:
-    """Updates a model.
+    """Update fields on an existing model.
+
+    Only arguments whose value is not ``None`` are sent to HubAI. This means
+    optional text fields cannot be cleared with this helper.
 
     Args:
-        identifier: UUID | str. The model ID or slug.
-        license_type: License | None. The type of the license.
-        is_public: bool | None. Whether the model is public (True), private (False), or team (None).
-        description: str | None. Full description of the model.
-        description_short: str | None. Short description of the model.
-        architecture_id: UUID | str | None. The architecture ID.
-        tasks: list[Task] | None. List of tasks this model supports.
-        links: list[str] | None. List of links to related resources.
-        is_yolo: bool | None. Whether the model is a YOLO model.
+        identifier: Model UUID, slug, or full HubAI slug.
+        license_type: Replacement license.
+        is_public: Replacement public/private state.
+        description: Replacement full description.
+        description_short: Replacement short description.
+        architecture_id: Replacement architecture UUID.
+        tasks: Replacement task list.
+        links: Replacement related-resource links.
+        is_yolo: Replacement YOLO flag.
 
     Returns:
         The updated model resource.
@@ -380,10 +420,14 @@ def update_model_cli(
     )
 )
 def delete_model(identifier: UUID | str) -> None:
-    """Deletes a model.
+    """Delete a model from HubAI.
 
     Args:
-        identifier: UUID | str. The model ID or slug.
+        identifier: Model UUID, slug, or full HubAI slug.
+
+    Raises:
+        ResourceNotFoundError: If ``identifier`` cannot be resolved.
+        HubApiError: If HubAI refuses the deletion.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

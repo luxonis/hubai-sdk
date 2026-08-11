@@ -1,4 +1,27 @@
+"""Exceptions raised for HubAI API and user-input failures.
+
+Service functions translate HTTP failures into this hierarchy so callers
+do not need to inspect status codes. Catch `HubApiError` to handle every
+remote API failure, or one of its subclasses when recovery depends on
+the cause.
+"""
+
+__all__ = [
+    "HubApiError",
+    "InputError",
+    "ResourceConflictError",
+    "ResourceNotFoundError",
+    "ValidationError",
+]
+
+
 class HubApiError(Exception):
+    """Base exception for errors reported by the HubAI API.
+
+    Attributes:
+        status_code: HTTP status code returned by HubAI, when available.
+    """
+
     def __init__(
         self, message: str, *, status_code: int | None = None
     ) -> None:
@@ -7,6 +30,13 @@ class HubApiError(Exception):
 
 
 class ResourceNotFoundError(HubApiError, LookupError):
+    """Raised when a requested HubAI resource cannot be resolved.
+
+    Attributes:
+        identifier: UUID or slug that could not be resolved.
+        endpoint: API resource collection that was searched.
+    """
+
     def __init__(self, identifier: str, endpoint: str) -> None:
         self.identifier = identifier
         self.endpoint = endpoint
@@ -18,12 +48,13 @@ class ResourceNotFoundError(HubApiError, LookupError):
 
 
 class ResourceConflictError(HubApiError, ValueError):
-    pass
+    """Raised when an operation conflicts with an existing resource."""
 
 
 class ValidationError(HubApiError, ValueError):
-    pass
+    """Raised when HubAI rejects request fields or values."""
 
 
 class InputError(ValueError):
-    pass
+    """Raised when SDK input is incomplete or internally
+    inconsistent."""
