@@ -18,21 +18,3 @@ jobs:
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
-
-  docs:
-    needs: pre-commit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-
-      - name: Install dependencies
-        run: pip install 'pydoctor~=25.10'
-
-      - name: Build docs
-        run: >
-          python tools/build_pydoctor_docs.py
-          --mode current
-          --output /tmp/hubai-sdk-apidocs
