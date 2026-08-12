@@ -1,3 +1,57 @@
+"""Provide the ``hubai`` command-line interface.
+
+The CLI exposes the same HubAI operations as :class:`HubAIClient` without
+writing Python code. Install the package to use ``hubai``; running
+``python -m hubai_sdk`` is equivalent during development.
+
+Authentication
+--------------
+
+Run ``hubai login`` to open the HubAI API-key page and store the key securely.
+Use ``hubai login --relogin`` to replace a stored key and ``hubai logout`` to
+remove it. Alternatively, set ``HUBAI_API_KEY`` in the environment.
+
+Command groups
+--------------
+
+* ``hubai model`` manages model metadata: ``ls``, ``info``, ``create``,
+  ``update``, and ``delete``.
+* ``hubai variant`` manages model variants: ``ls``, ``info``, ``create``, and
+  ``delete``.
+* ``hubai instance`` manages model artifacts: ``ls``, ``info``, ``create``,
+  ``delete``, ``config``, ``files``, ``upload``, and ``download``.
+* ``hubai convert TARGET`` uploads a model, runs hosted conversion, and
+  downloads the output. ``TARGET`` is one of ``rvc2``, ``rvc3``, ``rvc4``, or
+  ``hailo``.
+
+Examples
+--------
+
+.. code-block:: bash
+
+    hubai login
+    hubai model ls
+    hubai model info <model-id-or-slug>
+    hubai model create my-model --license-type MIT --tasks OBJECT_DETECTION
+    hubai variant ls
+    hubai instance ls
+    hubai convert rvc2 --path /path/to/model.onnx --name my-model
+
+Help and parameter reference
+----------------------------
+
+Use ``hubai --help`` to see command groups and ``hubai <command> --help`` for
+the exact CLI syntax, choices, and defaults. For example, use
+``hubai convert --help`` to see conversion options.
+
+The CLI command parameters are derived from the public service functions. The
+generated API reference for `hubai_sdk.services.models`,
+`hubai_sdk.services.variants`, `hubai_sdk.services.instances`, and
+`hubai_sdk.services.convert` is the detailed reference for the corresponding
+resource and conversion parameters. The conversion service also documents
+target-specific options and calibration behavior.
+"""
+
 import os
 import sys
 import webbrowser
