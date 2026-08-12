@@ -39,6 +39,112 @@ Quantization:
     with ``aid_``, or a local ZIP file. Passing a ZIP path uploads it for the
     export job. RVC2 and RVC3 ignore quantization inputs because those helpers
     expose their platform-specific precision controls instead.
+
+Conversion parameters
+---------------------
+
+The conversion API accepts parameters for the input, HubAI resources, and the
+selected target. The function signatures below provide exact types and defaults;
+this overview groups the parameters by purpose.
+
+General parameters
+^^^^^^^^^^^^^^^^^^
+
+* ``path``: Input model file, YAML configuration, or NN Archive.
+* ``tool_version``: Version of the conversion tool.
+* ``quantization_mode``: RVC4 quantization mode. ``FP16_STANDARD`` skips
+  calibration.
+* ``output_dir``: Directory for downloaded output files. If omitted, the
+  downloader creates a directory named after the exported instance slug in the
+  current working directory.
+
+YOLO parameters
+^^^^^^^^^^^^^^^
+
+* ``yolo_input_shape``: YOLO input shape. It defaults to ``[640, 640]`` when
+  omitted or invalid.
+* ``yolo_version``: YOLO version, such as ``"yolov8"``. Prefer auto-detection
+  and set this only when detection fails.
+* ``yolo_class_names``: Model class names.
+
+Model parameters
+^^^^^^^^^^^^^^^^
+
+These parameters create a HubAI Model resource unless ``model_id`` is supplied.
+
+* ``model_id``: ID of an existing model to reuse.
+* ``name``: Model name. It defaults to the configured or input model name.
+* ``license_type``: License type for the model.
+* ``is_public``: Whether the model is public, private, or team-scoped.
+* ``description`` and ``description_short``: Full and short model
+  descriptions. The short description defaults to ``"<empty>"``.
+* ``architecture_id``: Model architecture ID.
+* ``tasks``: Tasks the model supports.
+* ``links``: Additional links for the model.
+* ``is_yolo``: Whether the model is a YOLO model.
+
+Model variant parameters
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``model_id``: ID of an existing model to which to add a variant.
+* ``variant_version``: Version of the model variant. HubAI uses the next
+  version automatically when it is omitted.
+* ``variant_description``: Full variant description.
+* ``repository_url`` and ``commit_hash``: Related repository URL and commit.
+* ``domain``: Variant domain.
+* ``variant_tags``: Variant tags.
+
+Model instance parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``variant_id``: ID of an existing model variant to reuse.
+* ``quantization_data``: Predefined calibration domain, an ``aid_`` dataset ID,
+  or a local custom ``.zip`` path. Pass the ZIP path rather than ``CUSTOM``.
+* ``max_quantization_images``: Maximum number of images for quantization.
+* ``instance_tags``: Model-instance tags.
+* ``input_shape``: Model input shape.
+* ``is_deployable``: Whether the model instance is deployable.
+
+RVC2 parameters
+^^^^^^^^^^^^^^^
+
+* ``mo_args``: Arguments for the Model Optimizer.
+* ``compile_tool_args``: Arguments for the BLOB compiler.
+* ``compress_to_fp16``: Whether to compress model weights to FP16. Defaults to
+  ``True``.
+* ``number_of_shaves``: Number of shaves to use. Defaults to ``8``.
+* ``superblob``: Whether to create a superblob. Defaults to ``True``; disable
+  it to use legacy RVC2 conversion.
+
+RVC3 parameters
+^^^^^^^^^^^^^^^
+
+* ``mo_args``: Arguments for the Model Optimizer.
+* ``compile_tool_args``: Arguments for the BLOB compiler.
+* ``compress_to_fp16``: Whether to compress model weights to FP16. Defaults to
+  ``True``.
+* ``pot_target_device``: Target device for post-training optimization. Defaults
+  to ``"VPU"``.
+
+RVC4 parameters
+^^^^^^^^^^^^^^^
+
+* ``snpe_onnx_to_dlc_args``: Arguments for ``snpe-onnx-to-dlc``.
+* ``snpe_dlc_quant_args``: Arguments for ``snpe-dlc-quant``.
+* ``snpe_dlc_graph_prepare_args``: Arguments for ``snpe-dlc-graph-prepare``.
+* ``use_per_channel_quantization``: Whether to use per-channel quantization.
+  Defaults to ``True``.
+* ``use_per_row_quantization``: Whether to use per-row quantization. Defaults
+  to ``False``.
+* ``htp_socs``: HTP SoCs to use. Defaults to ``["sm8550"]``.
+
+Hailo parameters
+^^^^^^^^^^^^^^^^
+
+* ``optimization_level``: Optimization level. Defaults to ``2``.
+* ``compression_level``: Compression level. Defaults to ``2``.
+* ``batch_size``: Quantization batch size. Defaults to ``8``.
+* ``alls``: Additional ALLS parameters.
 """
 
 import time
@@ -166,17 +272,19 @@ def convert(
 
     Args:
         target: Target platform.
-        path: Path to the model file, NN Archive, or configuration file.
+        path: Path to the input model file, NN Archive, or YAML configuration
+            file.
         name: Model name. If not specified, the name is taken from the
             configuration file or the model file.
-        license_type: License type.
+        license_type: License type for a newly created model.
         is_public: Whether the model is public (``True``), private
             (``False``), or team-scoped (``None``).
-        description_short: Short description of the model.
+        description_short: Short description of the model. Defaults to
+            ``"<empty>"``.
         description: Full description of the model.
         architecture_id: Architecture ID.
-        tasks: Tasks this model supports.
-        links: Links to related resources.
+        tasks: Tasks the model supports.
+        links: Additional links for the model.
         is_yolo: Whether the model is a YOLO model.
         model_id: ID of an existing model resource. If specified, that
             model is used instead of creating a new one.
@@ -186,7 +294,7 @@ def convert(
         variant_description: Full description of the model variant.
         repository_url: URL of the repository.
         commit_hash: Commit hash.
-        quantization_mode: Quantization mode to use during conversion.
+        quantization_mode: Quantization mode to use during RVC4 conversion.
             Must be one of ``INT8_STANDARD``,
             ``INT8_ACCURACY_FOCUSED``, ``INT8_INT16_MIXED``,
             ``INT8_INT16_MIXED_ACCURACY_FOCUSED``, or
@@ -203,8 +311,8 @@ def convert(
             over throughput. ``FP16_STANDARD`` is FP16 quantization
             without calibration for models that require higher accuracy
             and numeric stability at the cost of performance and model
-            size.
-        domain: Domain of the model.
+            size. ``FP16_STANDARD`` skips calibration.
+        domain: Domain of the model variant.
         variant_tags: Tags for the model variant.
         variant_id: ID of an existing model version resource. If
             specified, that version is used instead of creating a new
@@ -215,7 +323,8 @@ def convert(
             dataset ID, or a path to a local quantization ``.zip`` file.
             Pass the ``.zip`` path itself instead of ``CUSTOM``; the SDK
             normalizes local zip inputs automatically.
-        max_quantization_images: Maximum number of quantization images.
+        max_quantization_images: Maximum number of images to use for
+            quantization.
         instance_tags: Tags for the model instance.
         input_shape: Input shape for the model instance.
         is_deployable: Whether the model instance is deployable.
@@ -226,8 +335,10 @@ def convert(
         tool_version: Version of the tool used for conversion. For
             RVC2 and RVC3 this is the IR version, while for RVC4 this
             is the SNPE version.
-        yolo_input_shape: Input shape for YOLO models.
-        yolo_version: YOLO version.
+        yolo_input_shape: Input shape for YOLO models. It defaults to
+            ``[640, 640]`` when omitted or invalid.
+        yolo_version: YOLO version, such as ``"yolov8"``. Usually omit this
+            to use auto-detection; specify it only if detection fails.
         yolo_class_names: Class names for YOLO models.
         opts: Additional options for the conversion process.
 
@@ -661,10 +772,12 @@ def RVC2(
         path: Path to the model file to convert.
         mo_args: Additional arguments for the Model Optimizer.
         compile_tool_args: Additional arguments for the compile tool.
-        compress_to_fp16: Whether to compress the model weights to
-            FP16.
-        number_of_shaves: Number of shaves to use for the conversion.
-        superblob: Whether to create a superblob for the model.
+        compress_to_fp16: Whether to compress model weights to FP16.
+            Defaults to ``True``.
+        number_of_shaves: Number of shaves to use for the conversion. Defaults
+            to ``8``.
+        superblob: Whether to create a superblob for the model. Defaults to
+            ``True``. Disable it to use legacy RVC2 conversion.
         opts: Additional conversion options. These can override config
             values.
         **hub_kwargs: Additional keyword arguments passed to `convert`.
@@ -762,9 +875,10 @@ def RVC3(
         path: Path to the model file to convert.
         mo_args: Additional arguments for the Model Optimizer.
         compile_tool_args: Additional arguments for the compile tool.
-        compress_to_fp16: Whether to compress the model weights to
-            FP16.
-        pot_target_device: Target device for POT quantization.
+        compress_to_fp16: Whether to compress model weights to FP16.
+            Defaults to ``True``.
+        pot_target_device: Target device for post-training optimization.
+            Defaults to ``"VPU"``.
         opts: Additional conversion options. These can override config
             values.
         **hub_kwargs: Additional keyword arguments passed to `convert`.
@@ -873,9 +987,11 @@ def RVC4(
         snpe_dlc_graph_prepare_args: Additional arguments for SNPE DLC
             graph preparation.
         use_per_channel_quantization: Whether to use per-channel
-            quantization.
+            quantization. Defaults to ``True``.
         use_per_row_quantization: Whether to use per-row quantization.
-        htp_socs: HTP SoCs for the final DLC graph.
+            Defaults to ``False``.
+        htp_socs: HTP SoCs for the final DLC graph. Defaults to
+            ``["sm8550"]``.
         opts: Additional conversion options. These can override config
             values.
         **hub_kwargs: Additional keyword arguments passed to `convert`.
@@ -981,10 +1097,12 @@ def Hailo(
 
     Args:
         path: Path to the model file to convert.
-        optimization_level: Optimization level for the conversion.
-        compression_level: Compression level for the conversion.
-        batch_size: Batch size for the conversion.
-        alls: Hailo ALLS commands applied during conversion.
+        optimization_level: Optimization level for the conversion. Defaults to
+            ``2``.
+        compression_level: Compression level for the conversion. Defaults to
+            ``2``.
+        batch_size: Batch size for quantization. Defaults to ``8``.
+        alls: Additional Hailo ALLS parameters to apply during conversion.
         opts: Additional conversion options. These can override config
             values.
         **hub_kwargs: Additional keyword arguments passed to `convert`.
