@@ -1,3 +1,5 @@
+"""Resolve HubAI connection settings and securely stored credentials."""
+
 import multiprocessing
 import platform
 from contextlib import suppress
@@ -50,7 +52,6 @@ def get_password_with_timeout(
     service_name: str, username: str, timeout: float = 5
 ) -> str | None:
     """Read a keyring password with a timeout using multiprocessing."""
-
     # if system is mac with arm, use direct keyring call
     if platform.system() == "Darwin" and platform.machine() == "arm64":
         return keyring.get_password(service_name, username)
@@ -79,13 +80,21 @@ def get_password_with_timeout(
 
 
 class Environ(BaseEnviron):
+    """HubAI settings loaded from environment variables and keyring.
+
+    Attributes:
+        HUBAI_API_KEY: API key used to authenticate requests. A key stored by
+            ``hubai login`` takes precedence over the environment variable.
+        HUBAI_URL: Base URL for HubAI services. Override this for staging or a
+            self-hosted environment.
+    """
+
     HUBAI_API_KEY: str | None = None
     HUBAI_URL: str = "https://easyml.cloud.luxonis.com/"
 
     @model_validator(mode="after")
     def validate_hubai_api_key(self) -> Self:
-        """Populate `HUBAI_API_KEY` from keyring when available."""
-
+        """Populate ``HUBAI_API_KEY`` from keyring when available."""
         keyring_api_key = None
 
         with suppress(Exception):

@@ -1,3 +1,5 @@
+"""Normalize calibration-domain, dataset, and local ZIP inputs."""
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,6 +10,15 @@ from hubai_sdk.typing import QuantizationData
 
 @dataclass(frozen=True)
 class NormalizedQuantizationInput:
+    """Normalized calibration selection used by hosted conversion.
+
+    Attributes:
+        quantization_data: Built-in domain, dataset ID, ``"CUSTOM"``, or
+            ``None``.
+        custom_zip_path: Resolved local calibration ZIP when custom data was
+            supplied.
+    """
+
     quantization_data: str | None
     custom_zip_path: Path | None
 
@@ -24,7 +35,7 @@ def normalize_quantization_input(
 
     Args:
         quantization_data: Quantization input provided as a predefined
-            domain, dataset ID, local `.zip` path, or `None`.
+            domain, dataset ID, local ``.zip`` path, or ``None``.
 
     Returns:
         A normalized quantization input record describing the resolved

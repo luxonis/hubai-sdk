@@ -24,7 +24,7 @@ def process_nn_archive(
         overrides: Config overrides.
 
     Returns:
-        Tuple of the parsed config, `NNArchiveConfig`, and the main stage
+        The parsed configuration, NN Archive configuration, and main stage
         key.
     """
 

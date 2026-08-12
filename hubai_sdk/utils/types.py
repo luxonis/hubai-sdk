@@ -1,3 +1,11 @@
+"""Enums used by model metadata and conversion configuration.
+
+Service APIs generally accept these enums directly. Their ``value`` is
+the spelling sent to HubAI, while ``name`` is used by a few list
+filters. Use `Target` to choose conversion hardware and `ModelType` to
+describe an existing artifact.
+"""
+
 from enum import Enum
 from pathlib import Path
 
@@ -8,6 +16,8 @@ __all__ = ["DataType", "Encoding", "PotDevice", "ResizeMethod", "Target"]
 
 
 class Encoding(Enum):
+    """Channel ordering for image tensors and preprocessing."""
+
     RGB = "RGB"
     BGR = "BGR"
     GRAY = "GRAY"
@@ -15,6 +25,8 @@ class Encoding(Enum):
 
 
 class DataType(Enum):
+    """Tensor element type shared by supported model formats."""
+
     FLOAT16 = "float16"
     FLOAT32 = "float32"
     FLOAT64 = "float64"
@@ -218,17 +230,24 @@ class DataType(Enum):
 
 
 class ResizeMethod(Enum):
+    """Strategy for adapting image dimensions to a model input."""
+
     CROP = "CROP"
     PAD = "PAD"
     RESIZE = "RESIZE"
 
 
 class PotDevice(Enum):
+    """Target device used by OpenVINO Post-training Optimization
+    Tool."""
+
     VPU = "VPU"
     ANY = "ANY"
 
 
 class Target(Enum):
+    """Hardware family accepted by hosted conversion."""
+
     HAILO = "hailo"
     RVC2 = "rvc2"
     RVC3 = "rvc3"
@@ -236,6 +255,8 @@ class Target(Enum):
 
 
 class InputFileType(Enum):
+    """Supported source model container or framework format."""
+
     ONNX = "ONNX"
     IR = "IR"
     TFLITE = "TFLITE"
@@ -263,6 +284,8 @@ class InputFileType(Enum):
 
 
 class ModelType(str, Enum):
+    """Artifact type stored by a HubAI model instance."""
+
     ONNX = "ONNX"
     IR = "IR"
     PYTORCH = "PYTORCH"

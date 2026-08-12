@@ -1,3 +1,5 @@
+"""Authenticated entry point for the HubAI Python API."""
+
 import os
 import time
 
@@ -23,13 +25,41 @@ from hubai_sdk.utils.telemetry import (
 
 
 class HubAIClient:
+    """Authenticate with HubAI and expose its high-level service modules.
+
+    A client does not hold a separate HTTP session. Its service attributes are
+    modules whose functions use the API key stored in the SDK environment.
+    Consequently, creating another client replaces the process-wide key used
+    by subsequent service calls.
+
+    Attributes:
+        models: Functions for model resources.
+        variants: Functions for versioned model variants.
+        instances: Functions for model artifacts and their files.
+        convert: Hosted model conversion functions.
+
+    Example:
+        The constructor finds ``HUBAI_API_KEY`` automatically.
+
+        .. python::
+
+            from hubai_sdk import HubAIClient
+
+            client = HubAIClient()
+            models = client.models.list_models(is_public=True)
+
+    Note:
+        Installed ``hubai.plugins`` entry points can add more attributes. A
+        plugin cannot replace one of the built-in service attributes.
+    """
+
     def __init__(self, api_key: str | None = None):
         """Initialize a HubAI SDK client.
 
         Args:
-            api_key: HubAI API key. If omitted, the client falls back to
-                `HUBAI_API_KEY` and then to the key loaded into
-                `environ`.
+            api_key: HubAI API key. If omitted, the client falls back to the
+                ``HUBAI_API_KEY`` environment variable and then to the key
+                loaded from secure credential storage.
 
         Raises:
             ValueError: If no API key is available or the provided key
@@ -95,7 +125,7 @@ class HubAIClient:
         """Check whether the configured API key is accepted by HubAI.
 
         Returns:
-            `True` if the API key is valid, otherwise `False` for
+            ``True`` if the API key is valid, otherwise ``False`` for
             authentication failures.
         """
         try:

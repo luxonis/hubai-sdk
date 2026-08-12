@@ -23,7 +23,7 @@ def sanitize_net_name(name: str, with_suffix: bool = False) -> str:
 
     Args:
         name: The name or path to sanitize.
-        with_suffix: If `True`, preserve the suffix (file extension)
+        with_suffix: Whether to preserve the suffix (file extension)
             without sanitizing it.
     """
     p = Path(name)
@@ -71,10 +71,10 @@ def is_pip_package(filepath: str = __name__) -> bool:
     package.
 
     Args:
-        filepath (str): The filepath to check.
+        filepath: The filepath to check.
 
     Returns:
-        (bool): True if the file is part of a pip package, False otherwise.
+        Whether the file is part of an installed package.
     """
     import importlib.util
 
