@@ -5,7 +5,8 @@ managing, converting, and deploying machine learning models for
 Luxonis OAK devices. If you want to convert models locally, check out
 [modelconverter](https://github.com/luxonis/modelconverter) instead.
 
-API documentation is available at <https://luxonis.github.io/hubai-sdk/>.
+For complete SDK, CLI, and conversion parameter documentation, see the
+[HubAI SDK API reference](https://docs.luxonis.com/cloud/hubai/model-registry/hubai-sdk/hubai-sdk-api-reference/).
 
 ## ✨ Features
 
@@ -468,11 +469,6 @@ blob = response.downloaded_path
 ### `Caffe` Conversion
 
 Conversion from the `Caffe` framework is not supported.
-
-## 📄 Available Parameters
-
-See [docs/available_parameters.md](docs/available_parameters.md) for
-the full conversion parameter reference.
 
 ## 🔨 Development
 
