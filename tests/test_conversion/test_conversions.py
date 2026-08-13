@@ -12,7 +12,10 @@ import onnx
 import pytest
 
 from hubai_sdk import HubAIClient
+from hubai_sdk.utils.config import InputConfig, RVC2Config, SingleStageConfig
+from hubai_sdk.utils.hub import get_target_specific_options
 from hubai_sdk.utils.sdk_models import ConvertResponse
+from hubai_sdk.utils.types import Target
 
 
 def _cleanup_response(
@@ -61,6 +64,48 @@ def test_rvc2_legacy_conversion(client: HubAIClient, base_model_path: str):
         _assert_response_downloaded(response)
     finally:
         _cleanup_response(response, client)
+
+
+def test_rvc2_two_input_conversion(
+    client: HubAIClient,
+    two_input_model_path: Path,
+):
+    name = f"test-sdk-conversion-rvc2-two-input-{uuid.uuid4()}"
+    response: ConvertResponse | None = None
+
+    try:
+        response = client.convert.RVC2(
+            path=str(two_input_model_path),
+            name=name,
+        )
+        _assert_response_downloaded(response)
+    finally:
+        _cleanup_response(response, client)
+
+
+def test_rvc2_export_options_use_api_input_names_for_multiple_inputs():
+    cfg = SingleStageConfig.model_construct(
+        input_model=Path("two-input-model.onnx"),
+        inputs=[
+            InputConfig(name="image_a", shape=[1, 3, 224, 224]),
+            InputConfig(name="image_b", shape=[1, 3, 224, 224]),
+        ],
+        disable_onnx_simplification=False,
+        disable_onnx_optimization=False,
+        rvc2=RVC2Config(),
+    )
+
+    options = get_target_specific_options(Target.RVC2, cfg)
+
+    assert [
+        input_config["input_name"] for input_config in options["inputs"]
+    ] == [
+        "image_a",
+        "image_b",
+    ]
+    assert all(
+        "name" not in input_config for input_config in options["inputs"]
+    )
 
 
 @pytest.mark.parametrize(
