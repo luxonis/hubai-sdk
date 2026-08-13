@@ -32,40 +32,12 @@ def test_resolve_resource_id_does_not_mask_lookup_http_error(
 ) -> None:
     monkeypatch.setattr(
         hub_utils.Request,
-        "post",
+        "get",
         lambda *args, **kwargs: (_ for _ in ()).throw(_http_error(401)),
     )
 
     with pytest.raises(HubApiError, match="401"):
         hub_utils.resolve_resource_id("missing-model", "models")
-
-
-def test_full_slug_to_id_falls_back_on_invalid_slug_format(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        hub_utils.Request,
-        "post",
-        lambda *args, **kwargs: (_ for _ in ()).throw(
-            _http_error(
-                422,
-                {
-                    "detail": [
-                        {
-                            "loc": ["body"],
-                            "msg": (
-                                "Value error, Invalid slug format. Slugs "
-                                "must be in the format {team-slug}/"
-                                "{model-slug}:{variant-slug}."
-                            ),
-                        }
-                    ]
-                },
-            )
-        ),
-    )
-
-    assert hub_utils.full_slug_to_id("plain-slug", "models") is None
 
 
 def test_convert_does_not_swallow_validation_error_from_create_model(

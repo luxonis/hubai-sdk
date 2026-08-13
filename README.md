@@ -115,14 +115,31 @@ print(f"Converted model downloaded to: {response.downloaded_path}")
 
 The SDK provides four main services accessible through the `HubAIClient`:
 
-### Using Slugs from HubAI
+### Using resource identifiers
 
-You can copy slugs directly from the HubAI platform and use them as
-identifiers in the SDK for models and variants:
+All operations that accept an identifier accept a resource ID or its raw
+`slug`. They also accept the following human-readable resource paths:
+
+| Resource | Resource paths                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------- |
+| Model    | `<team>/<model>`                                                                                                     |
+| Variant  | `<model>:<variant>`, `<team>/<model>:<variant>`, `<model>:<variant>:<version>`, `<team>/<model>:<variant>:<version>` |
+| Instance | `<model>:<variant>:<instance-hash>`, `<team>/<model>:<variant>:<instance-hash>`                                      |
+
+Here, `instance-hash` is the instance response's `hash_short` value. A
+three-part path identifies a model version for variant operations and an
+instance for instance operations.
+
+For example:
 
 ```bash
-hubai model info luxonis/yolov6-nano:r2-coco-512x384
+hubai model info luxonis/yolov6-nano
+hubai variant info yolov6-nano:r2-coco-512x384
 ```
+
+When several versions have the same variant slug, include the version segment
+to select one exactly, for example
+`luxonis/yolov6-nano:r2-coco-512x384:1.1.0`.
 
 ### 🤖 Models Service (`client.models`)
 
@@ -136,7 +153,7 @@ models = client.models.list_models(
     limit=10,
 )
 
-# Get model by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
+# Get model by ID, raw slug, or resource path
 model = client.models.get_model("model-id-or-slug")
 
 # Create a new model
@@ -169,7 +186,7 @@ Manage model variants and versions.
 # List variants (optionally filtered by model)
 variants = client.variants.list_variants(model_id=model.id)
 
-# Get variant by ID or slug (e.g., "luxonis/yolov6-nano:r2-coco-512x384")
+# Get variant by ID, raw slug, or resource path
 variant = client.variants.get_variant("variant-id-or-slug")
 
 # Create a new variant
@@ -205,8 +222,19 @@ client.instances.upload_file("/path/to/nn_archive.tar.xz", instance.id)
 # Get instance config
 config = client.instances.get_config(instance.id)
 
-# Download instance
+# Download an instance by its ID or raw instance slug
 downloaded_path = client.instances.download_instance(instance.id)
+
+# Download one exact instance by its resource path
+downloaded_path = client.instances.download_instance(
+    "yolov6-nano:r2-coco-512x384:fb1429e",
+)
+
+# Or select an instance beneath a variant by its type
+downloaded_path = client.instances.download_instance(
+    "luxonis/yolov6-nano:r2-coco-512x384",
+    model_type=ModelType.ONNX,
+)
 
 # Delete instance
 client.instances.delete_instance(instance.id)
@@ -287,6 +315,12 @@ hubai variant ls
 
 # List instances
 hubai instance ls
+
+# Download a typed instance from a model variant
+hubai instance download luxonis/yolov6-nano:r2-coco-512x384 --model-type ONNX
+
+# Download one exact instance by its resource path
+hubai instance download yolov6-nano:r2-coco-512x384:fb1429e
 ```
 
 For more CLI options, use the `--help` flag:

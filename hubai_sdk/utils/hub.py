@@ -24,6 +24,7 @@ from rich.table import Table
 from hubai_sdk.errors import (
     HubApiError,
     InputError,
+    ResourceAmbiguousError,
     ResourceConflictError,
     ResourceNotFoundError,
     ValidationError,
@@ -260,8 +261,9 @@ def is_hubai_id(identifier: str) -> bool:
 def slug_to_id(
     slug: str,
     endpoint: Literal["models", "modelVersions", "modelInstances"],
-) -> str:
-    """Resolve a simple slug to a resource ID by querying HubAI."""
+) -> str | None:
+    """Resolve a raw resource slug to its resource ID."""
+    matches: dict[str, dict[str, Any]] = {}
     for is_public in [True, False]:
         params = {
             "is_public": is_public,
@@ -276,55 +278,31 @@ def slug_to_id(
         if data:
             for item in data:
                 if item["slug"] == slug:
-                    return str(item["id"])
+                    matches[str(item["id"])] = item
 
-    return None  # type: ignore
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise ResourceAmbiguousError(slug, endpoint)
 
-
-def full_slug_to_id(
-    slug: str, endpoint: Literal["models", "modelVersions", "modelInstances"]
-) -> str:
-    """Resolve a full HubAI slug to a resource ID using the slug API."""
-    data = {"items": [{"identifier": 0, "slug": slug}]}
-
-    try:
-        response = Request.post(
-            service="models", endpoint="models/read_by_slugs", json=data
-        )
-    except HTTPError as exc:
-        detail = _get_http_error_detail(exc)
-        if "Invalid slug format" in detail:
-            return None  # type: ignore
-        raise_for_hub_error(exc, identifier=slug, endpoint=endpoint)
-
-    if not isinstance(response, dict) or not response.get("items"):
-        return None  # type: ignore
-
-    try:
-        if endpoint == "models":
-            return response["items"][0]["model"]["id"]
-        if endpoint == "modelVersions":
-            return response["items"][0]["model_version"]["id"]
-    except (KeyError, IndexError, TypeError):
-        return None  # type: ignore
-
-    return None  # type: ignore
+    return None
 
 
 def get_resource_id(
     identifier: str,
     endpoint: Literal["models", "modelVersions", "modelInstances"],
 ) -> str:
-    """Resolve a UUID, HubAI ID, or slug into a resource ID.
+    """Resolve a UUID, HubAI ID, raw slug, or resource path to a resource ID.
 
     Args:
-        identifier: User-supplied UUID, HubAI ID, or slug.
+        identifier: User-supplied UUID, HubAI ID, raw slug, or resource path.
         endpoint: Resource endpoint to resolve against.
 
     Returns:
         The resolved HubAI resource ID.
 
     Raises:
+        ResourceAmbiguousError: If the identifier matches multiple resources.
         ValueError: If the identifier cannot be resolved.
     """
     if is_valid_uuid(identifier):
@@ -333,10 +311,9 @@ def get_resource_id(
     if is_hubai_id(identifier):
         return identifier
 
-    found_id = full_slug_to_id(identifier, endpoint)
-
-    if found_id:
-        return found_id
+    resource_path_id = _resource_path_to_id(identifier, endpoint)
+    if resource_path_id:
+        return resource_path_id
 
     found_id = slug_to_id(identifier, endpoint)
 
@@ -346,6 +323,212 @@ def get_resource_id(
         )
 
     return found_id
+
+
+def _resource_path_to_id(
+    identifier: str,
+    endpoint: Literal["models", "modelVersions", "modelInstances"],
+) -> str | None:
+    """Resolve a human-readable HubAI resource path to its resource ID.
+
+    Supported forms are ``<team>/<model>`` for models;
+    ``<model>:<variant>`` and ``<model>:<variant>:<version>`` for model
+    versions; and ``<model>:<variant>:<instance-hash>`` for model instances.
+    Model-version and instance paths may include an optional ``<team>/``
+    prefix. The team
+    segment, when present, is matched against the model response's
+    ``team_slug`` field.
+    """
+    if endpoint == "models":
+        parsed_model = _parse_model_resource_path(identifier)
+        if parsed_model is None:
+            return None
+        team_slug, model_slug = parsed_model
+        return _find_model_id(model_slug, team_slug, identifier)
+
+    if endpoint == "modelVersions":
+        parsed_variant = _parse_variant_resource_path(identifier)
+        version = None
+        if parsed_variant is None:
+            parsed_versioned_variant = _parse_versioned_variant_resource_path(
+                identifier
+            )
+            if parsed_versioned_variant is None:
+                return None
+            team_slug, model_slug, variant_slug, version = (
+                parsed_versioned_variant
+            )
+        else:
+            team_slug, model_slug, variant_slug = parsed_variant
+        model_identifier = (
+            f"{team_slug}/{model_slug}" if team_slug else model_slug
+        )
+        model_id = get_resource_id(model_identifier, "models")
+        return _find_variant_id(model_id, variant_slug, identifier, version)
+
+    if endpoint == "modelInstances":
+        parsed_instance = _parse_instance_resource_path(identifier)
+        if parsed_instance is None:
+            return None
+        variant_path, instance_hash = parsed_instance
+        variant_id = get_resource_id(variant_path, "modelVersions")
+        return _find_instance_id(variant_id, instance_hash, identifier)
+
+    return None
+
+
+def _parse_model_resource_path(identifier: str) -> tuple[str, str] | None:
+    """Parse a ``<team>/<model>`` resource path."""
+    if identifier.count("/") != 1 or ":" in identifier:
+        return None
+    team_slug, model_slug = identifier.split("/", maxsplit=1)
+    if not team_slug or not model_slug:
+        return None
+    return team_slug, model_slug
+
+
+def _parse_variant_resource_path(
+    identifier: str,
+) -> tuple[str | None, str, str] | None:
+    """Parse a ``model:variant`` resource path with an optional team segment."""
+    if identifier.count(":") != 1:
+        return None
+    model_identifier, variant_slug = identifier.split(":", maxsplit=1)
+    if not model_identifier or not variant_slug:
+        return None
+
+    if "/" not in model_identifier:
+        return None, model_identifier, variant_slug
+
+    parsed_model = _parse_model_resource_path(model_identifier)
+    if parsed_model is None:
+        return None
+    team_slug, model_slug = parsed_model
+    return team_slug, model_slug, variant_slug
+
+
+def _parse_instance_resource_path(identifier: str) -> tuple[str, str] | None:
+    """Parse a ``model:variant:instance-hash`` resource path with an
+    optional team segment."""
+    if identifier.count(":") != 2:
+        return None
+    variant_path, instance_hash = identifier.rsplit(":", maxsplit=1)
+    if not instance_hash or _parse_variant_resource_path(variant_path) is None:
+        return None
+    return variant_path, instance_hash
+
+
+def _parse_versioned_variant_resource_path(
+    identifier: str,
+) -> tuple[str | None, str, str, str] | None:
+    """Parse a ``model:variant:version`` resource path with an optional team
+    segment."""
+    if identifier.count(":") != 2:
+        return None
+    variant_path, version = identifier.rsplit(":", maxsplit=1)
+    parsed_variant = _parse_variant_resource_path(variant_path)
+    if not version or parsed_variant is None:
+        return None
+    team_slug, model_slug, variant_slug = parsed_variant
+    return team_slug, model_slug, variant_slug, version
+
+
+def _find_model_id(
+    model_slug: str, team_slug: str | None, identifier: str
+) -> str | None:
+    """Find one model by slug, optionally constraining its owning team."""
+    matches: dict[str, dict[str, Any]] = {}
+    for is_public in [True, False]:
+        try:
+            data = Request.get(
+                service="models",
+                endpoint="models/",
+                params={
+                    "is_public": is_public,
+                    "slug": model_slug,
+                    "limit": 500,
+                },
+            )
+        except HTTPError as exc:
+            raise_for_hub_error(exc, identifier=identifier, endpoint="models")
+        for item in data:
+            if item["slug"] != model_slug:
+                continue
+            if team_slug is not None and item.get("team_slug") != team_slug:
+                continue
+            matches[str(item["id"])] = item
+
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise ResourceAmbiguousError(identifier, "models")
+    return None
+
+
+def _find_variant_id(
+    model_id: str,
+    variant_slug: str,
+    identifier: str,
+    version: str | None = None,
+) -> str | None:
+    """Find one model version beneath a resolved model."""
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelVersions",
+            params={
+                "model_id": model_id,
+                "variant_slug": variant_slug,
+                "version": version,
+                "limit": 500,
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelVersions"
+        )
+
+    matches = {
+        str(item["id"]): item
+        for item in data
+        if item.get("variant_slug") == variant_slug
+        and (version is None or item.get("version") == version)
+    }
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise ResourceAmbiguousError(identifier, "modelVersions")
+    return None
+
+
+def _find_instance_id(
+    variant_id: str, instance_hash: str, identifier: str
+) -> str | None:
+    """Find one instance beneath a resolved variant by its short hash."""
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelInstances",
+            params={
+                "model_version_id": variant_id,
+                "limit": 500,
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
+
+    matches = {
+        str(item["id"]): item
+        for item in data
+        if item.get("hash_short") == instance_hash
+    }
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise ResourceAmbiguousError(identifier, "modelInstances")
+    return None
 
 
 def resolve_resource_id(

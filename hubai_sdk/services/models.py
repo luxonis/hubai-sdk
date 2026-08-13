@@ -6,9 +6,9 @@ versioned variant; see `hubai_sdk.services.variants` and
 `hubai_sdk.services.instances`.
 
 Identifiers:
-    Functions that accept an ``identifier`` support a UUID, a model slug, or a
-    full HubAI slug copied from the web application. This makes slugs suitable
-    for configuration files while UUIDs remain useful for programmatic flows.
+    Functions that accept an ``identifier`` support a UUID, a raw model slug,
+    or a ``<team>/<model>`` resource path. This makes slugs suitable for
+    configuration files while UUIDs remain useful for programmatic flows.
 
 Visibility:
     During creation, ``is_public=True`` makes a model public, ``False`` makes
@@ -183,10 +183,10 @@ def list_models_cli(
     )
 )
 def get_model(identifier: UUID | str) -> ModelResponse:
-    """Get one model by UUID or slug.
+    """Get one model by identifier.
 
     Args:
-        identifier: Model UUID, slug, or full HubAI slug.
+        identifier: Model UUID, raw slug, or ``<team>/<model>`` path.
 
     Returns:
         The resolved model resource.
@@ -328,7 +328,7 @@ def update_model(
     optional text fields cannot be cleared with this helper.
 
     Args:
-        identifier: Model UUID, slug, or full HubAI slug.
+        identifier: Model UUID, raw slug, or ``<team>/<model>`` path.
         license_type: Replacement license.
         is_public: Replacement public/private state.
         description: Replacement full description.
@@ -423,7 +423,7 @@ def delete_model(identifier: UUID | str) -> None:
     """Delete a model from HubAI.
 
     Args:
-        identifier: Model UUID, slug, or full HubAI slug.
+        identifier: Model UUID, raw slug, or ``<team>/<model>`` path.
 
     Raises:
         ResourceNotFoundError: If ``identifier`` cannot be resolved.

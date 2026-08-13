@@ -301,10 +301,12 @@ def list_instances_cli(
     )
 )
 def get_instance(identifier: UUID | str) -> ModelInstanceResponse:
-    """Get one model instance by UUID or slug.
+    """Get one model instance by UUID, slug, or resource path.
 
     Args:
-        identifier: The model instance ID or slug.
+        identifier: The model instance ID, raw slug, or
+            ``<model>:<variant>:<instance-hash>`` resource path,
+            optionally prefixed with ``<team>/``.
 
     Returns:
         The resolved model instance resource.
@@ -341,16 +343,26 @@ def download_instance(
     identifier: UUID | str,
     output_dir: str | None = None,
     force: bool = False,
+    model_type: ModelType | None = None,
 ) -> Path:
     """Download every file attached to a model instance.
 
     Args:
-        identifier: The model instance ID or slug.
+        identifier: When ``model_type`` is omitted, the ID, raw slug, or
+            ``<model>:<variant>:<instance-hash>`` resource path,
+            optionally prefixed with ``<team>/``, of the instance to download.
+            When
+            ``model_type`` is provided, the model-version ID, raw
+            model-version slug, or ``<model>:<variant>[:<version>]``
+            resource path, optionally prefixed with ``<team>/``, whose instance
+            should be downloaded.
         output_dir: Directory path to save the downloaded files. If not
             specified, the downloader creates a directory named after the
             model instance slug under the current working directory.
         force: Whether to force download the files even if they already
             exist.
+        model_type: Select an instance of this type from the identified
+            variant. The match must be unique.
 
     Returns:
         Path to the downloaded file. When the instance has multiple files,
@@ -358,12 +370,18 @@ def download_instance(
 
     Raises:
         ResourceNotFoundError: If ``identifier`` cannot be resolved.
+        InputError: If ``model_type`` is provided and no instance, or more
+            than one instance, matches it.
         HubApiError: If the instance has no files or a download fails.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     dest = Path(output_dir) if output_dir else None
-    model_instance_id = resolve_resource_id(identifier, "modelInstances")
+    model_instance_id = (
+        _resolve_variant_instance_id(identifier, model_type)
+        if model_type is not None
+        else resolve_resource_id(identifier, "modelInstances")
+    )
     downloaded_path = None
     file_path: Path | None = None
     try:
@@ -449,9 +467,12 @@ def download_instance_cli(
     identifier: UUID | str,
     output_dir: str | None = None,
     force: bool = False,
+    model_type: ModelType | None = None,
 ) -> None:
     """Downloads files from a model instance."""
-    run_cli(lambda: download_instance(identifier, output_dir, force))
+    run_cli(
+        lambda: download_instance(identifier, output_dir, force, model_type)
+    )
 
 
 @telemetry_operation(
@@ -589,7 +610,8 @@ def delete_instance(identifier: UUID | str) -> None:
     """Delete a model instance from HubAI.
 
     Args:
-        identifier: The model instance ID or slug.
+        identifier: The model instance ID, raw slug, or exact instance
+            resource path.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)
@@ -625,7 +647,8 @@ def get_config(identifier: UUID | str) -> ArchiveConfigurationResponse:
     """Return the NN Archive configuration of a model instance.
 
     Args:
-        identifier: The model instance ID or slug.
+        identifier: The model instance ID, raw slug, or exact instance
+            resource path.
 
     Returns:
         The NN archive configuration for the model instance.
@@ -660,7 +683,8 @@ def get_files(
     """Return metadata for files attached to a model instance.
 
     Args:
-        identifier: The model instance ID or slug.
+        identifier: The model instance ID, raw slug, or exact instance
+            resource path.
 
     Returns:
         File metadata for the model instance.
@@ -698,7 +722,8 @@ def upload_file(file_path: str, identifier: UUID | str) -> None:
 
     Args:
         file_path: Path to the file to upload.
-        identifier: The model instance ID or slug.
+        identifier: The model instance ID, raw slug, or exact instance
+            resource path.
 
     Raises:
         FileNotFoundError: If ``file_path`` does not exist.
@@ -885,6 +910,43 @@ def _get_instance_subresource(
             identifier=identifier_str,
             endpoint="modelInstances",
         )
+
+
+def _resolve_variant_instance_id(
+    identifier: str, model_type: ModelType
+) -> str:
+    """Resolve exactly one instance of a requested type beneath a variant."""
+    variant_id = resolve_resource_id(identifier, "modelVersions")
+    try:
+        data = Request.get(
+            service="models",
+            endpoint="modelInstances",
+            params={
+                "model_version_id": variant_id,
+                "model_type": model_type,
+                "limit": 500,
+            },
+        )
+    except HTTPError as exc:
+        raise_for_hub_error(
+            exc, identifier=identifier, endpoint="modelInstances"
+        )
+
+    matches = [
+        instance
+        for instance in data
+        if instance.get("model_type") == model_type
+    ]
+    if len(matches) == 1:
+        return str(matches[0]["id"])
+    if len(matches) == 0:
+        raise InputError(
+            f"No {model_type.value} instance found for variant '{identifier}'."
+        )
+    raise InputError(
+        f"Multiple {model_type.value} instances found for variant "
+        f"'{identifier}'. Use the instance ID or slug instead."
+    )
 
 
 def _dump_for_cli(resource: object) -> object:
