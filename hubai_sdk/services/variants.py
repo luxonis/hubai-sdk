@@ -16,8 +16,10 @@ Example:
         )
         instances = client.instances.list_instances(variant_id=variant.id)
 
-Functions accepting an ``identifier`` resolve UUIDs and HubAI slugs. Deleting
-a variant removes the resource remotely and cannot be undone through the SDK.
+Functions accepting an ``identifier`` resolve UUIDs, raw model-version slugs,
+and model-variant resource paths. A resource path can include a version to
+select one exact model version. Deleting a variant removes the resource
+remotely and cannot be undone through the SDK.
 """
 
 from typing import Annotated
@@ -190,10 +192,12 @@ def list_variants_cli(
     )
 )
 def get_variant(identifier: UUID | str) -> ModelVersionResponse:
-    """Get one model variant by UUID or slug.
+    """Get one model variant by identifier.
 
     Args:
-        identifier: Variant UUID, slug, or full HubAI slug.
+        identifier: Variant UUID, raw model-version slug, or a
+            ``<model>:<variant>[:<version>]`` resource path, optionally
+            prefixed with ``<team>/``.
 
     Returns:
         The resolved model version resource.
@@ -323,7 +327,9 @@ def delete_variant(identifier: UUID | str) -> None:
     """Delete a model variant from HubAI.
 
     Args:
-        identifier: Variant UUID, slug, or full HubAI slug.
+        identifier: Variant UUID, raw model-version slug, or a variant
+            resource path. Include its version segment when the variant slug
+            identifies multiple model versions.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

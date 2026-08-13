@@ -9,6 +9,7 @@ the cause.
 __all__ = [
     "HubApiError",
     "InputError",
+    "ResourceAmbiguousError",
     "ResourceConflictError",
     "ResourceNotFoundError",
     "ValidationError",
@@ -33,7 +34,8 @@ class ResourceNotFoundError(HubApiError, LookupError):
     """Raised when a requested HubAI resource cannot be resolved.
 
     Attributes:
-        identifier: UUID or slug that could not be resolved.
+        identifier: ID, raw slug, or resource path that could not be
+            resolved.
         endpoint: API resource collection that was searched.
     """
 
@@ -44,6 +46,20 @@ class ResourceNotFoundError(HubApiError, LookupError):
             f"Resource for endpoint '{endpoint}' with identifier "
             f"'{identifier}' not found in HubAI.",
             status_code=404,
+        )
+
+
+class ResourceAmbiguousError(HubApiError, LookupError):
+    """Raised when an identifier matches more than one HubAI resource."""
+
+    def __init__(self, identifier: str, endpoint: str) -> None:
+        self.identifier = identifier
+        self.endpoint = endpoint
+        super().__init__(
+            f"Resource for endpoint '{endpoint}' with identifier "
+            f"'{identifier}' is ambiguous in HubAI. Use a more specific "
+            "identifier.",
+            status_code=409,
         )
 
 
