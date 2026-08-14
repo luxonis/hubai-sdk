@@ -917,28 +917,29 @@ def _resolve_variant_instance_id(
 ) -> str:
     """Resolve exactly one instance of a requested type beneath a variant."""
     variant_id = resolve_resource_id(identifier, "modelVersions")
-    try:
-        data = Request.get(
-            service="models",
-            endpoint="modelInstances",
-            params={
-                "model_version_id": variant_id,
-                "model_type": model_type,
-                "limit": 500,
-            },
-        )
-    except HTTPError as exc:
-        raise_for_hub_error(
-            exc, identifier=identifier, endpoint="modelInstances"
-        )
+    matches: dict[str, dict[str, object]] = {}
+    for is_public in [True, False]:
+        try:
+            data = Request.get(
+                service="models",
+                endpoint="modelInstances",
+                params={
+                    "model_version_id": variant_id,
+                    "model_type": model_type,
+                    "is_public": is_public,
+                    "limit": 500,
+                },
+            )
+        except HTTPError as exc:
+            raise_for_hub_error(
+                exc, identifier=identifier, endpoint="modelInstances"
+            )
+        for instance in data:
+            if instance.get("model_type") == model_type:
+                matches[str(instance["id"])] = instance
 
-    matches = [
-        instance
-        for instance in data
-        if instance.get("model_type") == model_type
-    ]
     if len(matches) == 1:
-        return str(matches[0]["id"])
+        return next(iter(matches))
     if len(matches) == 0:
         raise InputError(
             f"No {model_type.value} instance found for variant '{identifier}'."
