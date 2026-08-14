@@ -130,11 +130,15 @@ Here, `instance-hash` is the instance response's `hash_short` value. A
 three-part path identifies a model version for variant operations and an
 instance for instance operations.
 
+Resolution checks both public resources and resources visible to your team. A
+raw slug or resource path without `<team>/` must identify exactly one
+resource; otherwise, use the `<team>/...` form to disambiguate it.
+
 For example:
 
 ```bash
 hubai model info luxonis/yolov6-nano
-hubai variant info yolov6-nano:r2-coco-512x384
+hubai variant info luxonis/yolov6-nano:r2-coco-512x384
 ```
 
 When several versions have the same variant slug, include the version segment
@@ -227,7 +231,7 @@ downloaded_path = client.instances.download_instance(instance.id)
 
 # Download one exact instance by its resource path
 downloaded_path = client.instances.download_instance(
-    "yolov6-nano:r2-coco-512x384:fb1429e",
+    "luxonis/yolov6-nano:r2-coco-512x384:fb1429e",
 )
 
 # Or select an instance beneath a variant by its type
@@ -320,7 +324,7 @@ hubai instance ls
 hubai instance download luxonis/yolov6-nano:r2-coco-512x384 --model-type ONNX
 
 # Download one exact instance by its resource path
-hubai instance download yolov6-nano:r2-coco-512x384:fb1429e
+hubai instance download luxonis/yolov6-nano:r2-coco-512x384:fb1429e
 ```
 
 For more CLI options, use the `--help` flag:
