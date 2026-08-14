@@ -713,10 +713,21 @@ def get_target_specific_options(
 ) -> dict[str, Any]:
     """Build export options for a target from a parsed config."""
     json_cfg = cfg.model_dump(mode="json")
+    inputs = [
+        {
+            "input_name": input_config["name"],
+            **{
+                key: value
+                for key, value in input_config.items()
+                if key != "name"
+            },
+        }
+        for input_config in json_cfg["inputs"]
+    ]
     options = {
         "disable_onnx_simplification": cfg.disable_onnx_simplification,
         "disable_onnx_optimization": cfg.disable_onnx_optimization,
-        "inputs": json_cfg["inputs"],
+        "inputs": inputs,
     }
     if target is Target.RVC4:
         options["snpe_onnx_to_dlc_args"] = cfg.rvc4.snpe_onnx_to_dlc_args

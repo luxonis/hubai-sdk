@@ -433,10 +433,21 @@ def convert(
                         is_yolo=is_yolo,
                     )
                     model_id = model.id
-                except ResourceConflictError:
-                    model_id = resolve_resource_id(
-                        name.lower().replace(" ", "-"), "models"
-                    )
+                except ResourceConflictError as conflict_error:
+                    model_identifier = name.lower().replace(" ", "-")
+                    try:
+                        model_id = resolve_resource_id(
+                            model_identifier, "models"
+                        )
+                    except ResourceNotFoundError as lookup_error:
+                        raise ResourceConflictError(
+                            f"Unable to create model '{name}': HubAI "
+                            f"reported a resource conflict ({conflict_error}). "
+                            "The SDK then tried to reuse an existing model "
+                            f"using identifier '{model_identifier}', but it "
+                            f"could not be resolved ({lookup_error}).",
+                            status_code=conflict_error.status_code,
+                        ) from lookup_error
                     existing_model_reused = True
 
             if variant_id is None:

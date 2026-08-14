@@ -40,6 +40,13 @@ def pytest_addoption(parser: pytest.Parser):
         help="PyTorch model instance ID to use for conversion tests",
     )
 
+    parser.addoption(
+        "--two-input-instance-id",
+        action="store",
+        default=None,
+        help="Two-input ONNX model instance ID to use for conversion tests",
+    )
+
 
 @pytest.fixture
 def client():
@@ -143,6 +150,54 @@ def pytorch_model_path(
 
     raise ValueError(
         "Downloaded PyTorch base instance does not contain a .pt or .pth file."
+    )
+
+
+@pytest.fixture
+def two_input_instance_id(request: pytest.FixtureRequest) -> str:
+    """Return the stage-specific persistent two-input ONNX instance ID."""
+    instance_id = request.config.getoption(
+        "--two-input-instance-id", default=None
+    )
+    if instance_id is not None:
+        return instance_id
+
+    instance_id = os.getenv("HUBAI_TWO_INPUT_INSTANCE_ID")
+    if instance_id is not None:
+        return instance_id
+
+    stg_instance_id = "aimi_KXC47tfvHpjE5dkfsfkS97_stg"
+    prod_instance_id = "aimi_K2YT5FpnggJPmabbxNwFt1"
+    return (
+        stg_instance_id
+        if os.getenv("HUBAI_STAGE", "") == "stg"
+        else prod_instance_id
+    )
+
+
+@pytest.fixture
+def two_input_model_path(
+    client: HubAIClient,
+    two_input_instance_id: str,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
+    """Download the persistent two-input ONNX model for conversion tests."""
+    download_dir = tmp_path_factory.mktemp("two-input-onnx-model")
+    downloaded_path = Path(
+        client.instances.download_instance(
+            two_input_instance_id, output_dir=str(download_dir)
+        )
+    )
+
+    if downloaded_path.suffix == ".onnx":
+        return downloaded_path
+
+    matches = sorted(download_dir.glob("*.onnx"))
+    if matches:
+        return matches[0]
+
+    raise ValueError(
+        "Downloaded two-input source instance does not contain an .onnx file."
     )
 
 
