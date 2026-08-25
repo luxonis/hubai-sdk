@@ -1,4 +1,4 @@
-luxonis-ml[nn_archive,telemetry]~=0.9.0
+luxonis-ml[nn_archive,telemetry]>=0.9
 keyring
 requests
 cyclopts
