@@ -472,28 +472,31 @@ def _find_variant_id(
     version: str | None = None,
 ) -> str | None:
     """Find one model version beneath a resolved model."""
-    try:
-        data = Request.get(
-            service="models",
-            endpoint="modelVersions",
-            params={
-                "model_id": model_id,
-                "variant_slug": variant_slug,
-                "version": version,
-                "limit": 500,
-            },
-        )
-    except HTTPError as exc:
-        raise_for_hub_error(
-            exc, identifier=identifier, endpoint="modelVersions"
-        )
+    matches: dict[str, dict[str, Any]] = {}
+    for is_public in [True, False]:
+        try:
+            data = Request.get(
+                service="models",
+                endpoint="modelVersions",
+                params={
+                    "model_id": model_id,
+                    "variant_slug": variant_slug,
+                    "version": version,
+                    "is_public": is_public,
+                    "limit": 500,
+                },
+            )
+        except HTTPError as exc:
+            raise_for_hub_error(
+                exc, identifier=identifier, endpoint="modelVersions"
+            )
+        for item in data:
+            if item.get("variant_slug") != variant_slug:
+                continue
+            if version is not None and item.get("version") != version:
+                continue
+            matches[str(item["id"])] = item
 
-    matches = {
-        str(item["id"]): item
-        for item in data
-        if item.get("variant_slug") == variant_slug
-        and (version is None or item.get("version") == version)
-    }
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
@@ -505,25 +508,26 @@ def _find_instance_id(
     variant_id: str, instance_hash: str, identifier: str
 ) -> str | None:
     """Find one instance beneath a resolved variant by its short hash."""
-    try:
-        data = Request.get(
-            service="models",
-            endpoint="modelInstances",
-            params={
-                "model_version_id": variant_id,
-                "limit": 500,
-            },
-        )
-    except HTTPError as exc:
-        raise_for_hub_error(
-            exc, identifier=identifier, endpoint="modelInstances"
-        )
+    matches: dict[str, dict[str, Any]] = {}
+    for is_public in [True, False]:
+        try:
+            data = Request.get(
+                service="models",
+                endpoint="modelInstances",
+                params={
+                    "model_version_id": variant_id,
+                    "is_public": is_public,
+                    "limit": 500,
+                },
+            )
+        except HTTPError as exc:
+            raise_for_hub_error(
+                exc, identifier=identifier, endpoint="modelInstances"
+            )
+        for item in data:
+            if item.get("hash_short") == instance_hash:
+                matches[str(item["id"])] = item
 
-    matches = {
-        str(item["id"]): item
-        for item in data
-        if item.get("hash_short") == instance_hash
-    }
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:

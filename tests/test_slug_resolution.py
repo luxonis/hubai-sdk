@@ -76,13 +76,15 @@ def test_resolve_variant_resource_path(
         if endpoint == "models/":
             return [_model_data()]
         if endpoint == "modelVersions":
-            assert kwargs["params"] == {
+            params = kwargs["params"]
+            assert params == {
                 "model_id": "aim_model",
                 "variant_slug": "test-variant",
                 "version": None,
+                "is_public": params["is_public"],
                 "limit": 500,
             }
-            return [_variant_data()]
+            return [_variant_data()] if params["is_public"] else []
         raise AssertionError(f"Unexpected endpoint: {endpoint}")
 
     monkeypatch.setattr(hub_utils.Request, "get", fake_get)
@@ -110,16 +112,22 @@ def test_resolve_versioned_variant_resource_path(
         if endpoint == "models/":
             return [_model_data()]
         if endpoint == "modelVersions":
-            assert kwargs["params"] == {
+            params = kwargs["params"]
+            assert params == {
                 "model_id": "aim_model",
                 "variant_slug": "test-variant",
                 "version": "1.1.0",
+                "is_public": params["is_public"],
                 "limit": 500,
             }
-            return [
-                _variant_data(id="aimv_old", version="0.1.0"),
-                _variant_data(id="aimv_new", version="1.1.0"),
-            ]
+            return (
+                [
+                    _variant_data(id="aimv_old", version="0.1.0"),
+                    _variant_data(id="aimv_new", version="1.1.0"),
+                ]
+                if params["is_public"]
+                else []
+            )
         raise AssertionError(f"Unexpected endpoint: {endpoint}")
 
     monkeypatch.setattr(hub_utils.Request, "get", fake_get)
@@ -137,10 +145,14 @@ def test_unversioned_variant_resource_path_is_ambiguous_across_versions(
         if endpoint == "models/":
             return [_model_data()]
         if endpoint == "modelVersions":
-            return [
-                _variant_data(id="aimv_old", version="0.1.0"),
-                _variant_data(id="aimv_new", version="1.1.0"),
-            ]
+            return (
+                [
+                    _variant_data(id="aimv_old", version="0.1.0"),
+                    _variant_data(id="aimv_new", version="1.1.0"),
+                ]
+                if kwargs["params"]["is_public"]
+                else []
+            )
         raise AssertionError(f"Unexpected endpoint: {endpoint}")
 
     monkeypatch.setattr(hub_utils.Request, "get", fake_get)
@@ -186,11 +198,13 @@ def test_resolve_instance_resource_path(
         if endpoint == "modelVersions":
             return [_variant_data()]
         if endpoint == "modelInstances":
-            assert kwargs["params"] == {
+            params = kwargs["params"]
+            assert params == {
                 "model_version_id": "aimv_variant",
+                "is_public": params["is_public"],
                 "limit": 500,
             }
-            return [_instance_data()]
+            return [_instance_data()] if params["is_public"] else []
         raise AssertionError(f"Unexpected endpoint: {endpoint}")
 
     monkeypatch.setattr(hub_utils.Request, "get", fake_get)
@@ -209,11 +223,22 @@ def test_resolve_unique_variant_instance_by_model_type(
         "resolve_resource_id",
         lambda identifier, endpoint: "aimv_variant",
     )
-    monkeypatch.setattr(
-        instance_services.Request,
-        "get",
-        lambda *args, **kwargs: [{"id": "aimi_onnx", "model_type": "ONNX"}],
-    )
+
+    def fake_get(*args: object, **kwargs: object) -> list[dict[str, object]]:
+        params = kwargs["params"]
+        assert params == {
+            "model_version_id": "aimv_variant",
+            "model_type": ModelType.ONNX,
+            "is_public": params["is_public"],
+            "limit": 500,
+        }
+        return (
+            [{"id": "aimi_onnx", "model_type": "ONNX"}]
+            if params["is_public"]
+            else []
+        )
+
+    monkeypatch.setattr(instance_services.Request, "get", fake_get)
 
     assert (
         instance_services._resolve_variant_instance_id(
