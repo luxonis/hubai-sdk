@@ -215,13 +215,96 @@ def test_resolve_instance_resource_path(
     )
 
 
+def test_instance_hash_resolves_across_variant_versions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_get(
+        service: str, endpoint: str, **kwargs: object
+    ) -> list[dict[str, object]]:
+        assert service == "models"
+        if endpoint == "models/":
+            return [_model_data()]
+        if endpoint == "modelVersions":
+            return (
+                [
+                    _variant_data(id="aimv_old", version="0.1.0"),
+                    _variant_data(id="aimv_new", version="1.0.0"),
+                ]
+                if kwargs["params"]["is_public"]
+                else []
+            )
+        if endpoint == "modelInstances":
+            params = kwargs["params"]
+            if not params["is_public"]:
+                return []
+            if params["model_version_id"] == "aimv_old":
+                return [_instance_data(id="aimi_old", hash_short="oldhash")]
+            return [
+                _instance_data(
+                    id="aimi_new",
+                    model_version_id="aimv_new",
+                    hash_short="abc1234",
+                )
+            ]
+        raise AssertionError(f"Unexpected endpoint: {endpoint}")
+
+    monkeypatch.setattr(hub_utils.Request, "get", fake_get)
+
+    assert (
+        hub_utils.get_resource_id(
+            "test-team/test-model:test-variant:abc1234", "modelInstances"
+        )
+        == "aimi_new"
+    )
+
+
+def test_instance_hash_shared_by_versions_is_ambiguous(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_get(
+        service: str, endpoint: str, **kwargs: object
+    ) -> list[dict[str, object]]:
+        assert service == "models"
+        if endpoint == "models/":
+            return [_model_data()]
+        if endpoint == "modelVersions":
+            return (
+                [
+                    _variant_data(id="aimv_old", version="0.1.0"),
+                    _variant_data(id="aimv_new", version="1.0.0"),
+                ]
+                if kwargs["params"]["is_public"]
+                else []
+            )
+        if endpoint == "modelInstances":
+            params = kwargs["params"]
+            return (
+                [
+                    _instance_data(
+                        id=f"aimi_{params['model_version_id']}",
+                        model_version_id=params["model_version_id"],
+                    )
+                ]
+                if params["is_public"]
+                else []
+            )
+        raise AssertionError(f"Unexpected endpoint: {endpoint}")
+
+    monkeypatch.setattr(hub_utils.Request, "get", fake_get)
+
+    with pytest.raises(ResourceAmbiguousError, match="modelInstances"):
+        hub_utils.get_resource_id(
+            "test-team/test-model:test-variant:abc1234", "modelInstances"
+        )
+
+
 def test_resolve_unique_variant_instance_by_model_type(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         instance_services,
-        "resolve_resource_id",
-        lambda identifier, endpoint: "aimv_variant",
+        "resolve_variant_ids",
+        lambda identifier: ["aimv_variant"],
     )
 
     def fake_get(*args: object, **kwargs: object) -> list[dict[str, object]]:
@@ -246,3 +329,105 @@ def test_resolve_unique_variant_instance_by_model_type(
         )
         == "aimi_onnx"
     )
+
+
+def _mock_typed_variant_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+    version_types: dict[str, ModelType | None],
+) -> list[str]:
+    queried_versions: list[str] = []
+
+    def fake_get(
+        service: str, endpoint: str, **kwargs: object
+    ) -> list[dict[str, object]]:
+        assert service == "models"
+        if endpoint == "models/":
+            return [_model_data()]
+        params = kwargs["params"]
+        if endpoint == "modelVersions":
+            return (
+                [
+                    _variant_data(id=version_id, version=version)
+                    for version_id, version in [
+                        ("aimv_old", "1.0.0"),
+                        ("aimv_new", "1.1.0"),
+                    ]
+                    if version_id in version_types
+                ]
+                if params["is_public"]
+                else []
+            )
+        if endpoint == "modelInstances":
+            version_id = params["model_version_id"]
+            queried_versions.append(version_id)
+            instance_type = version_types[version_id]
+            return (
+                [
+                    _instance_data(
+                        id=f"aimi_{version_id}",
+                        model_version_id=version_id,
+                        model_type=instance_type,
+                    )
+                ]
+                if params["is_public"] and instance_type is not None
+                else []
+            )
+        raise AssertionError(f"Unexpected endpoint: {endpoint}")
+
+    monkeypatch.setattr(instance_services.Request, "get", fake_get)
+    return queried_versions
+
+
+@pytest.mark.parametrize(
+    ("identifier", "version_types", "expected", "queried_versions"),
+    [
+        (
+            "test-team/test-model:test-variant",
+            {"aimv_new": ModelType.ONNX},
+            "aimi_aimv_new",
+            {"aimv_new"},
+        ),
+        (
+            "test-team/test-model:test-variant",
+            {"aimv_old": ModelType.TFLITE, "aimv_new": ModelType.ONNX},
+            "aimi_aimv_new",
+            {"aimv_old", "aimv_new"},
+        ),
+        (
+            "test-team/test-model:test-variant:1.1.0",
+            {"aimv_old": ModelType.ONNX, "aimv_new": ModelType.ONNX},
+            "aimi_aimv_new",
+            {"aimv_new"},
+        ),
+    ],
+)
+def test_typed_instance_resolution_across_versions(
+    monkeypatch: pytest.MonkeyPatch,
+    identifier: str,
+    version_types: dict[str, ModelType | None],
+    expected: str,
+    queried_versions: set[str],
+) -> None:
+    queried = _mock_typed_variant_lookup(monkeypatch, version_types)
+
+    assert (
+        instance_services._resolve_variant_instance_id(
+            identifier, ModelType.ONNX
+        )
+        == expected
+    )
+    assert set(queried) == queried_versions
+
+
+def test_typed_instance_resolution_is_ambiguous_across_versions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_typed_variant_lookup(
+        monkeypatch,
+        {"aimv_old": ModelType.ONNX, "aimv_new": ModelType.ONNX},
+    )
+
+    with pytest.raises(ResourceAmbiguousError, match="modelInstances"):
+        instance_services._resolve_variant_instance_id(
+            "test-team/test-model:test-variant", ModelType.ONNX
+        )

@@ -138,7 +138,7 @@ For example:
 
 ```bash
 hubai model info luxonis/yolov6-nano
-hubai variant info luxonis/yolov6-nano:r2-coco-512x384
+hubai variant info luxonis/rf-detr-nano:coco-384x384
 ```
 
 When several versions have the same variant slug, include the version segment
@@ -236,7 +236,7 @@ downloaded_path = client.instances.download_instance(
 
 # Or select an instance beneath a variant by its type
 downloaded_path = client.instances.download_instance(
-    "luxonis/yolov6-nano:r2-coco-512x384",
+    "luxonis/yolov6-nano:r2-coco-512x384:1.1.0",
     model_type=ModelType.ONNX,
 )
 
@@ -321,7 +321,7 @@ hubai variant ls
 hubai instance ls
 
 # Download a typed instance from a model variant
-hubai instance download luxonis/yolov6-nano:r2-coco-512x384 --model-type ONNX
+hubai instance download luxonis/yolov6-nano:r2-coco-512x384:1.1.0 --model-type ONNX
 
 # Download one exact instance by its resource path
 hubai instance download luxonis/yolov6-nano:r2-coco-512x384:fb1429e

@@ -371,8 +371,16 @@ def _resource_path_to_id(
         if parsed_instance is None:
             return None
         variant_path, instance_hash = parsed_instance
-        variant_id = get_resource_id(variant_path, "modelVersions")
-        return _find_instance_id(variant_id, instance_hash, identifier)
+        parsed_variant = _parse_variant_resource_path(variant_path)
+        if parsed_variant is None:
+            return None
+        team_slug, model_slug, variant_slug = parsed_variant
+        model_identifier = (
+            f"{team_slug}/{model_slug}" if team_slug else model_slug
+        )
+        model_id = get_resource_id(model_identifier, "models")
+        variant_ids = _find_variant_ids(model_id, variant_slug, identifier)
+        return _find_instance_id(variant_ids, instance_hash, identifier)
 
     return None
 
@@ -472,6 +480,21 @@ def _find_variant_id(
     version: str | None = None,
 ) -> str | None:
     """Find one model version beneath a resolved model."""
+    matches = _find_variant_ids(model_id, variant_slug, identifier, version)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ResourceAmbiguousError(identifier, "modelVersions")
+    return None
+
+
+def _find_variant_ids(
+    model_id: str,
+    variant_slug: str,
+    identifier: str,
+    version: str | None = None,
+) -> list[str]:
+    """Find all visible versions of a model variant."""
     matches: dict[str, dict[str, Any]] = {}
     for is_public in [True, False]:
         try:
@@ -497,36 +520,33 @@ def _find_variant_id(
                 continue
             matches[str(item["id"])] = item
 
-    if len(matches) == 1:
-        return next(iter(matches))
-    if len(matches) > 1:
-        raise ResourceAmbiguousError(identifier, "modelVersions")
-    return None
+    return list(matches)
 
 
 def _find_instance_id(
-    variant_id: str, instance_hash: str, identifier: str
+    variant_ids: list[str], instance_hash: str, identifier: str
 ) -> str | None:
-    """Find one instance beneath a resolved variant by its short hash."""
+    """Find one instance across variant versions by its short hash."""
     matches: dict[str, dict[str, Any]] = {}
-    for is_public in [True, False]:
-        try:
-            data = Request.get(
-                service="models",
-                endpoint="modelInstances",
-                params={
-                    "model_version_id": variant_id,
-                    "is_public": is_public,
-                    "limit": 500,
-                },
-            )
-        except HTTPError as exc:
-            raise_for_hub_error(
-                exc, identifier=identifier, endpoint="modelInstances"
-            )
-        for item in data:
-            if item.get("hash_short") == instance_hash:
-                matches[str(item["id"])] = item
+    for variant_id in variant_ids:
+        for is_public in [True, False]:
+            try:
+                data = Request.get(
+                    service="models",
+                    endpoint="modelInstances",
+                    params={
+                        "model_version_id": variant_id,
+                        "is_public": is_public,
+                        "limit": 500,
+                    },
+                )
+            except HTTPError as exc:
+                raise_for_hub_error(
+                    exc, identifier=identifier, endpoint="modelInstances"
+                )
+            for item in data:
+                if item.get("hash_short") == instance_hash:
+                    matches[str(item["id"])] = item
 
     if len(matches) == 1:
         return next(iter(matches))
@@ -547,6 +567,21 @@ def resolve_resource_id(
         raise ResourceNotFoundError(identifier, endpoint) from exc
     except HTTPError as exc:
         raise_for_hub_error(exc)
+
+
+def resolve_variant_ids(identifier: str) -> list[str]:
+    """Resolve all versions of a variant path, or one exact version ID."""
+    parsed_variant = _parse_variant_resource_path(identifier)
+    if parsed_variant is None:
+        return [resolve_resource_id(identifier, "modelVersions")]
+
+    team_slug, model_slug, variant_slug = parsed_variant
+    model_identifier = f"{team_slug}/{model_slug}" if team_slug else model_slug
+    model_id = resolve_resource_id(model_identifier, "models")
+    variant_ids = _find_variant_ids(model_id, variant_slug, identifier)
+    if not variant_ids:
+        raise ResourceNotFoundError(identifier, "modelVersions")
+    return variant_ids
 
 
 def get_resource_info(
