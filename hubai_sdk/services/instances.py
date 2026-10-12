@@ -44,7 +44,7 @@ from luxonis_ml.telemetry import suppress_telemetry
 from requests import HTTPError
 from rich.progress import Progress
 
-from hubai_sdk.errors import HubApiError, InputError
+from hubai_sdk.errors import HubApiError, InputError, ResourceAmbiguousError
 from hubai_sdk.typing import (
     ModelClass,
     Order,
@@ -59,6 +59,7 @@ from hubai_sdk.utils.hub import (
     print_hub_resource_info,
     raise_for_hub_error,
     resolve_resource_id,
+    resolve_variant_ids,
     run_cli,
     wait_for_job,
 )
@@ -354,15 +355,15 @@ def download_instance(
             When
             ``model_type`` is provided, the model-version ID, raw
             model-version slug, or ``<model>:<variant>[:<version>]``
-            resource path, optionally prefixed with ``<team>/``, whose instance
-            should be downloaded.
+            resource path, optionally prefixed with ``<team>/``. Without a
+            version, instances in all matching versions are searched.
         output_dir: Directory path to save the downloaded files. If not
             specified, the downloader creates a directory named after the
             model instance slug under the current working directory.
         force: Whether to force download the files even if they already
             exist.
         model_type: Select an instance of this type from the identified
-            variant. The match must be unique.
+            variant versions. The match must be unique.
 
     Returns:
         Path to the downloaded file. When the instance has multiple files,
@@ -370,8 +371,8 @@ def download_instance(
 
     Raises:
         ResourceNotFoundError: If ``identifier`` cannot be resolved.
-        InputError: If ``model_type`` is provided and no instance, or more
-            than one instance, matches it.
+        InputError: If ``model_type`` is provided and no instance matches it.
+        ResourceAmbiguousError: If multiple instances match ``model_type``.
         HubApiError: If the instance has no files or a download fails.
     """
     if isinstance(identifier, UUID):
@@ -915,28 +916,29 @@ def _get_instance_subresource(
 def _resolve_variant_instance_id(
     identifier: str, model_type: ModelType
 ) -> str:
-    """Resolve exactly one instance of a requested type beneath a variant."""
-    variant_id = resolve_resource_id(identifier, "modelVersions")
+    """Resolve one typed instance across the selected variant versions."""
+    variant_ids = resolve_variant_ids(identifier)
     matches: dict[str, dict[str, object]] = {}
-    for is_public in [True, False]:
-        try:
-            data = Request.get(
-                service="models",
-                endpoint="modelInstances",
-                params={
-                    "model_version_id": variant_id,
-                    "model_type": model_type,
-                    "is_public": is_public,
-                    "limit": 500,
-                },
-            )
-        except HTTPError as exc:
-            raise_for_hub_error(
-                exc, identifier=identifier, endpoint="modelInstances"
-            )
-        for instance in data:
-            if instance.get("model_type") == model_type:
-                matches[str(instance["id"])] = instance
+    for variant_id in variant_ids:
+        for is_public in [True, False]:
+            try:
+                data = Request.get(
+                    service="models",
+                    endpoint="modelInstances",
+                    params={
+                        "model_version_id": variant_id,
+                        "model_type": model_type,
+                        "is_public": is_public,
+                        "limit": 500,
+                    },
+                )
+            except HTTPError as exc:
+                raise_for_hub_error(
+                    exc, identifier=identifier, endpoint="modelInstances"
+                )
+            for instance in data:
+                if instance.get("model_type") == model_type:
+                    matches[str(instance["id"])] = instance
 
     if len(matches) == 1:
         return next(iter(matches))
@@ -944,10 +946,7 @@ def _resolve_variant_instance_id(
         raise InputError(
             f"No {model_type.value} instance found for variant '{identifier}'."
         )
-    raise InputError(
-        f"Multiple {model_type.value} instances found for variant "
-        f"'{identifier}'. Use the instance ID or slug instead."
-    )
+    raise ResourceAmbiguousError(identifier, "modelInstances")
 
 
 def _dump_for_cli(resource: object) -> object:
