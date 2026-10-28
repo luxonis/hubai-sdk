@@ -80,6 +80,11 @@ class ArchitectureConfig(BaseModel):
                     f"Config file '{config_file_path}' must be JSON or YAML"
                 )
 
+            if not isinstance(config, dict):
+                raise ValueError(
+                    f"Config file '{config_file_path}' must contain a mapping"
+                )
+
             # Extract configs
             data["training_model_config"] = config.get("model")
             data["training_loader_config"] = config.get("loader")

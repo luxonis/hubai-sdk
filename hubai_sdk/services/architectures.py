@@ -222,7 +222,7 @@ def create_architecture(
     training_loader_config : dict[str, Any] | None
         The optional `loader` configuration block parsed by the training image.
     training_hyperparameter_config : dict[str, Any] | None
-        The `training` configuration block parsed by the training image.
+        The `trainer` configuration block parsed by the training image.
     performance_ratings : PerformanceRatings | None
         The speed and accuracy ratings for each HW with this architecture.
     config_file_path : str | None
@@ -340,7 +340,7 @@ def update_architecture(
     training_loader_config : dict[str, Any] | None
         The optional `loader` configuration block parsed by the training image.
     training_hyperparameter_config : dict[str, Any] | None
-        The `training` configuration block parsed by the training image.
+        The `trainer` configuration block parsed by the training image.
     performance_ratings : PerformanceRatings | dict[str, Any] | None
         The speed and accuracy ratings for each HW with this architecture.
     config_file_path : str | None
@@ -460,7 +460,7 @@ def update_architecture_cli(
 
 
 def delete_architecture(identifier: UUID | str) -> None:
-    """Deletes a architecture.
+    """Delete an architecture.
 
     Parameters
     ----------
@@ -485,7 +485,7 @@ def delete_architecture(identifier: UUID | str) -> None:
 
 @app.command(name="delete")
 def delete_architecture_cli(identifier: UUID | str) -> None:
-    """Deletes a architecture."""
+    """Delete an architecture."""
     run_cli(lambda: delete_architecture(identifier))
 
 

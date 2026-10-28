@@ -137,6 +137,17 @@ def test_create_architecture_requires_training_config() -> None:
     )
 
 
+def test_create_architecture_rejects_non_mapping_config(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "empty.yaml"
+    config_path.write_text("null\n")
+    with pytest.raises(InputError, match="must contain a mapping"):
+        architecture_services.create_architecture(
+            "invalid-config", config_file_path=str(config_path)
+        )
+
+
 def test_update_architecture_uses_resolved_resource_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
