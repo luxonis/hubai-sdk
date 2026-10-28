@@ -13,6 +13,7 @@ For complete SDK, CLI, and conversion parameter documentation, see the
 - **Model Management**: Create, list, update, and delete HubAI models
 - **Variant Management**: Manage HubAI model variants and versions
 - **Instance Management**: Create and manage HubAI model instances
+- **Library Versions**: Inspect versions reported by HubAI
 - **Model Conversion**: Convert HubAI models to various formats including:
   - `RVC2`
   - `RVC3`
@@ -113,7 +114,7 @@ print(f"Converted model downloaded to: {response.downloaded_path}")
 
 ## 🛠️ Services
 
-The SDK provides four main services accessible through the `HubAIClient`:
+The SDK provides resource, conversion, and health services through `HubAIClient`:
 
 ### Using resource identifiers
 
@@ -144,6 +145,18 @@ hubai variant info luxonis/rf-detr-nano:coco-384x384
 When several versions have the same variant slug, include the version segment
 to select one exactly, for example
 `luxonis/yolov6-nano:r2-coco-512x384:1.1.0`.
+
+### Library Versions (`client.library_versions`)
+
+Read the versions reported by the HubAI projects health endpoint. This call
+does not create or update cloud resources.
+
+```python
+versions = client.library_versions.get_library_versions()
+print(versions)  # e.g. {"luxonis-ml": "0.8.6"}
+```
+
+From the CLI, run `hubai library-versions`.
 
 ### 🤖 Models Service (`client.models`)
 

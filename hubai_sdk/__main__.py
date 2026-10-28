@@ -23,6 +23,7 @@ Command groups
 * ``hubai convert TARGET`` uploads a model, runs hosted conversion, and
   downloads the output. ``TARGET`` is one of ``rvc2``, ``rvc3``, ``rvc4``, or
   ``hailo``.
+* ``hubai library-versions`` prints library versions from HubAI health.
 
 Examples
 --------
@@ -67,6 +68,7 @@ from rich.prompt import Prompt
 
 from hubai_sdk.services.convert import convert as cli_convert
 from hubai_sdk.services.instances import app as instance_app
+from hubai_sdk.services.library_versions import app as library_versions_app
 from hubai_sdk.services.models import app as model_app
 from hubai_sdk.services.variants import app as variant_app
 from hubai_sdk.utils.environ import environ
@@ -86,6 +88,8 @@ app.command(variant := variant_app)
 
 app.command(instance := instance_app)
 
+app.command(library_versions := library_versions_app)
+
 
 @wraps(cli_convert)
 def convert_cli(*args: object, **kwargs: object) -> object:
@@ -96,7 +100,7 @@ def convert_cli(*args: object, **kwargs: object) -> object:
 
 app.command(convert := convert_cli)
 
-for plugin in load_cli_plugins():
+for plugin in load_cli_plugins(exclude={"library_versions"}):
     app.command(plugin)
 
 instrument_hubai_cli(app)

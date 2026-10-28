@@ -8,9 +8,13 @@ def iter_plugin_entry_points() -> list[EntryPoint]:
     return list(entry_points(group="hubai.plugins"))
 
 
-def load_cli_plugins() -> list[Any]:
+def load_cli_plugins(exclude: set[str] | None = None) -> list[Any]:
     """Load CLI plugin command objects from installed entry points."""
-    return [ep.load() for ep in iter_plugin_entry_points()]
+    return [
+        ep.load()
+        for ep in iter_plugin_entry_points()
+        if ep.name not in (exclude or set())
+    ]
 
 
 def load_client_plugins() -> dict[str, Any]:
