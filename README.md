@@ -189,8 +189,7 @@ client.architecture.delete_architecture(created.id)
 ```
 
 The same operations are available through `hubai architecture ls`, `info`,
-`create`, `update`, and `delete`. The architecture service is built into
-`hubai-sdk`; `hubai-sdk-private` is no longer needed for it.
+`create`, `update`, and `delete`.
 
 ### 🤖 Models Service (`client.models`)
 
