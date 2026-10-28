@@ -100,7 +100,7 @@ def convert_cli(*args: object, **kwargs: object) -> object:
 
 app.command(convert := convert_cli)
 
-for plugin in load_cli_plugins(exclude={"library_versions"}):
+for plugin in load_cli_plugins():
     app.command(plugin)
 
 instrument_hubai_cli(app)
