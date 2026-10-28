@@ -14,7 +14,7 @@ class ArchitectureConfig(BaseModel):
     name: str
     description: str = ""
     license_type: License = "undefined"
-    is_public: bool | None = False
+    is_public: bool = False
     tasks: list[Task] | None = None
     training_image: str = "luxonis-train"
     training_model_config: dict[str, Any] | None = None

@@ -192,7 +192,7 @@ def create_architecture(
     *,
     description: str | None = None,
     license_type: License = "undefined",
-    is_public: bool | None = False,
+    is_public: bool = False,
     tasks: list[Task] | None = None,
     training_image: str = "luxonis-train",
     training_model_config: dict[str, Any] | None = None,
@@ -209,8 +209,9 @@ def create_architecture(
         The name of the architecture.
     license_type : License
         The type of the license.
-    is_public : bool | None
-        Whether the architecture is public (True), private (False), or team (None).
+    is_public : bool
+        HubAI currently permits creating private architectures only. The
+        server rejects public architectures.
     description : str | None
         Full description of the architecture.
     tasks : list[Task] | None
@@ -270,7 +271,7 @@ def create_architecture_cli(
     *,
     description: str | None = None,
     license_type: License = "undefined",
-    is_public: bool | None = False,
+    is_public: bool = False,
     tasks: list[Task] | None = None,
     training_image: str = "luxonis-train",
     training_model_config: TrainingModelConfigOption = None,
@@ -330,7 +331,8 @@ def update_architecture(
     license_type : License | None
         The type of the license.
     is_public : bool | None
-        Whether the architecture is public (True), private (False), or team (None).
+        Visibility change; ``None`` leaves it unchanged. The server rejects
+        promotion to public through this endpoint.
     tasks : list[Task] | None
         List of tasks this architecture supports.
     training_image : str | None

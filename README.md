@@ -166,6 +166,7 @@ Manage architecture definitions used for training. Pass training configuration
 as a JSON or YAML file with `model` and `trainer` keys (and optional `loader`),
 or pass inline `training_model_config` and
 `training_hyperparameter_config`. The two forms cannot be mixed.
+The HubAI API currently allows creation of private architectures only.
 
 ```python
 architectures = client.architecture.list_architectures(

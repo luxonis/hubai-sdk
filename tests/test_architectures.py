@@ -148,6 +148,16 @@ def test_create_architecture_rejects_non_mapping_config(
         )
 
 
+def test_create_architecture_rejects_null_visibility() -> None:
+    with pytest.raises(InputError):
+        architecture_services.create_architecture(
+            "invalid-visibility",
+            is_public=None,  # type: ignore[arg-type]
+            training_model_config={"name": "resnet18"},
+            training_hyperparameter_config={"epochs": 1},
+        )
+
+
 def test_update_architecture_uses_resolved_resource_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
