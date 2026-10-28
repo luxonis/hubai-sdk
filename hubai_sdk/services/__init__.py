@@ -8,6 +8,8 @@ available through a `hubai_sdk.HubAIClient` instance:
 
    * - Module
      - Purpose
+   * - `hubai_sdk.services.architectures`
+     - Manage trainable architecture definitions.
    * - `hubai_sdk.services.models`
      - Create, inspect, update, list, and delete model metadata.
    * - `hubai_sdk.services.variants`
@@ -16,6 +18,8 @@ available through a `hubai_sdk.HubAIClient` instance:
      - Manage concrete model artifacts and transfer their files.
    * - `hubai_sdk.services.convert`
      - Upload a model, run hosted conversion, and download the result.
+   * - `hubai_sdk.services.library_versions`
+     - Inspect versions reported by HubAI health.
 
 Most resource functions accept either a UUID or a HubAI slug. Mutating
 operations raise exceptions from `hubai_sdk.errors` when the server rejects a

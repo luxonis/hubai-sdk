@@ -68,6 +68,21 @@ class Request:
         )
 
     @staticmethod
+    def get_page(
+        service: HubService, endpoint: str = "", **kwargs
+    ) -> tuple[Any, str | None]:
+        """Return one GET page and its opaque next-page cursor."""
+        response = requests.get(
+            Request._get_url(endpoint, Request.url(service)),
+            headers=Request.headers(),
+            timeout=200,
+            **kwargs,
+        )
+        return Request._process_response(response), response.headers.get(
+            "X-Next-Cursor"
+        )
+
+    @staticmethod
     def post(service: HubService, endpoint: str = "", **kwargs) -> Any:
         """Send an authenticated POST request to HubAI."""
         headers = Request.headers()

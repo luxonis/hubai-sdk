@@ -11,6 +11,7 @@ For complete SDK, CLI, and conversion parameter documentation, see the
 ## ✨ Features
 
 - **Model Management**: Create, list, update, and delete HubAI models
+- **Architecture Management**: Manage trainable architecture definitions
 - **Variant Management**: Manage HubAI model variants and versions
 - **Instance Management**: Create and manage HubAI model instances
 - **Library Versions**: Inspect versions reported by HubAI
@@ -121,11 +122,12 @@ The SDK provides resource, conversion, and health services through `HubAIClient`
 All operations that accept an identifier accept a resource ID or its raw
 `slug`. They also accept the following human-readable resource paths:
 
-| Resource | Resource paths                                                                                                       |
-| -------- | -------------------------------------------------------------------------------------------------------------------- |
-| Model    | `<team>/<model>`                                                                                                     |
-| Variant  | `<model>:<variant>`, `<team>/<model>:<variant>`, `<model>:<variant>:<version>`, `<team>/<model>:<variant>:<version>` |
-| Instance | `<model>:<variant>:<instance-hash>`, `<team>/<model>:<variant>:<instance-hash>`                                      |
+| Resource     | Resource paths                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Architecture | Raw architecture ID or slug                                                                                          |
+| Model        | `<team>/<model>`                                                                                                     |
+| Variant      | `<model>:<variant>`, `<team>/<model>:<variant>`, `<model>:<variant>:<version>`, `<team>/<model>:<variant>:<version>` |
+| Instance     | `<model>:<variant>:<instance-hash>`, `<team>/<model>:<variant>:<instance-hash>`                                      |
 
 Here, `instance-hash` is the instance response's `hash_short` value. A
 three-part path identifies a model version for variant operations and an
@@ -157,6 +159,37 @@ print(versions)  # e.g. {"luxonis-ml": "0.8.6"}
 ```
 
 From the CLI, run `hubai library-versions`.
+
+### Architectures (`client.architecture`)
+
+Manage architecture definitions used for training. Pass training configuration
+as a JSON or YAML file with `model` and `trainer` keys (and optional `loader`),
+or pass inline `training_model_config` and
+`training_hyperparameter_config`. The two forms cannot be mixed.
+
+```python
+architectures = client.architecture.list_architectures(
+    tasks=["CLASSIFICATION"], is_public=True
+)
+architecture = client.architecture.get_architecture("architecture-id-or-slug")
+
+created = client.architecture.create_architecture(
+    "my-architecture",
+    description="Image classifier",
+    license_type="MIT",
+    tasks=["CLASSIFICATION"],
+    training_model_config={"name": "resnet18"},
+    training_hyperparameter_config={"epochs": 10},
+)
+updated = client.architecture.update_architecture(
+    created.id, description="Updated image classifier"
+)
+client.architecture.delete_architecture(created.id)
+```
+
+The same operations are available through `hubai architecture ls`, `info`,
+`create`, `update`, and `delete`. The architecture service is built into
+`hubai-sdk`; `hubai-sdk-private` is no longer needed for it.
 
 ### 🤖 Models Service (`client.models`)
 

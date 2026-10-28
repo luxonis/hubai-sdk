@@ -16,6 +16,7 @@ Command groups
 
 * ``hubai model`` manages model metadata: ``ls``, ``info``, ``create``,
   ``update``, and ``delete``.
+* ``hubai architecture`` manages trainable architecture definitions.
 * ``hubai variant`` manages model variants: ``ls``, ``info``, ``create``, and
   ``delete``.
 * ``hubai instance`` manages model artifacts: ``ls``, ``info``, ``create``,
@@ -46,7 +47,8 @@ the exact CLI syntax, choices, and defaults. For example, use
 ``hubai convert --help`` to see conversion options.
 
 The CLI command parameters are derived from the public service functions. The
-generated API reference for `hubai_sdk.services.models`,
+generated API reference for `hubai_sdk.services.architectures`,
+`hubai_sdk.services.models`,
 `hubai_sdk.services.variants`, `hubai_sdk.services.instances`, and
 `hubai_sdk.services.convert` is the detailed reference for the corresponding
 resource and conversion parameters. The conversion service also documents
@@ -66,6 +68,7 @@ from cyclopts import App, Parameter
 from loguru import logger
 from rich.prompt import Prompt
 
+from hubai_sdk.services.architectures import app as architecture_app
 from hubai_sdk.services.convert import convert as cli_convert
 from hubai_sdk.services.instances import app as instance_app
 from hubai_sdk.services.library_versions import app as library_versions_app
@@ -81,6 +84,8 @@ from hubai_sdk.utils.telemetry import instrument_hubai_cli
 os.environ["HUBAI_CALL_SOURCE"] = "CLI"
 
 app = App(help="Interactions with resources on HubAI.", group="HubAI Commands")
+
+app.command(architecture := architecture_app)
 
 app.command(model := model_app)
 
