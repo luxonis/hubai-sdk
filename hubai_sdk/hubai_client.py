@@ -8,6 +8,7 @@ from requests import HTTPError
 
 import hubai_sdk.services.convert
 import hubai_sdk.services.instances
+import hubai_sdk.services.library_versions
 import hubai_sdk.services.models
 import hubai_sdk.services.variants
 from hubai_sdk.utils.environ import environ
@@ -36,6 +37,7 @@ class HubAIClient:
         models: Functions for model resources.
         variants: Functions for versioned model variants.
         instances: Functions for model artifacts and their files.
+        library_versions: Versions reported by the HubAI health endpoint.
         convert: Hosted model conversion functions.
 
     Example:
@@ -103,6 +105,7 @@ class HubAIClient:
             self.models = hubai_sdk.services.models
             self.variants = hubai_sdk.services.variants
             self.instances = hubai_sdk.services.instances
+            self.library_versions = hubai_sdk.services.library_versions
             self.convert = hubai_sdk.services.convert
 
             for attr_name, plugin in load_client_plugins().items():
