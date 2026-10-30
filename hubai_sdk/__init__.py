@@ -8,9 +8,10 @@ HubAI stores model resources in a three-level hierarchy:
        an exported artifact for RVC2, RVC3, RVC4, or Hailo.
 
 `HubAIClient` is the main entry point. It validates the API key and exposes
-the `hubai_sdk.services.models`, `hubai_sdk.services.variants`,
-`hubai_sdk.services.instances`, and `hubai_sdk.services.convert` modules as
-attributes.
+the `hubai_sdk.services.architectures`, `hubai_sdk.services.models`,
+`hubai_sdk.services.variants`, `hubai_sdk.services.instances`,
+`hubai_sdk.services.convert`, and `hubai_sdk.services.library_versions`
+modules as attributes.
 
 Example:
     List public object-detection models and inspect the first result.

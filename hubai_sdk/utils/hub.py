@@ -45,7 +45,9 @@ from hubai_sdk.utils.nn_archive import process_nn_archive
 from hubai_sdk.utils.sdk_models import JobMessageResponse
 from hubai_sdk.utils.types import ModelType, Target
 
-ResourceEndpoint = Literal["models", "modelVersions", "modelInstances"]
+ResourceEndpoint = Literal[
+    "models", "modelVersions", "modelInstances", "architectures"
+]
 T = TypeVar("T")
 
 
@@ -260,15 +262,35 @@ def is_hubai_id(identifier: str) -> bool:
 
 def slug_to_id(
     slug: str,
-    endpoint: Literal["models", "modelVersions", "modelInstances"],
+    endpoint: ResourceEndpoint,
 ) -> str | None:
     """Resolve a raw resource slug to its resource ID."""
     matches: dict[str, dict[str, Any]] = {}
     for is_public in [True, False]:
-        params = {
-            "is_public": is_public,
-            "slug": slug,
-        }
+        if endpoint == "architectures":
+            cursor = None
+            while True:
+                try:
+                    data, cursor = Request.get_page(
+                        service="models",
+                        endpoint="architectures/",
+                        params={
+                            "is_public": is_public,
+                            "limit": 500,
+                            "cursor": cursor,
+                        },
+                    )
+                except HTTPError as exc:
+                    raise_for_hub_error(
+                        exc, identifier=slug, endpoint=endpoint
+                    )
+                for item in data:
+                    if item["slug"] == slug:
+                        matches[str(item["id"])] = item
+                if not cursor:
+                    break
+            continue
+        params = {"is_public": is_public, "slug": slug}
         try:
             data = Request.get(
                 service="models", endpoint=f"{endpoint}/", params=params
@@ -290,7 +312,7 @@ def slug_to_id(
 
 def get_resource_id(
     identifier: str,
-    endpoint: Literal["models", "modelVersions", "modelInstances"],
+    endpoint: ResourceEndpoint,
 ) -> str:
     """Resolve a UUID, HubAI ID, raw slug, or resource path to a resource ID.
 
@@ -327,7 +349,7 @@ def get_resource_id(
 
 def _resource_path_to_id(
     identifier: str,
-    endpoint: Literal["models", "modelVersions", "modelInstances"],
+    endpoint: ResourceEndpoint,
 ) -> str | None:
     """Resolve a human-readable HubAI resource path to its resource ID.
 

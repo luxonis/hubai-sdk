@@ -6,6 +6,7 @@ import time
 from loguru import logger
 from requests import HTTPError
 
+import hubai_sdk.services.architectures
 import hubai_sdk.services.convert
 import hubai_sdk.services.instances
 import hubai_sdk.services.library_versions
@@ -35,6 +36,7 @@ class HubAIClient:
 
     Attributes:
         models: Functions for model resources.
+        architecture: Functions for architecture definitions.
         variants: Functions for versioned model variants.
         instances: Functions for model artifacts and their files.
         library_versions: Versions reported by the HubAI health endpoint.
@@ -103,6 +105,7 @@ class HubAIClient:
             logger.info("API key verified successfully.")
 
             self.models = hubai_sdk.services.models
+            self.architecture = hubai_sdk.services.architectures
             self.variants = hubai_sdk.services.variants
             self.instances = hubai_sdk.services.instances
             self.library_versions = hubai_sdk.services.library_versions

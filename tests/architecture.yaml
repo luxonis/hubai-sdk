@@ -1,0 +1,106 @@
+model:
+  name: demo_classification_resnet18
+
+  nodes:
+    - name: ResNet
+      variant: 18
+      task_name: classification
+    - name: ClassificationHead
+      task_name: classification
+      inputs:
+        - ResNet
+      fc_dropout: 0.2
+
+  losses:
+    - name: CrossEntropyLoss
+      attached_to: ClassificationHead
+
+  metrics:
+    - name: F1Score
+      attached_to: ClassificationHead
+      is_main_metric: True
+
+    - name: Accuracy
+      attached_to: ClassificationHead
+
+    - name: Recall
+      attached_to: ClassificationHead
+
+    - name: ConfusionMatrix
+      attached_to: ClassificationHead
+
+  visualizers:
+    - name: ClassificationVisualizer
+      attached_to: ClassificationHead
+
+loader:
+  name: LuxonisLoaderTorch
+  image_source: image
+  train_view: [train]
+  val_view: [val]
+  test_view: [test]
+
+trainer:
+  preprocessing:
+    train_image_size: [128, 128]
+    keep_aspect_ratio: False
+    normalize:
+      active: True
+    augmentations:
+      - name: HorizontalFlip
+        params:
+          p: 0.5
+
+      - name: RandomBrightnessContrast
+        params:
+          p: 0.4
+          brightness_limit: 0.3
+          contrast_limit: 0.3
+
+      - name: ToGray
+        params:
+          p: 1.0
+
+      - name: MotionBlur
+        params:
+          p: 0.3
+          blur_limit: 3
+
+      - name: GaussianBlur
+        params:
+          p: 0.2
+          blur_limit: 3
+
+      - name: GaussNoise
+        params:
+          p: 0.3
+          var_limit: [5.0, 30.0]
+
+      - name: RandomGamma
+        params:
+          p: 0.3
+          gamma_limit: [70, 130]
+
+      - name: Rotate
+        params:
+          p: 0.2
+          limit: [-20, 20]
+
+      - name: RandomScale
+        params:
+          p: 0.2
+          scale_limit: 0.15
+
+  batch_size: 16
+  epochs: 50
+  n_workers: 0
+  validation_interval: 4
+  n_log_images: 8
+
+  optimizer:
+    name: Adam
+    params:
+      lr: 0.003
+
+  scheduler:
+    name: ConstantLR

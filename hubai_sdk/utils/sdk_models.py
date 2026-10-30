@@ -16,6 +16,9 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from hubai_sdk.utils.hubai_models import (
+    ArchitectureResponse as HubAIArchitectureResponse,
+)
+from hubai_sdk.utils.hubai_models import (
     JobMessageResponse as HubAIJobMessageResponse,
 )
 from hubai_sdk.utils.hubai_models import (
@@ -34,6 +37,13 @@ from hubai_sdk.utils.hubai_models import (
 # in the internal Pydantic response models. The public API middleware strips
 # those fields from real client responses, so the SDK-facing wrappers hide them
 # to match the actual external contract.
+class ArchitectureResponse(HubAIArchitectureResponse):
+    """Metadata for a trainable architecture definition."""
+
+    team_id: ClassVar[UUID | None] = None
+    user_id: ClassVar[UUID | None] = None
+
+
 class ModelResponse(HubAIModelResponse):
     """Metadata for a top-level HubAI model resource.
 
