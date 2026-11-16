@@ -14,6 +14,29 @@ from hubai_sdk.utils.config import Config
 from hubai_sdk.utils.constants import MISC_DIR
 
 
+def _extract_nn_archive(path: Path, untar_path: Path) -> None:
+    """Extract an NN archive without allowing files outside the destination."""
+    with tarfile.open(path, mode="r") as tf:
+        if hasattr(tarfile, "data_filter"):
+            tf.extractall(path=untar_path, filter="data")
+        else:
+            # Older Python 3.10 builds have no extraction filters. Do not
+            # extract links or special files, and check existing symlinks in
+            # the destination before writing each regular file or directory.
+            root = untar_path.resolve()
+            for member in tf:
+                target = untar_path / member.name
+                if (
+                    not (member.isfile() or member.isdir())
+                    or ".." in Path(member.name).parts
+                    or not target.resolve().is_relative_to(root)
+                ):
+                    raise ValueError(
+                        f"Unsafe NN archive member: {member.name}"
+                    )
+                tf.extract(member, path=untar_path)
+
+
 def process_nn_archive(
     path: Path, overrides: dict[str, Any] | None
 ) -> tuple[Config, NNArchiveConfig, str]:
@@ -34,21 +57,7 @@ def process_nn_archive(
     elif tarfile.is_tarfile(path):
         if untar_path.suffix == ".tar":
             untar_path = MISC_DIR / untar_path.stem
-
-        def safe_members(tar: tarfile.TarFile) -> list[tarfile.TarInfo]:
-            """Filter members to prevent path traversal attacks."""
-            safe_files = []
-            for member in tar.getmembers():
-                # Normalize path and ensure it's within the extraction folder
-                if not member.name.startswith("/") and ".." not in member.name:
-                    safe_files.append(member)
-                else:
-                    logger.warning(f"Skipping unsafe file: {member.name}")
-            return safe_files
-
-        with tarfile.open(path, mode="r") as tf:
-            for member in safe_members(tf):
-                tf.extract(member, path=untar_path)
+        _extract_nn_archive(path, untar_path)
 
     else:
         raise RuntimeError(f"Unknown NN Archive path: `{path}`")
