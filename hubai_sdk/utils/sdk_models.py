@@ -1,6 +1,6 @@
 """Stable response models returned by the public SDK services.
 
-The HubAI OpenAPI schema is generated into an internal module. The
+The Luxonis Hub OpenAPI schema is generated into an internal module. The
 wrappers here remove server-only ownership fields and add values
 populated by the SDK, providing a smaller and more accurate public
 contract.
@@ -45,7 +45,7 @@ class ArchitectureResponse(HubAIArchitectureResponse):
 
 
 class ModelResponse(HubAIModelResponse):
-    """Metadata for a top-level HubAI model resource.
+    """Metadata for a top-level Luxonis Hub model resource.
 
     Common fields:
         - ``id``, ``name``, and ``slug`` identify the model.
@@ -116,7 +116,7 @@ class ModelInstanceFileResponse(HubAIModelInstanceFileResponse):
 
 
 class JobMessageResponse(HubAIJobMessageResponse):
-    """Status and output metadata for an asynchronous HubAI job.
+    """Status and output metadata for an asynchronous Luxonis Hub job.
 
     Common fields:
         ``id``, ``name``, and ``status`` identify the job and its state.
@@ -134,7 +134,7 @@ class ConvertResponse(BaseModel):
 
     Attributes:
         downloaded_path: Local directory or file created by the downloader.
-        job: Completed export job returned by HubAI.
+        job: Completed export job returned by Luxonis Hub.
         instance: Exported model instance associated with the job.
     """
 

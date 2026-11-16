@@ -123,7 +123,7 @@ def test_get_architecture_info_cli_exits_cleanly_on_missing_architecture(
     assert captured.out == ""
     assert captured.err == (
         "Resource for endpoint 'architectures' with identifier "
-        "'missing-architecture' not found in HubAI.\n"
+        "'missing-architecture' not found in Luxonis Hub.\n"
     )
 
 

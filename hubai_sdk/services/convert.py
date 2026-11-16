@@ -2,7 +2,7 @@
 
 The target-specific helpers `RVC2`, `RVC3`, `RVC4`, and `Hailo` are the
 recommended conversion API. Each helper prepares target options and delegates
-to `convert`, which coordinates the complete HubAI workflow:
+to `convert`, which coordinates the complete Luxonis Hub workflow:
 
     1. Read model metadata from a model file, YAML config, or NN Archive.
     2. Create or reuse model and variant resources.
@@ -11,7 +11,7 @@ to `convert`, which coordinates the complete HubAI workflow:
     5. Download the exported instance.
 
 Example:
-    Convert an ONNX model for RVC4 with HubAI's general calibration data.
+    Convert an ONNX model for RVC4 with Luxonis Hub's general calibration data.
 
     .. python::
 
@@ -43,7 +43,7 @@ Quantization:
 Conversion parameters
 ---------------------
 
-The conversion API accepts parameters for the input, HubAI resources, and the
+The conversion API accepts parameters for the input, Luxonis Hub resources, and the
 selected target. The function signatures below provide exact types and defaults;
 this overview groups the parameters by purpose.
 
@@ -70,7 +70,7 @@ YOLO parameters
 Model parameters
 ^^^^^^^^^^^^^^^^
 
-These parameters create a HubAI Model resource unless ``model_id`` is supplied.
+These parameters create a Luxonis Hub Model resource unless ``model_id`` is supplied.
 
 * ``model_id``: ID of an existing model to reuse.
 * ``name``: Model name. It defaults to the configured or input model name.
@@ -87,7 +87,7 @@ Model variant parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``model_id``: ID of an existing model to which to add a variant.
-* ``variant_version``: Version of the model variant. HubAI uses the next
+* ``variant_version``: Version of the model variant. Luxonis Hub uses the next
   version automatically when it is omitted.
 * ``variant_description``: Full variant description.
 * ``repository_url`` and ``commit_hash``: Related repository URL and commit.
@@ -441,7 +441,7 @@ def convert(
                         )
                     except ResourceNotFoundError as lookup_error:
                         raise ResourceConflictError(
-                            f"Unable to create model '{name}': HubAI "
+                            f"Unable to create model '{name}': Luxonis Hub "
                             f"reported a resource conflict ({conflict_error}). "
                             "The SDK then tried to reuse an existing model "
                             f"using identifier '{model_identifier}', but it "

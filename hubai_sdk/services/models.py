@@ -104,7 +104,7 @@ def list_models(
     sort: str = "updated",
     order: Order = "desc",
 ) -> list[ModelResponse]:
-    """List models visible to the authenticated HubAI team.
+    """List models visible to the authenticated Luxonis Hub team.
 
     Args:
         tasks: Filter models by supported tasks.
@@ -156,7 +156,7 @@ def list_models_cli(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> None:
-    """List the models in the HubAI."""
+    """List the models in Luxonis Hub."""
     models = run_cli(
         lambda: list_models(
             tasks=tasks,
@@ -200,7 +200,7 @@ def get_model(identifier: UUID | str) -> ModelResponse:
 
 @app.command(name="info")
 def get_model_info_cli(identifier: UUID | str) -> None:
-    """Get the model information from the HubAI."""
+    """Get the model information from Luxonis Hub."""
     _print_model_info(run_cli(lambda: get_model(identifier)))
 
 
@@ -228,7 +228,7 @@ def create_model(
     """Create a model resource.
 
     Args:
-        name: Human-readable model name. HubAI derives the slug from it.
+        name: Human-readable model name. Luxonis Hub derives the slug from it.
         license_type: License attached to the model metadata.
         is_public: ``True`` for public, ``False`` for private, or ``None`` for
             team visibility.
@@ -245,7 +245,7 @@ def create_model(
     Raises:
         ResourceConflictError: If a model with the derived slug already
             exists.
-        HubApiError: If HubAI rejects the request for another reason.
+        HubApiError: If Luxonis Hub rejects the request for another reason.
     """
     data = {
         "name": name,
@@ -324,7 +324,7 @@ def update_model(
 ) -> ModelResponse:
     """Update fields on an existing model.
 
-    Only arguments whose value is not ``None`` are sent to HubAI. This means
+    Only arguments whose value is not ``None`` are sent to Luxonis Hub. This means
     optional text fields cannot be cleared with this helper.
 
     Args:
@@ -420,14 +420,14 @@ def update_model_cli(
     )
 )
 def delete_model(identifier: UUID | str) -> None:
-    """Delete a model from HubAI.
+    """Delete a model from Luxonis Hub.
 
     Args:
         identifier: Model UUID, raw slug, or ``<team>/<model>`` path.
 
     Raises:
         ResourceNotFoundError: If ``identifier`` cannot be resolved.
-        HubApiError: If HubAI refuses the deletion.
+        HubApiError: If Luxonis Hub refuses the deletion.
     """
     if isinstance(identifier, UUID):
         identifier = str(identifier)

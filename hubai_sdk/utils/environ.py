@@ -1,4 +1,4 @@
-"""Resolve HubAI connection settings and securely stored credentials."""
+"""Resolve Luxonis Hub connection settings and securely stored credentials."""
 
 import multiprocessing
 import platform
@@ -80,12 +80,12 @@ def get_password_with_timeout(
 
 
 class Environ(BaseEnviron):
-    """HubAI settings loaded from environment variables and keyring.
+    """Luxonis Hub settings loaded from environment variables and keyring.
 
     Attributes:
         HUBAI_API_KEY: API key used to authenticate requests. A key stored by
             ``hubai login`` takes precedence over the environment variable.
-        HUBAI_URL: Base URL for HubAI services. Override this for staging or a
+        HUBAI_URL: Base URL for Luxonis Hub services. Override this for staging or a
             self-hosted environment.
     """
 

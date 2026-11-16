@@ -1,6 +1,6 @@
-"""Client library for managing and converting models with HubAI.
+"""Client library for managing and converting models with Luxonis Hub.
 
-HubAI stores model resources in a three-level hierarchy:
+Luxonis Hub stores model resources in a three-level hierarchy:
 
     1. A **model** describes the architecture, task, license, and visibility.
     2. A **variant** is a named and versioned implementation of that model.

@@ -14,7 +14,7 @@ args = parser.parse_args()
 # Get API key from environment variable
 api_key = os.getenv("HUBAI_API_KEY")
 
-# Create HubAI client
+# Create Luxonis Hub client
 client = HubAIClient(api_key=api_key)
 
 # Get variants

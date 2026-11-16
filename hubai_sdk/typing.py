@@ -1,6 +1,6 @@
-"""Public literal types accepted by HubAI service functions.
+"""Public literal types accepted by Luxonis Hub service functions.
 
-These aliases enumerate values sent to the HubAI API. They are useful when
+These aliases enumerate values sent to the Luxonis Hub API. They are useful when
 building typed wrappers or configuration models; ordinary callers may pass the
 corresponding strings directly.
 

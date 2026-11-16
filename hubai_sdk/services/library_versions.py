@@ -13,7 +13,7 @@ from hubai_sdk.utils.hub_requests import Request
 
 app = App(
     name="library-versions",
-    help="Print library versions reported by HubAI.",
+    help="Print library versions reported by Luxonis Hub.",
     group="Admin",
 )
 
@@ -34,7 +34,7 @@ def get_library_versions() -> dict[str, str]:
 
 @app.default
 def main() -> None:
-    """Print library versions from the HubAI health endpoint."""
+    """Print library versions from Luxonis Hub health endpoint."""
     versions = run_cli(get_library_versions)
     for library, version in versions.items():
         sys.stdout.write(f"{library}: {version}\n")

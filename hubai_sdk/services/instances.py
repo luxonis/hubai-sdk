@@ -266,7 +266,7 @@ def list_instances_cli(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> None:
-    """List the model instances in the HubAI."""
+    """List the model instances in Luxonis Hub."""
     instances = run_cli(
         lambda: list_instances(
             platforms=platforms,
@@ -608,7 +608,7 @@ def create_instance_cli(
     )
 )
 def delete_instance(identifier: UUID | str) -> None:
-    """Delete a model instance from HubAI.
+    """Delete a model instance from Luxonis Hub.
 
     Args:
         identifier: The model instance ID, raw slug, or exact instance
@@ -812,12 +812,12 @@ def upload_quantization_zip(
 
     Args:
         file_path: Path to a local ZIP archive containing calibration inputs.
-        job_id: Export job UUID returned by HubAI.
+        job_id: Export job UUID returned by Luxonis Hub.
 
     Raises:
         FileNotFoundError: If ``file_path`` does not exist.
         InputError: If the file does not have a ``.zip`` extension.
-        HubApiError: If HubAI cannot issue or complete the upload.
+        HubApiError: If Luxonis Hub cannot issue or complete the upload.
     """
     if isinstance(job_id, UUID):
         job_id = str(job_id)

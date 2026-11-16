@@ -1,13 +1,13 @@
 """Provide the ``hubai`` command-line interface.
 
-The CLI exposes the same HubAI operations as :class:`HubAIClient` without
+The CLI exposes the same Luxonis Hub operations as :class:`HubAIClient` without
 writing Python code. Install the package to use ``hubai``; running
 ``python -m hubai_sdk`` is equivalent during development.
 
 Authentication
 --------------
 
-Run ``hubai login`` to open the HubAI API-key page and store the key securely.
+Run ``hubai login`` to open the Luxonis Hub API-key page and store the key securely.
 Use ``hubai login --relogin`` to replace a stored key and ``hubai logout`` to
 remove it. Alternatively, set ``HUBAI_API_KEY`` in the environment.
 
@@ -24,7 +24,7 @@ Command groups
 * ``hubai convert TARGET`` uploads a model, runs hosted conversion, and
   downloads the output. ``TARGET`` is one of ``rvc2``, ``rvc3``, ``rvc4``, or
   ``hailo``.
-* ``hubai library-versions`` prints library versions from HubAI health.
+* ``hubai library-versions`` prints library versions from Luxonis Hub health.
 
 Examples
 --------
@@ -83,7 +83,10 @@ from hubai_sdk.utils.telemetry import instrument_hubai_cli
 # we can then detect if we need to log to the console or not
 os.environ["HUBAI_CALL_SOURCE"] = "CLI"
 
-app = App(help="Interactions with resources on HubAI.", group="HubAI Commands")
+app = App(
+    help="Interactions with resources on Luxonis Hub.",
+    group="Luxonis Hub Commands",
+)
 
 app.command(architecture := architecture_app)
 
@@ -124,7 +127,7 @@ def login(
         Parameter(["--relogin", "-r"]),
     ] = False,
 ) -> None:
-    """Login to HubAI.
+    """Login to Luxonis Hub.
 
     Args:
         relogin: Relogin if already logged in.
@@ -165,7 +168,7 @@ def login(
 
 @app.command(group="Admin")
 def logout() -> None:
-    """Logout from HubAI."""
+    """Logout from Luxonis Hub."""
     if environ.HUBAI_API_KEY is None:
         logger.info("User not logged in. Nothing to logout.")
         return

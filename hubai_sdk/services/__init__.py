@@ -1,4 +1,4 @@
-"""High-level APIs for HubAI resources and hosted conversion.
+"""High-level APIs for Luxonis Hub resources and hosted conversion.
 
 The modules in this package form the public functional API. They are also
 available through a `hubai_sdk.HubAIClient` instance:
@@ -19,9 +19,9 @@ available through a `hubai_sdk.HubAIClient` instance:
    * - `hubai_sdk.services.convert`
      - Upload a model, run hosted conversion, and download the result.
    * - `hubai_sdk.services.library_versions`
-     - Inspect versions reported by HubAI health.
+     - Inspect versions reported by Luxonis Hub health.
 
-Most resource functions accept either a UUID or a HubAI slug. Mutating
+Most resource functions accept either a UUID or a Luxonis Hub slug. Mutating
 operations raise exceptions from `hubai_sdk.errors` when the server rejects a
 request; list functions return Pydantic models from
 `hubai_sdk.utils.sdk_models`.

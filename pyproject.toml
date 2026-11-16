@@ -1,6 +1,6 @@
 [project]
 name = "hubai-sdk"
-description = "SDK for HubAI."
+description = "SDK for Luxonis Hub."
 readme = "README.md"
 requires-python = ">=3.10"
 license-files = ["LICENSE"]

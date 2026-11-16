@@ -1,21 +1,21 @@
-# HubAI SDK
+# Luxonis Hub AI SDK
 
-Python SDK for interacting with Luxonis HubAI, a platform for
+Python SDK for interacting with Luxonis Hub, a platform for
 managing, converting, and deploying machine learning models for
 Luxonis OAK devices. If you want to convert models locally, check out
 [modelconverter](https://github.com/luxonis/modelconverter) instead.
 
 For complete SDK, CLI, and conversion parameter documentation, see the
-[HubAI SDK API reference](https://docs.luxonis.com/cloud/hubai/model-registry/hubai-sdk/hubai-sdk-api-reference/).
+[Luxonis Hub AI SDK API reference](https://docs.luxonis.com/cloud/hubai/model-registry/hubai-sdk/hubai-sdk-api-reference/).
 
 ## ✨ Features
 
-- **Model Management**: Create, list, update, and delete HubAI models
+- **Model Management**: Create, list, update, and delete Luxonis Hub models
 - **Architecture Management**: Manage trainable architecture definitions
-- **Variant Management**: Manage HubAI model variants and versions
-- **Instance Management**: Create and manage HubAI model instances
-- **Library Versions**: Inspect versions reported by HubAI
-- **Model Conversion**: Convert HubAI models to various formats including:
+- **Variant Management**: Manage Luxonis Hub model variants and versions
+- **Instance Management**: Create and manage Luxonis Hub model instances
+- **Library Versions**: Inspect versions reported by Luxonis Hub
+- **Model Conversion**: Convert Luxonis Hub models to various formats including:
   - `RVC2`
   - `RVC3`
   - `RVC4`
@@ -42,14 +42,14 @@ pip install -e .
 ## 📋 Requirements
 
 - Python 3.10 or higher
-- Valid Luxonis HubAI API key available from
-  [HubAI Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
+- Valid Luxonis Hub API key available from
+  [Luxonis Hub Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
 
 ## 🔐 Authentication
 
 ### Get Your API Key
 
-1. Visit [HubAI Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
+1. Visit [Luxonis Hub Team API Key Settings](https://hub.luxonis.com/team-settings/api-keys)
 2. Generate or copy your API key
 
 ### Set API Key
@@ -150,8 +150,8 @@ to select one exactly, for example
 
 ### Library Versions (`client.library_versions`)
 
-Read the versions reported by the HubAI projects health endpoint. This call
-does not create or update cloud resources.
+Read the versions reported by the Luxonis Hub projects health endpoint.
+This call does not create or update cloud resources.
 
 ```python
 versions = client.library_versions.get_library_versions()
@@ -166,7 +166,7 @@ Manage architecture definitions used for training. Pass training configuration
 as a JSON or YAML file with `model` and `trainer` keys (and optional `loader`),
 or pass inline `training_model_config` and
 `training_hyperparameter_config`. The two forms cannot be mixed.
-The HubAI API currently allows creation of private architectures only.
+The Luxonis Hub API currently allows creation of private architectures only.
 
 ```python
 architectures = client.architecture.list_architectures(
@@ -193,7 +193,7 @@ The same operations are available through `hubai architecture ls`, `info`,
 
 ### 🤖 Models Service (`client.models`)
 
-Manage ML models in HubAI.
+Manage ML models in Luxonis Hub.
 
 ```python
 # List models
@@ -398,13 +398,13 @@ See the `examples/` directory for more detailed usage examples:
 [BlobConverter](https://pypi.org/project/blobconverter/) is our
 previous library for converting models to the BLOB format usable with
 `RVC2` and `RVC3` devices. It is being replaced by `modelconverter`
-and `HubAI SDK`, which will eventually become the supported
+and the Luxonis Hub AI SDK, which will eventually become the supported
 conversion path.
 
 `blobconverter` is still available and can be used for conversion, but
-we recommend using `HubAI SDK` for new projects. The HubAI SDK API is
+we recommend using the Luxonis Hub AI SDK for new projects. Its API is
 similar to `blobconverter`, but there are differences in parameters
-and in how conversion is performed. Hosted HubAI conversion also
+and in how conversion is performed. Hosted Luxonis Hub conversion also
 replaces the older
 [tools.luxonis.com](https://tools.luxonis.com/) YOLO conversion
 workflow.
@@ -412,12 +412,12 @@ workflow.
 `blobconverter` offers separate functions for different source
 frameworks, such as `from_onnx`, `from_openvino`, and `from_tf`.
 These are now replaced by `convert.RVC2` or `convert.RVC3` in
-`HubAI SDK`, both of which take a `path` to the source model.
+the Luxonis Hub AI SDK, both of which take a `path` to the source model.
 
 The following table shows the mapping between `blobconverter`
-parameters and `HubAI SDK` parameters.
+parameters and Luxonis Hub AI SDK parameters.
 
-| `blobconverter`    | `HubAI SDK`                              | Notes                                                                                                                                        |
+| `blobconverter`    | Luxonis Hub AI SDK                       | Notes                                                                                                                                        |
 | ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `model`            | `path`                                   | The model file path.                                                                                                                         |
 | `xml`              | `path`                                   | The XML file path. Only for conversion from OpenVINO IR                                                                                      |
@@ -428,7 +428,7 @@ parameters and `HubAI SDK` parameters.
 | `optimizer_params` | `mo_args`                                | The arguments to pass to the model optimizer.                                                                                                |
 | `compile_params`   | `compile_tool_args`                      | The arguments to pass to the BLOB compiler.                                                                                                  |
 
-By default, `HubAI SDK` enables `superblob`, which is only supported
+By default, the Luxonis Hub AI SDK enables `superblob`, which is only supported
 on DepthAI v3. To produce the legacy RVC2 blob format, pass
 `superblob=False` to `convert.RVC2`.
 
@@ -444,7 +444,7 @@ blob = blobconverter.from_onnx(
 )
 ```
 
-**Equivalent code using `HubAI SDK`**
+**Equivalent code using the Luxonis Hub AI SDK**
 
 ```python
 response = client.convert.RVC2(
@@ -467,7 +467,7 @@ blob = blobconverter.from_openvino(
 )
 ```
 
-**`HubAI SDK` example**
+**Luxonis Hub AI SDK example**
 
 ```python
 # When the XML and BIN files are at the same location,
@@ -489,7 +489,7 @@ blob = response.downloaded_path
 ### Conversion from `tflite`
 
 > [!WARNING]
-> HubAI online conversion does not support frozen PB files. Only
+> Luxonis Hub online conversion does not support frozen PB files. Only
 > TFLite files are supported.
 
 `blobconverter`
@@ -502,7 +502,7 @@ blob = blobconverter.from_tf(
 )
 ```
 
-**Equivalent code using `HubAI SDK`**
+**Equivalent code using the Luxonis Hub AI SDK**
 
 ```python
 response = client.convert.RVC2(
@@ -532,7 +532,7 @@ blob = blobconverter.from_onnx(
 )
 ```
 
-**Equivalent code using `HubAI SDK`**
+**Equivalent code using the Luxonis Hub AI SDK**
 
 ```python
 response = client.convert.RVC2(
@@ -574,10 +574,10 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 - **Issues**: [GitHub Issues](https://github.com/luxonis/hubai-sdk/issues)
 - **Email**: support@luxonis.com
-- **Documentation**: [HubAI Platform](https://docs.luxonis.com)
+- **Documentation**: [Luxonis Hub documentation](https://docs.luxonis.com)
 
 ## 🔗 Links
 
 - **Repository**: [https://github.com/luxonis/hubai-sdk](https://github.com/luxonis/hubai-sdk)
-- **HubAI Platform**: [https://hub.luxonis.com](https://hub.luxonis.com)
+- **Luxonis Hub**: [https://hub.luxonis.com](https://hub.luxonis.com)
 - **Luxonis**: [https://luxonis.com](https://luxonis.com)
