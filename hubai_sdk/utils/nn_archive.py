@@ -16,14 +16,25 @@ from hubai_sdk.utils.constants import MISC_DIR
 
 def _extract_nn_archive(path: Path, untar_path: Path) -> None:
     """Extract an NN archive without allowing files outside the destination."""
-    if not hasattr(tarfile, "data_filter"):
-        raise RuntimeError(
-            "Safe NN archive extraction requires a Python version with "
-            "tarfile.data_filter"
-        )
-
     with tarfile.open(path, mode="r") as tf:
-        tf.extractall(path=untar_path, filter="data")
+        if hasattr(tarfile, "data_filter"):
+            tf.extractall(path=untar_path, filter="data")
+        else:
+            # Older Python 3.10 builds have no extraction filters. Do not
+            # extract links or special files, and check existing symlinks in
+            # the destination before writing each regular file or directory.
+            root = untar_path.resolve()
+            for member in tf:
+                target = untar_path / member.name
+                if (
+                    not (member.isfile() or member.isdir())
+                    or ".." in Path(member.name).parts
+                    or not target.resolve().is_relative_to(root)
+                ):
+                    raise ValueError(
+                        f"Unsafe NN archive member: {member.name}"
+                    )
+                tf.extract(member, path=untar_path)
 
 
 def process_nn_archive(
