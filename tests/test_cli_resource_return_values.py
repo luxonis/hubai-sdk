@@ -208,7 +208,7 @@ def test_get_model_info_cli_exits_cleanly_on_missing_model(
         capsys,
         lambda: model_services.get_model_info_cli("missing-model"),
         "Resource for endpoint 'models' with identifier "
-        "'missing-model' not found in HubAI.",
+        "'missing-model' not found in Luxonis Hub.",
     )
 
 

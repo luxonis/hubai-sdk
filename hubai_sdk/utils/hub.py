@@ -124,7 +124,7 @@ def print_hub_resource_info(
     rename: dict[str, str] | None = None,
     **kwargs,
 ) -> None:
-    """Render a single HubAI resource in CLI-friendly rich output."""
+    """Render a single Luxonis Hub resource in CLI-friendly rich output."""
     rename = rename or {}
 
     if json:
@@ -222,7 +222,7 @@ def print_hub_ls(
     keys: list[str],
     rename: dict[str, str] | None = None,
 ) -> None:
-    """Render a list of HubAI resources as a rich table."""
+    """Render a list of Luxonis Hub resources as a rich table."""
     rename = rename or {}
     table = Table(row_styles=["yellow", "cyan"], box=ROUNDED)
     for key in keys:
@@ -252,7 +252,7 @@ def is_valid_uuid(uuid_string: str) -> bool:
 
 
 def is_hubai_id(identifier: str) -> bool:
-    """Return whether an identifier looks like a HubAI resource ID."""
+    """Return whether an identifier looks like a Luxonis Hub resource ID."""
     temp = identifier
     if not temp.startswith("ai"):
         return False
@@ -314,14 +314,14 @@ def get_resource_id(
     identifier: str,
     endpoint: ResourceEndpoint,
 ) -> str:
-    """Resolve a UUID, HubAI ID, raw slug, or resource path to a resource ID.
+    """Resolve a UUID, Luxonis Hub ID, raw slug, or resource path to a resource ID.
 
     Args:
-        identifier: User-supplied UUID, HubAI ID, raw slug, or resource path.
+        identifier: User-supplied UUID, Luxonis Hub ID, raw slug, or resource path.
         endpoint: Resource endpoint to resolve against.
 
     Returns:
-        The resolved HubAI resource ID.
+        The resolved Luxonis Hub resource ID.
 
     Raises:
         ResourceAmbiguousError: If the identifier matches multiple resources.
@@ -341,7 +341,7 @@ def get_resource_id(
 
     if not found_id:
         raise ValueError(
-            f"Resource for endpoint '{endpoint}' with identifier '{identifier}' not found in HubAI."
+            f"Resource for endpoint '{endpoint}' with identifier '{identifier}' not found in Luxonis Hub."
         )
 
     return found_id
@@ -351,7 +351,7 @@ def _resource_path_to_id(
     identifier: str,
     endpoint: ResourceEndpoint,
 ) -> str | None:
-    """Resolve a human-readable HubAI resource path to its resource ID.
+    """Resolve a human-readable Luxonis Hub resource path to its resource ID.
 
     Supported forms are ``<team>/<model>`` for models;
     ``<model>:<variant>`` and ``<model>:<variant>:<version>`` for model
@@ -610,7 +610,7 @@ def get_resource_info(
     identifier: str,
     endpoint: ResourceEndpoint,
 ) -> dict[str, Any]:
-    """Fetch raw HubAI resource data for a resolved identifier."""
+    """Fetch raw Luxonis Hub resource data for a resolved identifier."""
     resource_id = resolve_resource_id(identifier, endpoint)
 
     try:
@@ -634,9 +634,9 @@ def raise_for_hub_error(
     )
     detail = _get_http_error_detail(exc)
     default_message = (
-        f"HubAI request failed with status code {status_code}."
+        f"Luxonis Hub request failed with status code {status_code}."
         if status_code is not None
-        else "HubAI request failed."
+        else "Luxonis Hub request failed."
     )
 
     if status_code == 404 and identifier is not None and endpoint is not None:
@@ -648,7 +648,9 @@ def raise_for_hub_error(
         detail is not None and "Unique constraint error" in detail
     ) or status_code == 409:
         raise ResourceConflictError(
-            conflict_message or detail or "Resource already exists in HubAI.",
+            conflict_message
+            or detail
+            or "Resource already exists in Luxonis Hub.",
             status_code=status_code,
         ) from exc
 
@@ -730,10 +732,10 @@ def get_version_number(model_id: str) -> str:
 
 
 def wait_for_job(job_id: str) -> JobMessageResponse:
-    """Poll a HubAI job until it completes or fails.
+    """Poll a Luxonis Hub job until it completes or fails.
 
     Args:
-        job_id: HubAI job ID.
+        job_id: Luxonis Hub job ID.
 
     Returns:
         The completed job response.
@@ -854,8 +856,8 @@ def _get_http_error_detail(exc: HTTPError) -> str:
     if message:
         return message
     if status_code is not None:
-        return f"HubAI request failed with status code {status_code}."
-    return "HubAI request failed."
+        return f"Luxonis Hub request failed with status code {status_code}."
+    return "Luxonis Hub request failed."
 
 
 def _format_http_error_items(items: list[object]) -> str | None:

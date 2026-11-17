@@ -1,7 +1,7 @@
 """Enums used by model metadata and conversion configuration.
 
 Service APIs generally accept these enums directly. Their ``value`` is
-the spelling sent to HubAI, while ``name`` is used by a few list
+the spelling sent to Luxonis Hub, while ``name`` is used by a few list
 filters. Use `Target` to choose conversion hardware and `ModelType` to
 describe an existing artifact.
 """
@@ -284,7 +284,7 @@ class InputFileType(Enum):
 
 
 class ModelType(str, Enum):
-    """Artifact type stored by a HubAI model instance."""
+    """Artifact type stored by a Luxonis Hub model instance."""
 
     ONNX = "ONNX"
     IR = "IR"

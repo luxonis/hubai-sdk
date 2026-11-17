@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for the HubAI SDK tests."""
+"""Pytest configuration and fixtures for Luxonis Hub AI SDK tests."""
 
 import os
 from pathlib import Path
@@ -50,7 +50,7 @@ def pytest_addoption(parser: pytest.Parser):
 
 @pytest.fixture
 def client():
-    """Fixture to provide HubAI client instance."""
+    """Fixture to provide Luxonis Hub client instance."""
     api_key = os.getenv("HUBAI_API_KEY")
     if not api_key:
         pytest.skip("HUBAI_API_KEY environment variable not set")

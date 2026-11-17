@@ -11,12 +11,12 @@ from hubai_sdk.utils.environ import environ
 class Request:
     @staticmethod
     def url(service: HubService) -> str:
-        """Build the API base URL for a HubAI service."""
+        """Build the API base URL for a Luxonis Hub service."""
         return f"{environ.HUBAI_URL.rstrip('/')}/{service}/api/v1"
 
     @staticmethod
     def headers() -> dict[str, str]:
-        """Build authenticated request headers for HubAI API calls.
+        """Build authenticated request headers for Luxonis Hub API calls.
 
         Returns:
             Headers containing the bearer token and JSON accept header.
@@ -57,7 +57,7 @@ class Request:
 
     @staticmethod
     def get(service: HubService, endpoint: str = "", **kwargs) -> Any:
-        """Send an authenticated GET request to HubAI."""
+        """Send an authenticated GET request to Luxonis Hub."""
         return Request._process_response(
             requests.get(
                 Request._get_url(endpoint, Request.url(service)),
@@ -84,7 +84,7 @@ class Request:
 
     @staticmethod
     def post(service: HubService, endpoint: str = "", **kwargs) -> Any:
-        """Send an authenticated POST request to HubAI."""
+        """Send an authenticated POST request to Luxonis Hub."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**Request.headers(), **kwargs.pop("headers")}
@@ -99,7 +99,7 @@ class Request:
 
     @staticmethod
     def delete(service: HubService, endpoint: str = "", **kwargs) -> Any:
-        """Send an authenticated DELETE request to HubAI."""
+        """Send an authenticated DELETE request to Luxonis Hub."""
         return Request._process_response(
             requests.delete(
                 Request._get_url(endpoint, Request.url(service)),
@@ -111,7 +111,7 @@ class Request:
 
     @staticmethod
     def put(service: HubService, endpoint: str = "", **kwargs) -> Any:
-        """Send an authenticated PUT request to HubAI."""
+        """Send an authenticated PUT request to Luxonis Hub."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**headers, **kwargs.pop("headers")}
@@ -126,7 +126,7 @@ class Request:
 
     @staticmethod
     def patch(service: HubService, endpoint: str = "", **kwargs) -> Any:
-        """Send an authenticated PATCH request to HubAI."""
+        """Send an authenticated PATCH request to Luxonis Hub."""
         headers = Request.headers()
         if "headers" in kwargs:
             headers = {**headers, **kwargs.pop("headers")}

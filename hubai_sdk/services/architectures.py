@@ -1,8 +1,8 @@
-"""Manage HubAI trainable architecture definitions.
+"""Manage Luxonis Hub trainable architecture definitions.
 
 Use ``client.architecture`` or the ``hubai architecture`` CLI group. Create
 and update accept either inline model/trainer configuration or a JSON/YAML
-file. Deleting an architecture removes it from HubAI.
+file. Deleting an architecture removes it from Luxonis Hub.
 """
 
 from typing import Annotated, Any
@@ -158,7 +158,7 @@ def list_architectures_cli(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> None:
-    """List the architectures in HubAI."""
+    """List the architectures in Luxonis Hub."""
     architectures = run_cli(
         lambda: list_architectures(
             tasks=tasks,
@@ -173,7 +173,7 @@ def list_architectures_cli(
 
 
 def get_architecture(identifier: UUID | str) -> ArchitectureResponse:
-    """Get architecture information from HubAI."""
+    """Get architecture information from Luxonis Hub."""
     if isinstance(identifier, UUID):
         identifier = str(identifier)
     data = get_resource_info(identifier, "architectures")
@@ -183,7 +183,7 @@ def get_architecture(identifier: UUID | str) -> ArchitectureResponse:
 
 @app.command(name="info")
 def get_architecture_info_cli(identifier: UUID | str) -> None:
-    """Get architecture information from HubAI."""
+    """Get architecture information from Luxonis Hub."""
     _print_architecture_info(run_cli(lambda: get_architecture(identifier)))
 
 
@@ -210,7 +210,7 @@ def create_architecture(
     license_type : License
         The type of the license.
     is_public : bool
-        HubAI currently permits creating private architectures only. The
+        Luxonis Hub currently permits creating private architectures only. The
         server rejects public architectures.
     description : str | None
         Full description of the architecture.

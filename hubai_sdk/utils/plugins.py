@@ -4,7 +4,7 @@ from typing import Any
 
 
 def iter_plugin_entry_points() -> list[EntryPoint]:
-    """Return installed HubAI plugin entry points."""
+    """Return installed Luxonis Hub plugin entry points."""
     return list(entry_points(group="hubai.plugins"))
 
 

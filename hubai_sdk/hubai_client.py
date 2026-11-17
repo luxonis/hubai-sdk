@@ -1,4 +1,4 @@
-"""Authenticated entry point for the HubAI Python API."""
+"""Authenticated entry point for the Luxonis Hub Python API."""
 
 import os
 import time
@@ -27,7 +27,7 @@ from hubai_sdk.utils.telemetry import (
 
 
 class HubAIClient:
-    """Authenticate with HubAI and expose its high-level service modules.
+    """Authenticate with Luxonis Hub and expose its high-level service modules.
 
     A client does not hold a separate HTTP session. Its service attributes are
     modules whose functions use the API key stored in the SDK environment.
@@ -39,7 +39,7 @@ class HubAIClient:
         architecture: Functions for architecture definitions.
         variants: Functions for versioned model variants.
         instances: Functions for model artifacts and their files.
-        library_versions: Versions reported by the HubAI health endpoint.
+        library_versions: Versions reported by Luxonis Hub health endpoint.
         convert: Hosted model conversion functions.
 
     Example:
@@ -58,10 +58,10 @@ class HubAIClient:
     """
 
     def __init__(self, api_key: str | None = None):
-        """Initialize a HubAI SDK client.
+        """Initialize a Luxonis Hub AI SDK client.
 
         Args:
-            api_key: HubAI API key. If omitted, the client falls back to the
+            api_key: Luxonis Hub API key. If omitted, the client falls back to the
                 ``HUBAI_API_KEY`` environment variable and then to the key
                 loaded from secure credential storage.
 
@@ -128,7 +128,7 @@ class HubAIClient:
             )
 
     def _verify_api_key(self) -> bool:
-        """Check whether the configured API key is accepted by HubAI.
+        """Check whether the configured API key is accepted by Luxonis Hub.
 
         Returns:
             ``True`` if the API key is valid, otherwise ``False`` for

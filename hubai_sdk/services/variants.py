@@ -1,4 +1,4 @@
-"""Manage named and versioned variants of HubAI models.
+"""Manage named and versioned variants of Luxonis Hub models.
 
 A variant groups related model instances under a semantic version. For
 example, a model can have separate variants for different input resolutions or
@@ -164,7 +164,7 @@ def list_variants_cli(
         list[str] | None, Parameter(name=["--field", "-f"])
     ] = None,
 ) -> None:
-    """List the model versions in the HubAI."""
+    """List the model versions in Luxonis Hub."""
     variants = run_cli(
         lambda: list_variants(
             model_id=model_id,
@@ -254,7 +254,7 @@ def create_variant(
 
     Raises:
         ResourceConflictError: If the variant already exists for the model.
-        HubApiError: If HubAI rejects the request for another reason.
+        HubApiError: If Luxonis Hub rejects the request for another reason.
     """
     data = {
         "model_id": str(model_id) if model_id else None,
@@ -324,7 +324,7 @@ def create_variant_cli(
     )
 )
 def delete_variant(identifier: UUID | str) -> None:
-    """Delete a model variant from HubAI.
+    """Delete a model variant from Luxonis Hub.
 
     Args:
         identifier: Variant UUID, raw model-version slug, or a variant
